@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const MyHomePage(),       // 기존 홈을 사용
-        '/mission': (context) => const MissionScreen(),
+        '/mission': (context) => MissionStepPage(),
       },
     );
   }
