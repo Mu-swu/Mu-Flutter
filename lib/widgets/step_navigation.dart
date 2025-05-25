@@ -22,14 +22,15 @@ class StepNavigation extends StatelessWidget {
           onTap: () => onStepSelected(index),
           child: AnimatedContainer(
             duration: Duration(milliseconds: 200),
-            width: 100,
-            height: 80,
+            width: 183,
+            height: 46,
             margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16), // 텍스트 여백
             decoration: BoxDecoration(
-              color: isSelected ? Colors.black : Colors.grey.shade300,
+              color: isSelected ? const Color(0xFF7F91FF) : Colors.white,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Center(
+            alignment: Alignment.centerLeft,
               child: Text(
                 'STEP ${index + 1}',
                 style: TextStyle(
@@ -39,8 +40,7 @@ class StepNavigation extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        );
+          );
       }),
     );
   }

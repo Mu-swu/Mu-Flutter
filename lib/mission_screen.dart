@@ -4,6 +4,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:async';
 import 'widgets/tts_text_box.dart';
 import 'widgets/step_navigation.dart';
+import 'keepbox_start.dart';
 
 class StepData {
   final String title;
@@ -79,17 +80,27 @@ class _MissionStepPageState extends State<MissionStepPage> {
     });
   }
 
-  void _loadStepData(int index) {
-    _currentLines = missionSteps[index].lines;
-    _currentLineIndex = -1;
+  Future<void> _loadStepData(int index) async {
+    // 기존 TTS 멈춤
+    await _flutterTts.stop();
+
+    setState(() {
+      _currentStepIndex = index;
+      _currentLines = missionSteps[index].lines;
+      _currentLineIndex = -1;
+    });
+
     if (_isTtsEnabled) {
-      _startTtsSequence();
+      _startTtsSequence(); // TTS는 따로 await하지 않음 (중첩 방지)
     }
   }
 
+
   Future<void> _startTtsSequence() async {
     for (int i = 0; i < _currentLines.length; i++) {
-      if (_isPaused) break;
+      // 사용자가 일시정지 했거나 스텝을 바꿨다면 종료
+      if (_isPaused || i >= _currentLines.length) break;
+
       setState(() => _currentLineIndex = i);
       await _flutterTts.speak(_currentLines[i]);
       await Future.delayed(Duration(seconds: 2));
@@ -103,8 +114,10 @@ class _MissionStepPageState extends State<MissionStepPage> {
       });
       _loadStepData(_currentStepIndex);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("모든 단계를 완료했어요!")),
+      // 모든 단계 완료 시 KeepBoxStartPage로 이동
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const Keepbox_start()),
       );
     }
   }
@@ -118,6 +131,12 @@ class _MissionStepPageState extends State<MissionStepPage> {
   void _togglePause() {
     setState(() {
       _isPaused = !_isPaused;
+
+
+      if (!_isPaused && (_timer == null || !_timer!.isActive)) {
+        // 일시정지 해제되었고, 타이머가 멈춘 상태라면 다시 시작
+        _startTimer();
+      }
     });
   }
 
@@ -125,6 +144,13 @@ class _MissionStepPageState extends State<MissionStepPage> {
     String minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     String seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
     return "${(duration.inHours).toString().padLeft(2, '0')}:$minutes:$seconds";
+  }
+
+  @override
+  void dispose() {
+    _flutterTts.stop(); // 화면 나갈 때 말 멈추기
+    _timer?.cancel();   // 타이머도 멈추기
+    super.dispose();
   }
 
   @override
@@ -175,11 +201,13 @@ class _MissionStepPageState extends State<MissionStepPage> {
                       StepNavigation(
                         currentIndex: _currentStepIndex,
                         totalSteps: missionSteps.length,
-                        onStepSelected: (step) {
+                        onStepSelected: (step) async {
+                          await _flutterTts.stop(); // 말 멈추기
                           setState(() {
-                            _currentStepIndex = step - 1;
-                            _loadStepData(_currentStepIndex);
+                            _currentStepIndex = step; // ❗step 그대로
+                            _currentLineIndex = -1;
                           });
+                          _loadStepData(step); // 스텝 새로 불러오기
                         },
                       ),
                       const SizedBox(width: 20),
