@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'mission_screen.dart';
 
-void main() {
+Future<void> main() async {
+  await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
@@ -52,12 +54,12 @@ class FigmaHomePage extends StatelessWidget {
             height: baseHeight,
             child: Stack(
               children: [
-              // 배경
-               Container(
-                 width: baseWidth,
+                // 배경
+                Container(
+                  width: baseWidth,
                   height: baseHeight,
                   color: Colors.white,
-                  ),
+                ),
 
                 // "시작하기" 버튼
                 Positioned(
@@ -223,9 +225,9 @@ class FigmaHomePage extends StatelessWidget {
                     child: Image.asset('assets/mainimg.jpg'),
                   ),
                 ),
-        ],
-        ),
-        ),
+              ],
+            ),
+          ),
         ),
       ),
     );
