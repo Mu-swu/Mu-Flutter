@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import 'widgets/ItemListSection.dart';
 import 'widgets/ItemSaveSection.dart';
 
@@ -11,6 +12,10 @@ class keepbox extends StatefulWidget {
 }
 
 class _keepboxState extends State<keepbox> {
+  final SpeechToText _speechToText=SpeechToText();
+  bool _speechEnabled=false;
+  String _lastWords='';
+
   List<Map<String, String>> foodItems = [];
   bool isSaving = false;
   int? selectedIndex;
@@ -18,15 +23,58 @@ class _keepboxState extends State<keepbox> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(Duration(seconds: 3), () {
-      setState(() {
-        foodItems.add({
-          'name': '딸기잼',
-          'date': '3월 29일',
-        });
-      });
-    });
+    _initSpeech();
   }
+
+  //음성 인식 초기화
+  void _initSpeech() async{
+    _speechEnabled=await _speechToText.initialize();
+    setState(() {});
+  }
+
+  //음성 인식 시작
+  void _startListening() async{
+    await _speechToText.listen(
+      onResult: (result) {
+        if (result.finalResult) {
+          setState(() {
+            _lastWords = result.recognizedWords;
+            _onSpeechResult(_lastWords);
+          });
+        }
+      },
+      localeId: 'ko_KR',
+    );
+    setState(() {});
+  }
+
+  //음성 인식 중지
+  void _stopListening()async{
+    await _speechToText.stop();
+    setState(() {});
+  }
+
+  //음성 인식 결과 처리
+  void _onSpeechResult(String text){
+    if(text.startsWith("버릴까 말까")){
+      String itemName=text.substring(7).trim();
+      if(itemName.isNotEmpty){
+        final now=DateTime.now();
+        final formattedDate=DateFormat("MM월 dd일").format(now);
+        setState(() {
+          foodItems.add({
+            'name':itemName,
+            'date':formattedDate,
+          });
+
+          selectedIndex=foodItems.length-1;
+          isSaving=true;
+        });
+        _stopListening();
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +112,32 @@ class _keepboxState extends State<keepbox> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    SizedBox(height: 40 * heightRatio),
+                    SizedBox(height: 20 * heightRatio),
+                    //음성 인식 버튼 및 상태 표시
+                    Column(
+                      children: [
+                        IconButton(
+                            iconSize:50*widthRatio,
+                            icon:Icon(_speechToText.isListening?Icons.mic_off:Icons.mic),
+                            onPressed:_speechToText.isNotListening?_startListening:_stopListening,
+                            tooltip: '음성으로 추가하기',
+                        ),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            _speechToText.isListening
+                                ? '듣고 있어요...'
+                                : _speechEnabled
+                                ? '버튼을 누르고 "버릴까 말까 [음식 이름]" 이라고 말해보세요.'
+                                : '음성 인식을 사용할 수 없습니다.',
+                            style: TextStyle(fontSize: 14*widthRatio),
+                            textAlign: TextAlign.center,
+                        ),
+                        ),
+                        Text(_lastWords), //디버깅용
+                      ],
+                    ),
+                    SizedBox(height:20*heightRatio),
                     Image.asset(
                       'assets/box.jpg',
                       width: 224 * 1.3 * widthRatio,
@@ -108,8 +181,12 @@ class _keepboxState extends State<keepbox> {
                   title: '식품',
                   items: foodItems,
                   onAddPressed: () {
+                    final now = DateTime.now();
+                    final formattedDate = DateFormat('MM월 dd일').format(now);
                     setState(() {
-                      foodItems.add({'name': '새 식품', 'date': '오늘'});
+                      foodItems.add({'name': '새 식품', 'date': formattedDate});
+                      selectedIndex=foodItems.length-1;
+                      isSaving=true;
                     });
                   },
                   onItemTapped: (index) {
@@ -137,7 +214,7 @@ class _keepboxState extends State<keepbox> {
   }) {
     return Container(
       width: 500 * widthRatio,
-      height: 120 * heightRatio,
+      height: 100 * heightRatio,
       padding: EdgeInsets.all(16 * widthRatio),
       decoration: BoxDecoration(
         color: Color(0xFFF5F5F5),
