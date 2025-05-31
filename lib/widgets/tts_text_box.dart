@@ -15,6 +15,8 @@ Widget tts_text_box({required List<String> lines, required int currentLineIndex}
             padding: const EdgeInsets.only(bottom: 16.0),
             child: Text(
               lines[index],
+              softWrap: true,
+              overflow: TextOverflow.visible,
               style: TextStyle(
                 fontSize: isCurrent ? 24 : 20,
                 fontWeight: isCurrent ? FontWeight.bold : FontWeight.w400,

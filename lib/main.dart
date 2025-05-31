@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'mission_screen.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
@@ -15,6 +16,14 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Timer Mission',
       theme: ThemeData(primarySwatch: Colors.blue),
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: [
+        const Locale('ko'), // 🇰🇷 한국어 달력 등 지원
+      ],
       initialRoute: '/',
       routes: {
         '/': (context) => const FigmaHomePage(),
