@@ -20,7 +20,12 @@ class _keepboxState extends State<keepbox> {
   double _currentLevel = 0.0;
   String _lastWords = '';
 
-  List<Map<String, String>> items = [];
+  List<Map<String, dynamic>> items = [];
+  List<Map<String, dynamic>> categories = [
+    {'name': '식품', 'isFilled': false},
+    {'name': '의류', 'isFilled': false},
+    {'name': '기타', 'isFilled': false},
+  ];
   int? selectedIndex;
 
   GenerativeModel? _model;
@@ -152,6 +157,7 @@ class _keepboxState extends State<keepbox> {
               if (selectedIndex != null && selectedIndex! < items.length) {
                 setState(() {
                   items[selectedIndex!]['category'] = chosenCat;
+                  categories[selectedIndex!]['isFilled'] = true;
                 });
               }
             },
@@ -160,6 +166,7 @@ class _keepboxState extends State<keepbox> {
               if (selectedIndex != null && selectedIndex! < items.length) {
                 setState(() {
                   items[selectedIndex!]['category'] = newCat;
+                  categories[selectedIndex!]['isFilled'] = true;
                 });
               }
             },
@@ -264,6 +271,7 @@ Widget build(BuildContext context) {
         // 오른쪽: ItemSaveSection 고정
         Expanded(
           child: ItemSaveSection(
+            categories: categories,
             widthRatio: widthRatio,
             heightRatio: heightRatio,
             itemName: currentItemName,

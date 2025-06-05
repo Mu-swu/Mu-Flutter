@@ -36,6 +36,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   late final GenerativeModel _model;
 
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -49,14 +51,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
     _model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
 
     _initTts();
-    _startTimer();
     _generateMissionSteps();
-  }
-  void _printVoices() async {
-    final voices = await _flutterTts.getVoices;
-    for (var voice in voices) {
-      debugPrint('Voice: $voice');
-    }
   }
   void _initTts() {
     _flutterTts.setVoice({
@@ -66,7 +61,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
     _flutterTts.setSpeechRate(0.5);
     _flutterTts.setPitch(1.2);
     _flutterTts.awaitSpeakCompletion(true);
-    //_printVoices();
   }
 
   void _startTimer() {
@@ -262,6 +256,10 @@ class _MissionStepPageState extends State<MissionStepPage> {
         _loadStepData(0);
         _isLoading = false;
       });
+
+      if (!_isPaused) {
+        _startTimer();
+      }
     } catch (e) {
       print('미션 생성 중 오류 발생:$e');
       setState(() {
@@ -277,8 +275,15 @@ class _MissionStepPageState extends State<MissionStepPage> {
     setState(() {
       _currentStepIndex = index;
       _currentLines = _missionSteps[index].lines;
-      _currentLineIndex = -1;
+      _currentLineIndex = 0;
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+    });
+
 
     if (_isTtsEnabled) {
       _startTtsSequence(); // TTS는 따로 await하지 않음 (중첩 방지)
@@ -354,6 +359,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
   void dispose() {
     _flutterTts.stop(); // 화면 나갈 때 말 멈추기
     _timer?.cancel(); // 타이머도 멈추기
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -362,7 +368,11 @@ class _MissionStepPageState extends State<MissionStepPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
+        child: _isLoading
+            ? const Center(
+          child: CircularProgressIndicator(),
+        )
+            : Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -484,6 +494,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                                 lines: _currentLines,
                                 currentLineIndex:
                                 _currentLines.isNotEmpty ? _currentLineIndex : -1,
+                                controller: _scrollController,
                               ),
                             ),
 

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 class ItemListSection extends StatelessWidget {
-  final List<Map<String, dynamic>> items;
+  final List<Map<String, dynamic>> categories;
   final void Function(String category) onAddPressed;
   final void Function(String category) onItemTapped;
 
   const ItemListSection({
     super.key,
-    required this.items,
+    required this.categories,
     required this.onAddPressed,
     required this.onItemTapped,
   });
@@ -23,9 +23,9 @@ class ItemListSection extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       padding: EdgeInsets.symmetric(horizontal: 5 * w),
       child: Row(
-        children: items.map((item) {
-          final name = item['name'] as String;
-          final isFilled = item['isFilled'] as bool? ?? false;
+        children: categories.map((category) {
+          final name = category['name'] as String;
+          final isFilled = category['isFilled'] as bool? ?? false;
 
           return Padding(
             padding: EdgeInsets.only(right: 32 * w),

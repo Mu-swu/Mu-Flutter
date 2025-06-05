@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-Widget tts_text_box({required List<String> lines, required int currentLineIndex}) {
+Widget tts_text_box({required List<String> lines,
+  required int currentLineIndex,
+  ScrollController? controller,}) {
   return Container(
     width: double.infinity,
     padding: const EdgeInsets.all(20),

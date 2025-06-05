@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'ItemListSection.dart';
-import 'keepdialogs.dart';
 
 class ItemSaveSection extends StatefulWidget {
+  final List<Map<String, dynamic>> categories;
   final double widthRatio;
   final double heightRatio;
   final VoidCallback onExit;
@@ -10,6 +10,7 @@ class ItemSaveSection extends StatefulWidget {
   final String? itemCategory;
 
   const ItemSaveSection({
+    required this.categories,
     required this.widthRatio,
     required this.heightRatio,
     required this.onExit,
@@ -25,7 +26,6 @@ class ItemSaveSection extends StatefulWidget {
 class _ItemSaveSectionState extends State<ItemSaveSection> {
   late DateTime todayDate;
   late DateTime oneWeekLaterDate;
-  List<Map<String, dynamic>> items = [];
   String? _selectedCategory;
 
   @override
@@ -34,10 +34,6 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
     todayDate = DateTime.now();
     oneWeekLaterDate = todayDate.add(const Duration(days: 7));
     _selectedCategory = widget.itemCategory;
-    items = [
-      {'name': '식품', 'isFilled': false},
-      {'name': '의류', 'isFilled': true},
-    ];
   }
 
   Future<void> _pickDate({
@@ -128,7 +124,7 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
           SizedBox(height: 32 * h),
 
           ItemListSection(
-            items: items,
+            categories: widget.categories,
             onAddPressed: (category) {
               print('$category 추가');
             },
@@ -142,23 +138,6 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
           Center(
             child: ElevatedButton(
               onPressed: () {
-                showVoiceConfirmDialog(
-                  context: context,
-                  itemName: widget.itemName,
-                  initialCategory: _selectedCategory ?? "기타",
-                  onConfirm: (selectedCategory) {
-                    // 실제 저장 처리
-                    setState(() {
-                      final index = items.indexWhere((item) => item['name'] == selectedCategory);
-                      if (index != -1) {
-                        items[index]['isFilled'] = true;
-                      }
-                    });
-                  },
-                  onAddCategory: (newCategory) {
-                    print("새 카테고리 저장: $newCategory");
-                  },
-                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey,

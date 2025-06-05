@@ -29,8 +29,8 @@ class _Keepbox_startState extends State<Keepbox_start> {
       body: SafeArea(
         child: Center(
           child: Container(
-            width: screenWidth * 0.8, // 전체의 80%
-            height: screenHeight * 0.9, // 전체의 90%
+            width: screenWidth , // 전체의 80%
+            height: screenHeight , // 전체의 90%
             padding: EdgeInsets.all(24 * widthRatio),
             decoration: BoxDecoration(
               //border: Border.all(color: const Color(0xFFE0E0E0)),
