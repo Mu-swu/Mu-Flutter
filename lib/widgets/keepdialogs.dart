@@ -3,18 +3,58 @@ import 'package:flutter/material.dart';
 Future<void> showVoiceConfirmDialog({
   required BuildContext context,
   required String itemName,
+  required String initialCategory,
   required Function(String selectedCategory) onConfirm,
   required Function(String) onAddCategory,
 }) async {
   String customCategory = '';
   bool showEditMode = false;
-  String selectedCategory = '식품';
+  String selectedCategory = initialCategory;
 
   return showDialog(
     context: context,
     barrierDismissible: false,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) {
+        Widget _categoryOption(String name){
+          final bool isSelected=(selectedCategory==name);
+          return GestureDetector(
+            onTap:(){
+              setState((){
+                selectedCategory=name;
+              });
+            },
+            child:Container(
+              padding:const EdgeInsets.symmetric(vertical:14, horizontal: 16),
+              decoration: BoxDecoration(
+                color: isSelected? Colors.blue.shade100:Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border:Border.all(
+                  color:isSelected?Colors.blue:Colors.transparent,
+                  width:1.5,
+                ),
+              ),
+              child:Row(
+                children: [
+                  Text(
+                    name,
+                    style:TextStyle(
+                      fontSize: 16,
+                      color:isSelected?Colors.blue:Colors.black,
+                      fontWeight: isSelected?FontWeight.bold:FontWeight.normal,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.check_circle,
+                    size:20,
+                    color:isSelected?Colors.blue:Colors.transparent,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         return AlertDialog(
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -63,9 +103,9 @@ Future<void> showVoiceConfirmDialog({
                   ],
                 ),
               ] else ...[
-                _categoryBox("식품"),
+                _categoryOption("식품"),
                 const SizedBox(height: 12),
-                _categoryBox("의류"),
+                _categoryOption("의류"),
                 const SizedBox(height: 12),
                 TextField(
                   onChanged: (value) => customCategory = value,
@@ -99,23 +139,6 @@ Future<void> showVoiceConfirmDialog({
           ),
         );
       },
-    ),
-  );
-}
-
-Widget _categoryBox(String name) {
-  return Container(
-    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-    decoration: BoxDecoration(
-      color: Colors.grey.shade100,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Row(
-      children: [
-        Text(name, style: TextStyle(fontSize: 16)),
-        const Spacer(),
-        Icon(Icons.add, size: 20),
-      ],
     ),
   );
 }

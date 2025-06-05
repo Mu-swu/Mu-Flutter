@@ -7,12 +7,14 @@ class ItemSaveSection extends StatefulWidget {
   final double heightRatio;
   final VoidCallback onExit;
   final String itemName;
+  final String? itemCategory;
 
   const ItemSaveSection({
     required this.widthRatio,
     required this.heightRatio,
     required this.onExit,
     required this.itemName,
+    required this.itemCategory,
     super.key,
   });
 
@@ -24,12 +26,14 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
   late DateTime todayDate;
   late DateTime oneWeekLaterDate;
   List<Map<String, dynamic>> items = [];
+  String? _selectedCategory;
 
   @override
   void initState() {
     super.initState();
     todayDate = DateTime.now();
     oneWeekLaterDate = todayDate.add(const Duration(days: 7));
+    _selectedCategory = widget.itemCategory;
     items = [
       {'name': '식품', 'isFilled': false},
       {'name': '의류', 'isFilled': true},
@@ -141,6 +145,7 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
                 showVoiceConfirmDialog(
                   context: context,
                   itemName: widget.itemName,
+                  initialCategory: _selectedCategory ?? "기타",
                   onConfirm: (selectedCategory) {
                     // 실제 저장 처리
                     setState(() {
