@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:mu/widgets/keepdialogs.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'widgets/SimpleWaveform.dart';
 import 'widgets/ItemSaveSection.dart';
 
 class keepbox extends StatefulWidget {
@@ -178,111 +177,174 @@ class _keepboxState extends State<keepbox> {
   }
 }
 
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
-@override
-Widget build(BuildContext context) {
-  final screenWidth = MediaQuery
-      .of(context)
-      .size
-      .width;
-  final screenHeight = MediaQuery
-      .of(context)
-      .size
-      .height;
+    final widthRatio = screenWidth / (1280 / 1.2);
+    final heightRatio = screenHeight / (832 / 1.2);
 
-  // 확대 비율 (1.2배)
-  final widthRatio = screenWidth / (1280 / 1.2);
-  final heightRatio = screenHeight / (832 / 1.2);
+    String currentItemName = "새 항목";
+    String? currentItemCategory = _isGeminiInitialized ? '카테고리' : '분류 기능 사용 불가';
 
-  String currentItemName = "새 항목";
-  String? currentItemCategory = _isGeminiInitialized ? '카테고리' : '분류 기능 사용 불가';
+    if (items.isNotEmpty && selectedIndex != null && selectedIndex! < items.length) {
+      currentItemName = items[selectedIndex!]['name']!;
+      currentItemCategory = items[selectedIndex!]['category'];
+    }
 
-  if (items.isNotEmpty && selectedIndex != null &&
-      selectedIndex! < items.length) {
-    currentItemName = items[selectedIndex!]['name']!;
-    currentItemCategory = items[selectedIndex!]['category'];
-  }
-
-  return Scaffold(
-    backgroundColor: Colors.white,
-    body: Row(
-      children: [
-        // 왼쪽 음성 영역
-        Expanded(
-          child: Center(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Row(
+        children: [
+          // 왼쪽 15% 영역
+          Container(
+            width: screenWidth * 0.15,
+            decoration: BoxDecoration(
+              gradient: _speechToText.isListening
+                  ? const LinearGradient(
+                colors: [Color(0xFFF3CDCD), Color(0xFFC9C6F2)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              )
+                  : null,
+              color: _speechToText.isListening ? null : const Color(0xFFF3F5FF),
+            ),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  '버릴까 말까 상자',
-                  style: TextStyle(
-                    fontSize: 28 * widthRatio,
-                    fontWeight: FontWeight.bold,
+                // 🔙 뒤로가기 버튼
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back, size: 28),
                   ),
                 ),
-                SizedBox(height: 32 * heightRatio),
-                SizedBox(
-                  height: 300 * heightRatio,
-                  width: 300 * widthRatio,
-                  child: SimpleWaveform(level: _currentLevel),
+
+                const Spacer(),
+
+                // 🎙 마이크 또는 정지 아이콘 (동그란 배경 포함)
+                GestureDetector(
+                  onTap: () {
+                    if (!_speechToText.isListening) {
+                      _startListening();
+                    } else {
+                      _stopListening();
+                    }
+                    setState(() {});
+                  },
+                  child: Container(
+                    width: 80 * widthRatio,
+                    height: 80 * widthRatio,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _speechToText.isListening ? Colors.white : Colors.blue,
+                    ),
+                    child: Icon(
+                      _speechToText.isListening ? Icons.stop : Icons.mic,
+                      size: 36 * widthRatio,
+                      color: _speechToText.isListening ? Colors.blue : Colors.white,
+                    ),
+                  ),
                 ),
 
-                SizedBox(height: 24 * heightRatio),
+                SizedBox(height: 16 * heightRatio),
 
+                // 🗣 텍스트 상태 표시
                 Text(
-                  _lastWords.isNotEmpty ? _lastWords : '여기에 말한 텍스트가 보여집니다',
-                  style: TextStyle(fontSize: 16 * widthRatio),
-                  textAlign: TextAlign.center,
+                  _speechToText.isListening ? '눌러서 멈추기' : '눌러서 말하기',
+                  style: TextStyle(
+                    fontSize: 14 * widthRatio,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black,
+                  ),
                 ),
 
                 SizedBox(height: 24 * heightRatio),
 
+                // 📝 마지막 음성 텍스트
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    _lastWords.isNotEmpty ? _lastWords : '',
+                    style: TextStyle(
+                      fontSize: 12 * widthRatio,
+                      color: _lastWords.isNotEmpty ? Colors.blue : Colors.transparent,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+
+                const Spacer(),
+              ],
+            ),
+          ),
+          // 오른쪽 90% 영역
+          Container(
+            width: screenWidth * 0.85,
+            padding: EdgeInsets.symmetric(horizontal: 40 * widthRatio),
+            color: Colors.white,
+            child: Column(
+              children: [
+                SizedBox(height: 80 * heightRatio),
+                Center(
+                  child: Text(
+                    '버릴까말까 상자',
+                    style: TextStyle(
+                      fontSize: 28 * widthRatio,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 40 * heightRatio),
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 아이템 리스트 영역
+                      Expanded(
+                        child: ItemSaveSection(
+                          categories: categories,
+                          widthRatio: widthRatio,
+                          heightRatio: heightRatio,
+                          itemName: currentItemName,
+                          itemCategory: currentItemCategory,
+                          onExit: () {
+                            _lastWords = '';
+                            selectedIndex = null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 10 * heightRatio),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     padding: EdgeInsets.symmetric(
                       vertical: 16 * heightRatio,
-                      horizontal: 36 * widthRatio,
+                      horizontal: 200 * widthRatio,
                     ),
-                    backgroundColor: Colors.grey,
+                    backgroundColor: Colors.black,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: _speechToText.isNotListening
-                      ? _startListening
-                      : _stopListening,
-                  child: Text(_speechToText.isListening ? "확인하기" : "눌러서 말하기"),
+                  onPressed: () {
+                    // 저장 로직
+                  },
+                  child: Text(
+                    '저장',
+                    style: TextStyle(color: Colors.white, fontSize: 16 * widthRatio),
+                  ),
                 ),
-                if(!_isGeminiInitialized)
-                  Padding(
-                    padding: EdgeInsets.only(top: 15 * heightRatio),
-                    child: Text(
-                      '자동 분류 기능을 사용할 수 없습니다.\nAPI 키 설정을 확인해주세요.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 12 * widthRatio, color: Colors.red),
-                    ),
-                  )
+                SizedBox(height: 24 * heightRatio),
               ],
             ),
           ),
-        ),
-
-        // 오른쪽: ItemSaveSection 고정
-        Expanded(
-          child: ItemSaveSection(
-            categories: categories,
-            widthRatio: widthRatio,
-            heightRatio: heightRatio,
-            itemName: currentItemName,
-            itemCategory: currentItemCategory,
-            onExit: () {
-              _lastWords = '';
-              selectedIndex = null;
-            },
-          ),
-        ),
-      ],
-    ),
-  );
-}}
+        ],
+      ),
+    );
+  }}

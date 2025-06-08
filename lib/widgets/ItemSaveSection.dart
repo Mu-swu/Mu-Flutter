@@ -52,119 +52,129 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
       onSelected(picked);
     }
   }
-
   @override
   Widget build(BuildContext context) {
     final w = widget.widthRatio;
     final h = widget.heightRatio;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 80 * w), // ✅ 좌우 여백
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(height: 48 * h),
-          Text(
-            '세부 수정',
-            style: TextStyle(
-              fontSize: 18 * w,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-          SizedBox(height: 24 * h),
-
-          _labelTextField('이름', widget.itemName),
-          SizedBox(height: 16 * h),
-
-          Text(
-            '날짜',
-            style: TextStyle(
-              fontSize: 14 * w,
-              color: Colors.black,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          SizedBox(height: 8 * h),
-
-          _infoBox(_formatDate(todayDate)),
-          SizedBox(height: 12 * h),
-
-          GestureDetector(
-            onTap: () => _pickDate(
-              initialDate: oneWeekLaterDate,
-              onSelected: (picked) => setState(() => oneWeekLaterDate = picked),
-            ),
-            child: Container(
-              height: 48 * h,
-              padding: EdgeInsets.symmetric(horizontal: 16 * w),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _formatDate(oneWeekLaterDate),
-                    style: TextStyle(
-                      fontSize: 16 * w,
-                      color: Colors.black,
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 960 * w,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // ───────── 왼쪽: 세부 수정 영역 ─────────
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40 * w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 48 * h),
+                    Text(
+                      '세부 수정',
+                      style: TextStyle(
+                        fontSize: 18 * w,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.only(right: 8.0),
-                    child: Icon(Icons.calendar_today, size: 20 * w, color: Colors.grey),
-                  ),
-                ],
+                    SizedBox(height: 24 * h),
+
+                    _labelTextField('이름', widget.itemName),
+                    SizedBox(height: 16 * h),
+
+                    Text(
+                      '날짜',
+                      style: TextStyle(
+                        fontSize: 14 * w,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 8 * h),
+
+                    _infoBox(_formatDate(todayDate)),
+                    SizedBox(height: 12 * h),
+
+                    GestureDetector(
+                      onTap: () => _pickDate(
+                        initialDate: oneWeekLaterDate,
+                        onSelected: (picked) => setState(() => oneWeekLaterDate = picked),
+                      ),
+                      child: Container(
+                        height: 48 * h,
+                        padding: EdgeInsets.symmetric(horizontal: 16 * w),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _formatDate(oneWeekLaterDate),
+                              style: TextStyle(
+                                fontSize: 16 * w,
+                                color: Colors.black,
+                              ),
+                            ),
+                            Padding(
+                              padding: EdgeInsets.only(right: 8.0),
+                              child: Icon(Icons.calendar_today, size: 20 * w, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          SizedBox(height: 32 * h),
 
-          ItemListSection(
-            categories: widget.categories,
-            onAddPressed: (category) {
-              print('$category 추가');
-            },
-            onItemTapped: (category) {
-              print('$category 이미지 탭됨');
-            },
-          ),
-          const Spacer(),
+            SizedBox(width: 10 * w),
 
-          // ✅ 저장 버튼 하단 중앙 배치
-          Center(
-            child: ElevatedButton(
-              onPressed: () {
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey,
-                padding: EdgeInsets.symmetric(
-                  vertical: 14 * h,
-                  horizontal: 40 * w,
+            // ───────── 오른쪽: 아이템 리스트 영역 ─────────
+        // ───────── 오른쪽: 아이템 리스트 영역 ─────────
+        Expanded(
+          flex: 1,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 40 * w), // 왼쪽과 동일한 패딩
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 48 * h),
+                Text(
+                  '카테고리',
+                  style: TextStyle(
+                    fontSize: 18 * w,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+
+                Expanded(
+                  child: ItemListSection(
+                    categories: widget.categories,
+                    onAddPressed: (category) {
+                      print('$category 추가');
+                    },
+                    onItemTapped: (category) {
+                      print('$category 이미지 탭됨');
+                    },
+                  ),
                 ),
-              ),
-              child: Text(
-                '저장',
-                style: TextStyle(
-                  fontSize: 16 * w,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+              ],
             ),
           ),
-          SizedBox(height: 32 * h),
-        ],
-      ),
-    );
+        ),
+      ]),
+    ));
   }
-
   Widget _labelTextField(String label, String value) {
     final w = widget.widthRatio;
     final h = widget.heightRatio;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'keepbox.dart';
+import 'MissionStepPage.dart';
 
 class Keepbox_start extends StatefulWidget {
   const Keepbox_start({super.key});
@@ -22,42 +23,39 @@ class _Keepbox_startState extends State<Keepbox_start> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     final widthRatio = screenWidth / 1280;
-    final heightRatio = screenHeight / 832;
+    final heightRatio = screenHeight / 800;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: Container(
-            width: screenWidth , // 전체의 80%
-            height: screenHeight , // 전체의 90%
+            width: screenWidth ,
+            height: screenHeight ,
             padding: EdgeInsets.all(24 * widthRatio),
             decoration: BoxDecoration(
-              //border: Border.all(color: const Color(0xFFE0E0E0)),
-              //borderRadius: BorderRadius.circular(12),
               color: Colors.white,
             ),
             child: Stack(
               children: [
                 Column(
                   children: [
-                    // 사운드 버튼
                     Align(
-                      alignment: Alignment.topRight,
+                      alignment: Alignment.topLeft,
                       child: IconButton(
-                        onPressed: _toggleTts,
-                        icon: Icon(
-                          _isTtsEnabled ? Icons.volume_up : Icons.volume_off,
-                          size: 28 * widthRatio,
-                          color: Colors.black,
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => MissionStepPage()),
                         ),
+                        icon: const Icon(Icons.arrow_back, size: 28),
                       ),
                     ),
                     SizedBox(height: 16 * heightRatio),
 
                     // 제목
                     Text(
-                      '못 버린 물건이 있나요?',
+                      '못 버린 물건이 있나요?\n 버릴까 말까 상자에 잠시 보관하세요',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 30 * widthRatio,
                         fontWeight: FontWeight.w600,
@@ -66,7 +64,6 @@ class _Keepbox_startState extends State<Keepbox_start> {
                     ),
                     SizedBox(height: 20 * heightRatio),
 
-                    // 이미지 (기존 크기의 1.3배)
                     Image.asset(
                       'assets/box.jpg',
                       width: 400 * widthRatio,
@@ -74,7 +71,7 @@ class _Keepbox_startState extends State<Keepbox_start> {
                       fit: BoxFit.contain,
                     ),
 
-                    SizedBox(height: 32 * heightRatio),
+                    SizedBox(height: 10 * heightRatio),
 
                     // 설명 박스
                     Container(
@@ -84,11 +81,11 @@ class _Keepbox_startState extends State<Keepbox_start> {
                         horizontal: 20 * widthRatio,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF5F5F5),
+                        color: const Color(0xFFF3F5FF),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '버리지 못한 물건이 있다면 ‘버릴까 말까 상자’로 이동하여 일정 기간 동안 물건을 보관해드려요.',
+                        '버리지 못한 물건이 있다면 \n‘버릴까 말까 상자’로 이동하여 일정 기간 동안 물건을 보관해드려요.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 16 * widthRatio,

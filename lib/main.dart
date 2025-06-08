@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'mission_screen.dart';
+import 'MissionStepPage.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 Future<void> main() async {
@@ -166,6 +166,7 @@ class FigmaHomePage extends StatelessWidget {
                     ),
                   ),
                 ),
+/*
 
                 // 왼쪽 말풍선
                 Positioned(
@@ -224,14 +225,15 @@ class FigmaHomePage extends StatelessWidget {
                     ),
                   ),
                 ),
+*/
 
                 Positioned(
-                  left: 465,
+                  left: 360,
                   top: 250,
                   child: SizedBox(
-                    width: 350,
+                    width: 600,
                     height: 350,
-                    child: Image.asset('assets/mainimg.jpg'),
+                    child: Image.asset('assets/motion.gif',fit: BoxFit.cover,),
                   ),
                 ),
               ],

@@ -11,69 +11,66 @@ class ItemListSection extends StatelessWidget {
     required this.onAddPressed,
     required this.onItemTapped,
   });
-
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final w = screenWidth / 1280;
-    final h = screenHeight / 832;
+    final maxWidth = 960 * 0.45; // 부모 너비 제약 예시
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: EdgeInsets.symmetric(horizontal: 5 * w),
-      child: Row(
-        children: categories.map((category) {
+    return SizedBox(
+      width: maxWidth,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          final category = categories[index];
           final name = category['name'] as String;
           final isFilled = category['isFilled'] as bool? ?? false;
 
           return Padding(
-            padding: EdgeInsets.only(right: 32 * w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 상단: 카테고리명 + + 버튼
-                Row(
-                  children: [
-                    Text(
-                      name,
-                      style: TextStyle(
-                        fontSize: 16 * w,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(width: 8 * w),
-                    GestureDetector(
-                      onTap: () => onAddPressed(name),
-                      child: Icon(Icons.add, size: 24 * w),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 16 * h),
-                // 하단: 이미지
-                GestureDetector(
-                  onTap: () => onItemTapped(name),
-                  child: Container(
-                    width: 150 * w,
-                    height: 170 * h,
-                    padding: EdgeInsets.all(12.0),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: Colors.white,
-                      image: DecorationImage(
-                        image: AssetImage(
-                          isFilled ? 'assets/fill.jpg' : 'assets/empty.jpg',
+            padding: const EdgeInsets.only(right: 12),
+            child: SizedBox(
+              width: maxWidth/2,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name,
+                          style: TextStyle(fontSize: 20),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        fit: BoxFit.contain,
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.add),
+                        onPressed: () => onAddPressed(name),
+                        iconSize: 26,
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  GestureDetector(
+                    onTap: () => onItemTapped(name),
+                    child: Container(
+                      width: double.infinity,
+                      height: 240,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        image: DecorationImage(
+                          image: AssetImage(
+                              isFilled ? 'assets/fill.jpg' : 'assets/empty.jpg'),
+                          fit: BoxFit.contain,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
-        }).toList(),
+        },
       ),
     );
-  }
-}
+  }}

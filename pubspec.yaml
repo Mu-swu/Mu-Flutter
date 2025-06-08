@@ -17,8 +17,6 @@ dependencies:
   google_generative_ai: ^0.4.7
   flutter_dotenv: ^5.2.1
   speech_to_text: ^7.0.0
-  flutter_audio_waveforms: ^1.2.0
-
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
@@ -34,4 +32,5 @@ flutter:
     - assets/box.jpg
     - assets/empty.jpg
     - assets/fill.jpg
+    - assets/motion.gif
     - .env
