@@ -31,6 +31,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
   FlutterTts _flutterTts = FlutterTts();
   bool _isTtsEnabled = true;
   bool _isPaused = false;
+  bool _isTtsSpeaking = false;
+  bool _isTtsSequenceRunning = false;
+  int _ttsSessionId = 0;
 
   List<StepData> _missionSteps = []; //API로부터 받을 미션 데이터
   bool _isLoading = true; //로딩 상태
@@ -56,9 +59,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
     _initTts();
 
     _flutterTts.setCompletionHandler(() {
+
       if (_isTtsEnabled && _continueAfterExtraMessage) {
         _continueAfterExtraMessage = false;
-        _resumeTtsFromIndex(_currentLineIndex);
       }
     });
 
@@ -81,6 +84,18 @@ class _MissionStepPageState extends State<MissionStepPage> {
       }
     });
   }
+  /*void _scrollToCurrentLine() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final lineHeight = 40.0; // 대략적인 한 줄 높이 (패딩 포함)
+      final targetOffset = _currentLineIndex * lineHeight;
+      _scrollController.animateTo(
+        targetOffset,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+*/
 
   Future<void> _generateMissionSteps() async {
     final userType = "방치형";
@@ -277,61 +292,75 @@ class _MissionStepPageState extends State<MissionStepPage> {
     }
   }
 
+// 단계 전환 시 호출되는 함수
   Future<void> _loadStepData(int index) async {
-    // 기존 TTS 멈춤
+    print("📦 단계 로딩 시작: $index");
+    print("TTS 중단 완료, 세션ID: $_ttsSessionId");
+
     await _flutterTts.stop();
+    _ttsSessionId++; // 이전 세션 강제 종료
 
     setState(() {
       _currentStepIndex = index;
       _currentLines = _missionSteps[index].lines;
       _currentLineIndex = 0;
+      _isTtsSpeaking = false;
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(0);
-      }
+      _scrollController.jumpTo(0);
     });
 
+    await Future.delayed(Duration(milliseconds: 300));
+
     if (_isTtsEnabled) {
-      _startTtsSequence(); // TTS는 따로 await하지 않음 (중첩 방지)
+      _startTtsSequence();
     }
   }
 
+  // TTS 루프 실행
   Future<void> _startTtsSequence() async {
-    for (int i = 0; i < _currentLines.length; i++) {
-      // 사용자가 일시정지 했거나 스텝을 바꿨다면 종료
-      if (_isPaused || i >= _currentLines.length) break;
+    if (_isTtsSequenceRunning) return; // 루프 중복 방지
 
-      setState(() => _currentLineIndex = i);
-      await _flutterTts.speak(_currentLines[i]);
-      await Future.delayed(Duration(seconds: 2));
+    final currentSessionId = ++_ttsSessionId;
+    _isTtsSequenceRunning = true;
+
+    try {
+      for (int i = 0; i < _currentLines.length; i++) {
+        if (_isPaused || !_isTtsEnabled || _ttsSessionId != currentSessionId) break;
+
+        setState(() {
+          _currentLineIndex = i;
+          _isTtsSpeaking = true;
+        });
+
+        //_scrollToCurrentLine(); // 선택 줄로 스크롤 이동
+
+        await _flutterTts.speak(_currentLines[i]);
+
+        // 혹시 모를 세션 중단
+        if (_ttsSessionId != currentSessionId) break;
+
+        await Future.delayed(Duration(milliseconds: 1500));
+
+        setState(() {
+          _isTtsSpeaking = false;
+        });
+      }
+    } finally {
+      _isTtsSequenceRunning = false; // ✅ 무조건 종료됨
     }
   }
 
-  void _onStepFinished() {
+
+  void _onStepFinished() async {
     if (_currentStepIndex < _missionSteps.length - 1) {
-      setState(() {
-        _currentStepIndex++;
-      });
-      _loadStepData(_currentStepIndex);
+      await _loadStepData(_currentStepIndex + 1);
     } else {
-      // 모든 단계 완료 시 KeepBoxStartPage로 이동
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const Keepbox_start()),
       );
-    }
-  }
-
-  void _resumeTtsFromIndex(int startIndex) async {
-    for (int i = startIndex; i < _currentLines.length; i++) {
-      if (_isPaused || i >= _currentLines.length) break;
-
-      setState(() => _currentLineIndex = i);
-
-      await _flutterTts.speak(_currentLines[i]);
-      await Future.delayed(Duration(seconds: 2));
     }
   }
 
@@ -366,9 +395,10 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   @override
   void dispose() {
-    _flutterTts.stop(); // 화면 나갈 때 말 멈추기
-    _timer?.cancel(); // 타이머도 멈추기
+    _flutterTts.stop();
+    _ttsSessionId++; // 현재 실행 중인 루프 중단
     _scrollController.dispose();
+    _timer?.cancel();
     super.dispose();
   }
   @override
@@ -599,8 +629,19 @@ class _MissionStepPageState extends State<MissionStepPage> {
                 ),
               ],
             ),
+            if (_isTtsSpeaking)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Image.asset(
+                    'assets/gradient.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
           ],
+
         ),
+
       ),
     ]));
   }}

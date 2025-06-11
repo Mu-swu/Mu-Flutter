@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 Widget tts_text_box({
   required List<String> lines,
   required int currentLineIndex,
@@ -8,11 +7,12 @@ Widget tts_text_box({
   return Container(
     width: double.infinity,
     margin: const EdgeInsets.symmetric(vertical: 24),
-    constraints: const BoxConstraints(minHeight: 180, maxHeight: 220),
+    constraints: const BoxConstraints(minHeight: 180, maxHeight: 280),
     child: Stack(
       children: [
+        // 텍스트 영역 (전체에 깔림)
         Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20), // 이미지 겹침 방지
           child: SingleChildScrollView(
             controller: controller,
             child: Column(
@@ -23,8 +23,6 @@ Widget tts_text_box({
                   padding: const EdgeInsets.only(bottom: 16.0),
                   child: Text(
                     lines[index],
-                    softWrap: true,
-                    overflow: TextOverflow.visible,
                     style: TextStyle(
                       fontSize: isCurrent ? 24 : 20,
                       fontWeight: isCurrent ? FontWeight.bold : FontWeight.w400,
@@ -37,14 +35,18 @@ Widget tts_text_box({
             ),
           ),
         ),
+
+        // 이미지: 오른쪽 아래 고정
         Positioned(
           bottom: 0,
           right: 0,
-          child: Image.asset(
-            'assets/boximage.png',
+          child: SizedBox(
             width: 200,
             height: 80,
-            fit: BoxFit.cover,
+            child: Image.asset(
+              'assets/boximage.png',
+              fit: BoxFit.cover,
+            ),
           ),
         ),
       ],
