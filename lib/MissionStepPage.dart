@@ -36,6 +36,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   late final GenerativeModel _model;
 
+  bool _continueAfterExtraMessage = false;
+
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -51,13 +53,19 @@ class _MissionStepPageState extends State<MissionStepPage> {
     _model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
 
     _initTts();
+
+    _flutterTts.setCompletionHandler(() {
+      if (_isTtsEnabled && _continueAfterExtraMessage) {
+        _continueAfterExtraMessage = false;
+        _resumeTtsFromIndex(_currentLineIndex);
+      }
+    });
+
     _generateMissionSteps();
   }
+
   void _initTts() {
-    _flutterTts.setVoice({
-      "name": "ko-kr-x-kob-local",
-      "locale": "ko-KR"
-    });
+    _flutterTts.setVoice({"name": "ko-kr-x-kob-local", "locale": "ko-KR"});
     _flutterTts.setSpeechRate(0.5);
     _flutterTts.setPitch(1.2);
     _flutterTts.awaitSpeakCompletion(true);
@@ -284,7 +292,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
       }
     });
 
-
     if (_isTtsEnabled) {
       _startTtsSequence(); // TTS는 따로 await하지 않음 (중첩 방지)
     }
@@ -321,6 +328,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
       if (_isPaused || i >= _currentLines.length) break;
 
       setState(() => _currentLineIndex = i);
+
       await _flutterTts.speak(_currentLines[i]);
       await Future.delayed(Duration(seconds: 2));
     }
@@ -362,6 +370,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
     _scrollController.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -369,206 +378,198 @@ class _MissionStepPageState extends State<MissionStepPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5FF), // 전체 하늘색 배경
       body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-          children: [
-            // ✅ 상단 아이콘 Row
-            Row(
-              children: [
-                // 왼쪽 15% 하늘색 영역 (뒤로가기 아이콘)
-                Container(
-                  width: screenWidth * 0.15,
-                  height: 56,
-                  color: const Color(0xFFF3F5FF),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back, size: 28),
-                    ),
-                  ),
-                ),
-
-                // 오른쪽 85% 흰색 영역 (TTS 아이콘)
-                Container(
-                  width: screenWidth * 0.85,
-                  height: 56,
-                  color: Colors.white,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: IconButton(
-                      onPressed: _toggleTts,
-                      icon: Icon(
-                        _isTtsEnabled ? Icons.volume_up : Icons.volume_off,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ✅ 왼쪽 내비게이션 영역 (비율 기반 너비)
-                  Container(
-                    width: screenWidth * 0.15, // 예: 25% 차지
-                    color: const Color(0xFFF3F5FF),
-                    child: Column(
+        child:
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                  children: [
+                    // ✅ 상단 아이콘 Row
+                    Row(
                       children: [
-                        const SizedBox(height: 24), // 상단바 여백
-                        StepNavigation(currentIndex: _currentStepIndex),
+                        // 왼쪽 15% 하늘색 영역 (뒤로가기 아이콘)
+                        Container(
+                          width: screenWidth * 0.15,
+                          height: 56,
+                          color: const Color(0xFFF3F5FF),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.arrow_back, size: 28),
+                            ),
+                          ),
+                        ),
+
+                        // 오른쪽 85% 흰색 영역 (TTS 아이콘)
+                        Container(
+                          width: screenWidth * 0.85,
+                          height: 56,
+                          color: Colors.white,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: IconButton(
+                              onPressed: _toggleTts,
+                              icon: Icon(
+                                _isTtsEnabled
+                                    ? Icons.volume_up
+                                    : Icons.volume_off,
+                                size: 28,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
 
-                  // ✅ 오른쪽 콘텐츠
-                  Expanded(
-                    child: Container(
-                      color: Colors.white,
-                      padding: const EdgeInsets.fromLTRB(150, 70, 150, 50),
-                      child: Column(
+                    Expanded(
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 남은 시간 + +
-                          Row(
-                            children: [
-                              const Text(
-                                '남은 시간',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _remainingTime += const Duration(seconds: 30);
-                                  });
-                                  if (_isTtsEnabled) {
-                                    _flutterTts.speak("30초를 더 줄게. 이어서 해보자.");
-                                  }
-                                },
-                                child: const Text(
-                                  '+',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    color: Colors.grey,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-
-                          // 타이머
-                          Row(
-                            children: [
-                              IconButton(
-                                onPressed: _togglePause,
-                                icon: Icon(
-                                  _isPaused ? Icons.play_arrow : Icons.pause,
-                                  size: 80,
-                                  color: _isPaused ? Colors.green : Colors.red,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                _formatDuration(_remainingTime),
-                                style: const TextStyle(
-                                  fontSize: 80,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 30),
-
-                          // TTS 박스
+                          // ✅ 왼쪽 내비게이션 영역 (비율 기반 너비)
                           Container(
-                            width: double.infinity,
-                            height: 370,
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF3F5FF),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: tts_text_box(
-                              lines: _currentLines,
-                              currentLineIndex: _currentLines.isNotEmpty ? _currentLineIndex : -1,
-                              controller: _scrollController,
+                            width: screenWidth * 0.15, // 예: 25% 차지
+                            color: const Color(0xFFF3F5FF),
+                            child: Column(
+                              children: [
+                                const SizedBox(height: 24), // 상단바 여백
+                                StepNavigation(currentIndex: _currentStepIndex),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 25),
 
-                          // 하단 버튼
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    await _flutterTts.stop();
-                                    if (_isTtsEnabled) {
-                                      await _flutterTts.speak("도움이 더 필요하구나. 중요한 부분을 다시 짚어줄게.");
-                                    }
-                                    if (_isTtsEnabled && _currentLineIndex >= 0) {
-                                      _resumeTtsFromIndex(_currentLineIndex);
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    side: const BorderSide(color: Colors.black),
-                                    padding: const EdgeInsets.symmetric(vertical: 20),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    "아직 안 끝났어요",
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                ),
+                          // ✅ 오른쪽 콘텐츠
+                          Expanded(
+                            child: Container(
+                              color: Colors.white,
+                              padding: const EdgeInsets.fromLTRB(
+                                150,
+                                70,
+                                150,
+                                50,
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: _onStepFinished,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.black,
-                                    padding: const EdgeInsets.symmetric(vertical: 20),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // 남은 시간 + +
+                                  Row(
+                                    children: [
+                                      const Text(
+                                        '남은 시간',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          color: Colors.grey,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _remainingTime += const Duration(
+                                              seconds: 30,
+                                            );
+                                          });
+                                        },
+                                        child: const Text(
+                                          '+',
+                                          style: TextStyle(
+                                            fontSize: 24,
+                                            color: Colors.grey,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+
+                                  // 타이머
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        onPressed: _togglePause,
+                                        icon: Icon(
+                                          _isPaused
+                                              ? Icons.play_arrow
+                                              : Icons.pause,
+                                          size: 80,
+                                          color:
+                                              _isPaused
+                                                  ? Colors.green
+                                                  : Colors.red,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        _formatDuration(_remainingTime),
+                                        style: const TextStyle(
+                                          fontSize: 80,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 30),
+
+                                  // TTS 박스
+                                  Container(
+                                    width: double.infinity,
+                                    height: 370,
+                                    padding: const EdgeInsets.all(24),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF3F5FF),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: tts_text_box(
+                                      lines: _currentLines,
+                                      currentLineIndex:
+                                          _currentLines.isNotEmpty
+                                              ? _currentLineIndex
+                                              : -1,
+                                      controller: _scrollController,
                                     ),
                                   ),
-                                  child: const Text(
-                                    "끝났어요",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
+                                  const SizedBox(height: 25),
+
+                                  // 하단 버튼
+                                  const SizedBox(width: 12),
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        onPressed: _onStepFinished,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.black,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 20,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          "끝났어요",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 18,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+                  ],
+                ),
       ),
     );
-  }}
+  }
+}
