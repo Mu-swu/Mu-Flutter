@@ -19,15 +19,12 @@ class StepNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 16.0, top: 24.0), // ← 왼쪽·위 여백 추가
+      padding: const EdgeInsets.only(left: 16.0, top: 24.0),
       child: SizedBox(
         width: 200,
-        height: 320, // 높이도 줄여서 간격 줄이기
+        height: 480,
         child: Stack(
           children: [
-            // 수직선
-
-            // 단계들
             for (int index = 0; index < stepTitles.length; index++)
               _buildStep(index),
           ],
@@ -38,41 +35,59 @@ class StepNavigation extends StatelessWidget {
 
   Widget _buildStep(int index) {
     final isCurrent = index == currentIndex;
-    final stepTop = 0 + (index * 64.0);
+    final isLast = index == stepTitles.length - 1;
+    final stepTop = index * 90.0;
 
     return Positioned(
       top: stepTop,
       left: 0,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 원
-          Container(
-            width: 28,
-            height: 28,
-            decoration: ShapeDecoration(
-              color: isCurrent ? const Color(0xFFEF8484) : const Color(0xFFD6DDE5),
-              shape: const OvalBorder(),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '${index + 1}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w400,
+          // 원 + 선
+          Column(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: ShapeDecoration(
+                  color: isCurrent ? const Color(0xFFEF8484) : const Color(0xFFD6DDE5),
+                  shape: const OvalBorder(),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '${index + 1}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
               ),
-            ),
+              // 아래 선 (마지막이 아니면)
+              if (!isLast)
+                Container(
+                  width: 3,
+                  height: 65, // 선의 길이
+                  color: const Color(0xFFD6DDE5),
+                ),
+            ],
           ),
-          const SizedBox(width: 12), // 원과 텍스트 사이 여백
-          Text(
-            stepTitles[index],
-            style: TextStyle(
-              fontSize: 16,
-              fontFamily: 'Pretendard',
-              fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
-              color: isCurrent ? const Color(0xFF5C5C5C) : const Color(0xFFB0B8C1),
+
+          const SizedBox(width: 12),
+
+          // 텍스트
+          Padding(
+            padding: const EdgeInsets.only(top: 4.0), // 텍스트 위치 보정
+            child: Text(
+              stepTitles[index],
+              style: TextStyle(
+                fontSize: 20,
+                fontFamily: 'Pretendard',
+                fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                color: isCurrent ? const Color(0xFF5C5C5C) : const Color(0xFFB0B8C1),
+              ),
             ),
           ),
         ],

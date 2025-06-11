@@ -130,7 +130,7 @@ class FigmaHomePage extends StatelessWidget {
                   left: 506,
                   top: 159,
                   child: Text(
-                    '냉장실 상단 비우기',
+                    '냉장실 한 칸 비우기',
                     style: TextStyle(
                       color: Colors.black,
                       fontSize: 36,
@@ -227,13 +227,14 @@ class FigmaHomePage extends StatelessWidget {
                 ),
 */
 
-                Positioned(
-                  left: 360,
-                  top: 250,
+                Center(
                   child: SizedBox(
-                    width: 600,
+                    width: 1000,
                     height: 350,
-                    child: Image.asset('assets/motion.gif',fit: BoxFit.cover,),
+                    child: Image.asset(
+                      'assets/still.png',
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ],

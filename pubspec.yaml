@@ -18,6 +18,7 @@ dependencies:
   flutter_dotenv: ^5.2.1
   speech_to_text: ^7.0.0
   cupertino_icons: ^1.0.8
+  video_player: ^2.8.1
 
 dev_dependencies:
   flutter_test:
@@ -33,4 +34,8 @@ flutter:
     - assets/empty.jpg
     - assets/fill.jpg
     - assets/motion.gif
+    - assets/gradient.png
+    - assets/loadingvideo.mp4
+    - assets/still.png
+    - assets/boximage.png
     - .env

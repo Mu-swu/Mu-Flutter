@@ -5,7 +5,7 @@ import 'package:mu/widgets/keepdialogs.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'widgets/ItemSaveSection.dart';
-
+import 'package:mu/data/sampledata.dart';
 class keepbox extends StatefulWidget {
   const keepbox({super.key});
 
@@ -21,9 +21,9 @@ class _keepboxState extends State<keepbox> {
 
   List<Map<String, dynamic>> items = [];
   List<Map<String, dynamic>> categories = [
-    {'name': '식품', 'isFilled': false},
-    {'name': '의류', 'isFilled': false},
-    {'name': '기타', 'isFilled': false},
+    {'name': '식품', 'items': <Map<String, String>>[]},
+    {'name': '의류', 'items': <Map<String, String>>[]},
+    {'name': '기타', 'items': <Map<String, String>>[]},
   ];
   int? selectedIndex;
 
@@ -35,7 +35,8 @@ class _keepboxState extends State<keepbox> {
     super.initState();
     _initGemini();
     _initSpeech();
-  }
+    categories = List<Map<String, dynamic>>.from(sampleCategories);
+}
 
   Future<void> _initGemini() async {
     final apiKey = dotenv.env['GEMINI_API_KEY'];
@@ -129,53 +130,84 @@ class _keepboxState extends State<keepbox> {
 
     if (itemName.isNotEmpty) {
       final now = DateTime.now();
-      final formattedDate = DateFormat("MM월 dd일").format(now);
+      final formattedDate = DateFormat("yyyy.MM.dd").format(now);
+      final formattedendDate = DateFormat("yyyy.MM.dd").format(now.add(Duration(days: 7)));
+      final newItem = {
+        'name': itemName,
+        'startDate': formattedDate,
+        'endDate': formattedendDate,            // 만료일 선택 전
+      };
       setState(() {
-        items.add({
-          'name': itemName,
-          'date': formattedDate,
-          'category': _isGeminiInitialized ? '분류 중...' : '카테고리 분류 불가',
-        });
-        selectedIndex = items.length - 1;
+        _pushItemToCategory(
+          categoryName: '기타',
+          item: {...newItem, 'category': '분류 중...'},
+        );
       });
 
       if (_isGeminiInitialized) {
-        String? category = await _getCategoryFromGemini(itemName);
-        if (mounted && selectedIndex != null && selectedIndex! < items.length) {
-          setState(() {
-            items[selectedIndex!]['category'] = category!;
-          });
-        }
+        final geminiCat = await _getCategoryFromGemini(itemName) ?? '기타';
+
+        setState(() {
+          // '기타' → 실제 카테고리로 이동
+          for (final cat in categories) {
+            (cat['items'] as List).removeWhere((it) =>
+            it['name'] == itemName && it['category'] == '분류 중...');
+          }
+          _pushItemToCategory(
+            categoryName: geminiCat,
+            item: {...newItem, 'category': geminiCat},
+          );
+        });
+
         if (mounted) {
           showVoiceConfirmDialog(
             context: context,
             itemName: itemName,
-            initialCategory: category!,
+            initialCategory: geminiCat,
             onConfirm: (chosenCat) {
-              print('최종 선택한 카테고리: $chosenCat');
-              if (selectedIndex != null && selectedIndex! < items.length) {
-                setState(() {
-                  items[selectedIndex!]['category'] = chosenCat;
-                  categories[selectedIndex!]['isFilled'] = true;
-                });
-              }
+              setState(() {
+                // 이동(=삭제 후 재추가)
+                for (final cat in categories) {
+                  (cat['items'] as List)
+                      .removeWhere((it) => it['name'] == itemName);
+                }
+                _pushItemToCategory(
+                  categoryName: chosenCat,
+                  item: {...newItem, 'category': chosenCat},
+                );
+              });
             },
             onAddCategory: (newCat) {
-              print('새로 추가된 카테고리: $newCat');
-              if (selectedIndex != null && selectedIndex! < items.length) {
-                setState(() {
-                  items[selectedIndex!]['category'] = newCat;
-                  categories[selectedIndex!]['isFilled'] = true;
+              setState(() {
+                // 새 카테고리 생성 + 추가
+                categories.add({
+                  'name': newCat,
+                  'items': [ {...newItem, 'category': newCat} ],
                 });
-              }
+              });
             },
           );
         }
       }
-    } else{
+    }
+     else{
       print('인식된 텍스트가 없습니다.');
   }
 }
+
+  void _pushItemToCategory({
+    required String categoryName,
+    required Map<String, String> item,
+  }) {
+    final idx = categories.indexWhere((c) => c['name'] == categoryName);
+    if (idx != -1) {
+      (categories[idx]['items'] as List).add(item);
+    } else {
+      // 분류 불가 → '기타'에 쌓기
+      final etcIdx = categories.indexWhere((c) => c['name'] == '기타');
+      (categories[etcIdx]['items'] as List).add(item);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -240,12 +272,12 @@ class _keepboxState extends State<keepbox> {
                     height: 80 * widthRatio,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _speechToText.isListening ? Colors.white : Colors.blue,
+                      color: _speechToText.isListening ? Colors.white : const Color(0xFF7F91FF),
                     ),
                     child: Icon(
                       _speechToText.isListening ? Icons.stop : Icons.mic,
                       size: 36 * widthRatio,
-                      color: _speechToText.isListening ? Colors.blue : Colors.white,
+                      color: _speechToText.isListening ? const Color(0xFF7F91FF) : Colors.white,
                     ),
                   ),
                 ),
@@ -288,6 +320,15 @@ class _keepboxState extends State<keepbox> {
             color: Colors.white,
             child: Column(
               children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    onPressed: () {
+                      // TODO: 홈으로 이동 기능은 나중에 구현
+                    },
+                    icon: const Icon(Icons.home, size: 28),
+                  ),
+                ),
                 SizedBox(height: 80 * heightRatio),
                 Center(
                   child: Text(
@@ -298,7 +339,7 @@ class _keepboxState extends State<keepbox> {
                     ),
                   ),
                 ),
-                SizedBox(height: 40 * heightRatio),
+                SizedBox(height: 20 * heightRatio),
                 Expanded(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
