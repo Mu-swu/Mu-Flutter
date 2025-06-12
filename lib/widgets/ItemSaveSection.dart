@@ -65,7 +65,7 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ───────── 왼쪽: 세부 수정 영역 ─────────
+            // ───── 왼쪽: 세부 수정 영역 ─────
             Expanded(
               flex: 1,
               child: Padding(
@@ -88,7 +88,7 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
                     SizedBox(height: 16 * h),
 
                     Text(
-                      '날짜',
+                      '오늘 날짜',
                       style: TextStyle(
                         fontSize: 14 * w,
                         color: Colors.black,
@@ -96,9 +96,18 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
                       ),
                     ),
                     SizedBox(height: 8 * h),
-
                     _infoBox(_formatDate(todayDate)),
                     SizedBox(height: 12 * h),
+
+                    Text(
+                      '리마인드 날짜',
+                      style: TextStyle(
+                        fontSize: 14 * w,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 8 * h),
 
                     GestureDetector(
                       onTap: () => _pickDate(
@@ -138,43 +147,44 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
 
             SizedBox(width: 10 * w),
 
-            // ───────── 오른쪽: 아이템 리스트 영역 ─────────
-        // ───────── 오른쪽: 아이템 리스트 영역 ─────────
-        Expanded(
-          flex: 1,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40 * w), // 왼쪽과 동일한 패딩
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: 48 * h),
-                Text(
-                  '카테고리',
-                  style: TextStyle(
-                    fontSize: 18 * w,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
+            // ───── 오른쪽: 아이템 리스트 영역 ─────
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40 * w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 48 * h),
+                    Text(
+                      '카테고리',
+                      style: TextStyle(
+                        fontSize: 18 * w,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    Expanded(
+                      child: ItemListSection(
+                        categories: widget.categories,
+                        onAddPressed: (category) {
+                          print('$category 추가');
+                        },
+                        onItemTapped: (category) {
+                          print('$category 이미지 탭됨');
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-
-                Expanded(
-                  child: ItemListSection(
-                    categories: widget.categories,
-                    onAddPressed: (category) {
-                      print('$category 추가');
-                    },
-                    onItemTapped: (category) {
-                      print('$category 이미지 탭됨');
-                    },
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
-      ]),
-    ));
+      ),
+    );
   }
+
   Widget _labelTextField(String label, String value) {
     final w = widget.widthRatio;
     final h = widget.heightRatio;

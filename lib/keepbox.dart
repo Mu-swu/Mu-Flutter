@@ -26,6 +26,7 @@ class _keepboxState extends State<keepbox> {
     {'name': '기타', 'items': <Map<String, String>>[]},
   ];
   int? selectedIndex;
+  String _currentItemName = "새 항목";
 
   GenerativeModel? _model;
   bool _isGeminiInitialized = false;
@@ -175,6 +176,7 @@ class _keepboxState extends State<keepbox> {
                   categoryName: chosenCat,
                   item: {...newItem, 'category': chosenCat},
                 );
+                _currentItemName = itemName;
               });
             },
             onAddCategory: (newCat) {
@@ -350,7 +352,7 @@ class _keepboxState extends State<keepbox> {
                           categories: categories,
                           widthRatio: widthRatio,
                           heightRatio: heightRatio,
-                          itemName: currentItemName,
+                          itemName: _currentItemName,
                           itemCategory: currentItemCategory,
                           onExit: () {
                             _lastWords = '';

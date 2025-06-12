@@ -19,7 +19,7 @@ class StepNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 16.0, top: 24.0),
+      padding: const EdgeInsets.only(left: 24.0, top: 24.0),
       child: SizedBox(
         width: 200,
         height: 480,
@@ -51,7 +51,7 @@ class StepNavigation extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: ShapeDecoration(
-                  color: isCurrent ? const Color(0xFFEF8484) : const Color(0xFFD6DDE5),
+                  color: isCurrent ? const Color(0xFFC484EF) : const Color(0xFFD6DDE5),
                   shape: const OvalBorder(),
                 ),
                 alignment: Alignment.center,

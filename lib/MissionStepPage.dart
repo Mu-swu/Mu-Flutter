@@ -59,7 +59,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
     _initTts();
 
     _flutterTts.setCompletionHandler(() {
-
       if (_isTtsEnabled && _continueAfterExtraMessage) {
         _continueAfterExtraMessage = false;
       }
@@ -84,6 +83,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
       }
     });
   }
+
   /*void _scrollToCurrentLine() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final lineHeight = 40.0; // 대략적인 한 줄 높이 (패딩 포함)
@@ -206,7 +206,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
     -공간 밀집도:$density
     
     위 정보를 바탕으로, 다음 JSON 형식에 맞춰 5단계 미션 가이드를 생성해줘.
-    각 단계(step)의 lines는 3~5개의 문장으로 구성해줘.
+    각 단계(step)의 lines는 3~4개의 문장으로 구성해줘.
     
     {
       "steps":[
@@ -319,26 +319,24 @@ class _MissionStepPageState extends State<MissionStepPage> {
   }
 
   // TTS 루프 실행
-  Future<void> _startTtsSequence() async {
-    if (_isTtsSequenceRunning) return; // 루프 중복 방지
+  Future<void> _startTtsSequence({int startFrom = 0}) async {
+    if (_isTtsSequenceRunning) return;
 
     final currentSessionId = ++_ttsSessionId;
     _isTtsSequenceRunning = true;
 
     try {
-      for (int i = 0; i < _currentLines.length; i++) {
-        if (_isPaused || !_isTtsEnabled || _ttsSessionId != currentSessionId) break;
+      for (int i = startFrom; i < _currentLines.length; i++) {
+        if (_isPaused || !_isTtsEnabled || _ttsSessionId != currentSessionId)
+          break;
 
         setState(() {
           _currentLineIndex = i;
           _isTtsSpeaking = true;
         });
 
-        //_scrollToCurrentLine(); // 선택 줄로 스크롤 이동
-
         await _flutterTts.speak(_currentLines[i]);
 
-        // 혹시 모를 세션 중단
         if (_ttsSessionId != currentSessionId) break;
 
         await Future.delayed(Duration(milliseconds: 1500));
@@ -348,7 +346,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
         });
       }
     } finally {
-      _isTtsSequenceRunning = false; // ✅ 무조건 종료됨
+      _isTtsSequenceRunning = false;
     }
   }
 
@@ -374,9 +372,19 @@ class _MissionStepPageState extends State<MissionStepPage> {
     setState(() {
       _isPaused = !_isPaused;
 
-      if (!_isPaused && (_timer == null || !_timer!.isActive)) {
-        // 일시정지 해제되었고, 타이머가 멈춘 상태라면 다시 시작
-        _startTimer();
+      if (_isPaused) {
+        _flutterTts.stop(); // TTS 일시정지 대신 stop
+        _ttsSessionId++; // 현재 TTS 세션 중단
+      } else {
+        if (_currentLineIndex >= 0 &&
+            _currentLineIndex < _currentLines.length &&
+            _isTtsEnabled) {
+          _startTtsSequence(startFrom: _currentLineIndex); // 현재 줄부터 다시 시작
+        }
+
+        if (_timer == null || !_timer!.isActive) {
+          _startTimer();
+        }
       }
     });
   }
@@ -401,247 +409,280 @@ class _MissionStepPageState extends State<MissionStepPage> {
     _timer?.cancel();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenWidth = MediaQuery
+        .of(context)
+        .size
+        .width;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-          children: [
-    // 🔹 2. 전체 콘텐츠 (SafeArea 포함)
-    SafeArea(
-        child: _isLoading
-            ? Center(
-          child: SizedBox(
-            width: 1000,
-            child: const LoadingVideo(),
-          ),
-        )
-            : Stack(
-          children: [
-
-            // ✅ 전체 콘텐츠
-            Column(
-              children: [
-                // ─────── 상단바 ───────
-                SizedBox(
-                  height: 56,
-                  child: Row(
-                    children: [
-                      // ◀︎ 뒤로가기 버튼 (15%)
-                      Container(
-                        width: screenWidth * 0.15,
-                        color: Colors.white,
-                        child: Align(
-                          alignment: Alignment.centerLeft, // 왼쪽 정렬
-                          child: IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.arrow_back, size: 28),
+      body: _isLoading
+          ? Center(
+        child: SizedBox(
+          width: MediaQuery.of(context).size.width > 1000
+              ? 1000
+              : MediaQuery.of(context).size.width,
+          child: const LoadingVideo(),
+        ),
+      )
+          : SafeArea(
+        child: SizedBox.expand(
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  // ─────── 상단바 ───────
+                  SizedBox(
+                    height: 56,
+                    child: Row(
+                      children: [
+                        // ◀︎ 뒤로가기 버튼 (15%)
+                        Container(
+                          width: screenWidth * 0.15,
+                          color: Colors.white,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.arrow_back, size: 28),
+                            ),
                           ),
                         ),
-                      ),
-                      // ▶︎ 타이틀 + TTS 버튼 (85%)
-                      Expanded(
-                        child: Container(
-                          color: const Color(0xFFF3F5FF),
-                          child: Row(
-                            children: [
-                              // 타이틀 중앙 정렬
-                              Expanded(
-                                child: Center(
-                                  child: Text(
-                                    _missionSteps[_currentStepIndex].title,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
+                        // ▶︎ 타이틀 + TTS 버튼 (85%)
+                        Expanded(
+                          child: Container(
+                            color: const Color(0xFFF9F1FD),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Center(
+                                    child: Text(
+                                      (_missionSteps.isNotEmpty &&
+                                          _currentStepIndex >= 0 &&
+                                          _currentStepIndex <
+                                              _missionSteps.length)
+                                          ? _missionSteps[_currentStepIndex]
+                                          .title
+                                          : '',
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                              ),
-                              // TTS 아이콘 버튼
-                              IconButton(
-                                onPressed: _toggleTts,
-                                icon: Icon(
-                                  _isTtsEnabled ? Icons.volume_up : Icons.volume_off,
-                                  size: 28,
+                                IconButton(
+                                  onPressed: _toggleTts,
+                                  icon: Icon(
+                                    _isTtsEnabled
+                                        ? Icons.volume_up
+                                        : Icons.volume_off,
+                                    size: 28,
+                                  ),
                                 ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ─────── 본문 영역 ───────
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ◀︎ 왼쪽 네비게이션
+                        Container(
+                          width: screenWidth * 0.15,
+                          color: Colors.white,
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 24),
+                              StepNavigation(
+                                currentIndex: _currentStepIndex,
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
 
-                // ─────── 본문 영역 ───────
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ◀︎ 왼쪽 네비게이션
-                      Container(
-                        width: screenWidth * 0.15,
-                        color: Colors.white,
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 24),
-                            StepNavigation(currentIndex: _currentStepIndex),
-                          ],
-                        ),
-                      ),
-                      // ▶︎ 오른쪽 본문 내용
-                      Expanded(
-                        child: Container(
-                          color: const Color(0xFFF3F5FF),
-                          padding: const EdgeInsets.fromLTRB(150, 70, 150, 50),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                '남은 시간',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.w500,
+                        // ▶︎ 오른쪽 본문 내용
+                        Expanded(
+                          child: Container(
+                            color: const Color(0xFFF9F1FD),
+                            padding:
+                            const EdgeInsets.fromLTRB(150, 70, 150, 50),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  (_missionSteps.isNotEmpty &&
+                                      _currentStepIndex >= 0 &&
+                                      _currentStepIndex <
+                                          _missionSteps.length)
+                                      ? _missionSteps[_currentStepIndex].title
+                                      : '',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(height: 20),
 
-                              const SizedBox(height: 20),
-
-                              // 🔹 타이머 + 버튼
-                              Row(
-                                children: [
-                                  // 일시정지 / 재생 버튼
-                                  Container(
-                                    width: 80,
-                                    height: 80,
-                                    decoration: const BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: const Color(0xFF7F91FF),
-                                    ),
-                                    child: IconButton(
-                                      icon: Icon(
-                                        _isPaused ? Icons.play_arrow : Icons.pause,
-                                        size: 60,
-                                        color: Colors.white,
+                                // 🔹 타이머 + 버튼
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 80,
+                                      height: 80,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Color(0xFF7F91FF),
                                       ),
-                                      onPressed: _togglePause,
+                                      child: IconButton(
+                                        icon: Icon(
+                                          _isPaused
+                                              ? Icons.play_arrow
+                                              : Icons.pause,
+                                          size: 60,
+                                          color: Colors.white,
+                                        ),
+                                        onPressed: _togglePause,
+                                      ),
                                     ),
-                                  ),
-
-                                  const SizedBox(width: 20),
-
-                                  // 타이머 텍스트
-                                  Text(
-                                    _formatDuration(_remainingTime),
-                                    style: const TextStyle(
-                                      fontSize: 80,
-                                      fontWeight: FontWeight.bold,
+                                    const SizedBox(width: 20),
+                                    Text(
+                                      _formatDuration(_remainingTime),
+                                      style: const TextStyle(
+                                        fontSize: 80,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
-
-                                  const SizedBox(width: 20),
-
-                                  // +30초 버튼
-                                  Container(
-                                    width: 80,
-                                    height: 80,
-                                    decoration: const BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: const Color(0xFFD7DCFA),
-                                    ),
-                                    child: IconButton(
-                                      padding: EdgeInsets.zero,
-                                      onPressed: () {
+                                    const SizedBox(width: 20),
+                                    GestureDetector(
+                                      onTap: () {
                                         setState(() {
-                                          _remainingTime += const Duration(seconds: 30);
+                                          _remainingTime +=
+                                          const Duration(seconds: 30);
                                         });
                                       },
-                                      icon: const Center(
-                                        child: Text(
-                                          '+',
+                                      child: Container(
+                                        width: 80,
+                                        height: 80,
+                                        decoration: const BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Color(0xFFD7DCFA),
+                                        ),
+                                        child: const Center(
+                                          child: Text(
+                                            '+',
+                                            style: TextStyle(
+                                              fontSize: 60,
+                                              color: Color(0xFF7F91FF),
+                                              fontWeight: FontWeight.bold,
+                                              height: 1.0,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 30),
+
+                                // 🔹 TTS 텍스트 박스
+                                Container(
+                                  width: double.infinity,
+                                  height: 370,
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: tts_text_box(
+                                    lines: _currentLines,
+                                    currentLineIndex:
+                                    _currentLines.isNotEmpty
+                                        ? _currentLineIndex
+                                        : -1,
+                                    controller: _scrollController,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 25),
+
+                                // 🔹 하단 버튼
+                                Align(
+                                  alignment: Alignment.center,
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                            Colors.black.withOpacity(0.25),
+                                            blurRadius: 4,
+                                            offset: const Offset(2, 2),
+                                          ),
+                                        ],
+                                        borderRadius:
+                                        BorderRadius.circular(16),
+                                      ),
+                                      child: ElevatedButton(
+                                        onPressed: _onStepFinished,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.black,
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 20),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                            BorderRadius.circular(16),
+                                          ),
+                                          elevation: 0,
+                                        ),
+                                        child: const Text(
+                                          "끝났어요",
                                           style: TextStyle(
-                                            fontSize: 60,
-                                            color: Color(0xFF7F91FF),
-                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            fontSize: 18,
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 30),
-                              // TTS 텍스트 박스
-                              Container(
-                                width: double.infinity,
-                                height: 370,
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: tts_text_box(
-                                  lines: _currentLines,
-                                  currentLineIndex: _currentLines.isNotEmpty
-                                      ? _currentLineIndex
-                                      : -1,
-                                  controller: _scrollController,
-                                ),
-                              ),
-
-                              const SizedBox(height: 25),
-
-                              // 하단 버튼
-                              Align(
-                                alignment: Alignment.center,
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: _onStepFinished,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.black,
-                                      padding: const EdgeInsets.symmetric(vertical: 20),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      "끝났어요",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 18,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            if (_isTtsSpeaking)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Image.asset(
-                    'assets/gradient.png',
-                    fit: BoxFit.cover,
-                  ),
-                ),
+                ],
               ),
-          ],
 
+              // 🔹 TTS 애니메이션 오버레이
+              if (_isTtsSpeaking)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Image.asset(
+                      'assets/gradient.png',
+                      fit: BoxFit.fill,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
-
       ),
-    ]));
-  }}
+    );
+  }
+}

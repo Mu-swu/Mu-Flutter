@@ -11,10 +11,7 @@ Future<void> showVoiceConfirmDialog({
   bool showEditMode = false;
   String selectedCategory = initialCategory;
 
-  final List<Map<String, dynamic>> categories = [
-    {'name': '식품', 'isFilled': false},
-    {'name': '의류', 'isFilled': true},
-  ];
+  final List<Map<String, dynamic>> categories = [];
   return showDialog(
     context: context,
     barrierDismissible: false,
@@ -114,7 +111,7 @@ Future<void> showVoiceConfirmDialog({
                                   ElevatedButton(
                                     onPressed: () {
                                       Navigator.pop(context);
-                                      onConfirm(selectedCategory);
+                                      Future.microtask(() => onConfirm(selectedCategory));
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.black,
@@ -157,10 +154,10 @@ Future<void> showVoiceConfirmDialog({
                                 onPressed: () {
                                   if (customCategory.trim().isNotEmpty) {
                                     Navigator.pop(context);
-                                    onAddCategory(customCategory.trim());
+                                    Future.microtask(() => onAddCategory(customCategory.trim()));
                                   } else if (selectedCategory.isNotEmpty) {
                                     Navigator.pop(context);
-                                    onConfirm(selectedCategory);
+                                    Future.microtask(() => onConfirm(selectedCategory));
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(

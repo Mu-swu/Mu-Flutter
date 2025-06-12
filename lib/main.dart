@@ -14,6 +14,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Flutter Timer Mission',
       theme: ThemeData(primarySwatch: Colors.blue),
       localizationsDelegates: [
@@ -84,6 +85,14 @@ class FigmaHomePage extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFF333333),
                         borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.25), // 그림자 색상
+                            offset: Offset(2, 2), // x, y 방향 그림자 위치
+                            blurRadius: 5,
+                            spreadRadius: 4,
+                          ),
+                        ],
                       ),
                       child: const Center(
                         child: Text(
@@ -110,6 +119,10 @@ class FigmaHomePage extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: const Color(0xFFFBFCFF),
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Color(0xFFB0B8C1),
+                        width: 2,
+                      ),
                     ),
                     child: const Center(
                       child: Text(
