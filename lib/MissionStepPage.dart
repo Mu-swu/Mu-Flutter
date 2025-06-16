@@ -367,6 +367,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
   }
 
   void _onStepFinished() async {
+    _ttsEngine?.stop();
+    _ttsSessionId++;
+
     if (_currentStepIndex < _missionSteps.length - 1) {
       await _loadStepData(_currentStepIndex + 1);
     } else {
@@ -643,7 +646,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
                                             controller: _scrollController,
                                           ),
                                         ),
-
                                         const SizedBox(height: 25),
 
                                         // 🔹 하단 버튼
