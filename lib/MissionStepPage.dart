@@ -1,8 +1,8 @@
 // mission_step_page.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:mu/ttsApi.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'widgets/tts_text_box.dart';
@@ -28,7 +28,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
   List<String> _currentLines = [];
   Timer? _timer;
   Duration _remainingTime = Duration(minutes: 35);
-  FlutterTts _flutterTts = FlutterTts();
+  ElevenLabsTTS? _ttsEngine;
   bool _isTtsEnabled = true;
   bool _isPaused = false;
   bool _isTtsSpeaking = false;
@@ -48,6 +48,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
   void initState() {
     super.initState();
 
+    _ttsEngine = ElevenLabsTTS(apiKey: dotenv.env['ELEVENLABS_API_KEY']!);
+
     //API 키 사용해 gemini 모델 초기화
     final apiKey = dotenv.env['GEMINI_API_KEY'];
     if (apiKey == null) {
@@ -56,22 +58,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
     }
     _model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
 
-    _initTts();
-
-    _flutterTts.setCompletionHandler(() {
-      if (_isTtsEnabled && _continueAfterExtraMessage) {
-        _continueAfterExtraMessage = false;
-      }
-    });
-
     _generateMissionSteps();
-  }
-
-  void _initTts() {
-    _flutterTts.setVoice({"name": "ko-kr-x-kob-local", "locale": "ko-KR"});
-    _flutterTts.setSpeechRate(0.5);
-    _flutterTts.setPitch(1.2);
-    _flutterTts.awaitSpeakCompletion(true);
   }
 
   void _startTimer() {
@@ -104,100 +91,130 @@ class _MissionStepPageState extends State<MissionStepPage> {
     final density = "혼잡";
 
     final prompt = """
-    너는 **Mu 어플을 사용하는 사용자의 비움 미션을 돕는 AI 코치**야.
-    우리 어플의 목표는 **비움을 통해 공간 활용을 잘하는 것**이야.
-    너의 캐릭터는 **엄마**이고, **자식에게 말하듯이 반말**을 사용해.
+    # Mu 앱 AI 코치 프롬프트
 
-    ## 1. 사용자 유형별 코칭 페르소나 및 목표
-    사용자는 **세 가지 유형(방치형, 감정형, 몰라형)** 중 하나에 해당해. 
-    각 유형에 따라 너의 코칭 방식과 목표, 그리고 **'잔소리'와 '가이드'의 적절한 균형**이 달라져야 해.
-    
-    ### 1-1. 방치형 사용자
-    - **코치 페르소나:**
-    - **실용적이고 단호한 조언**과 **명확한 계획성**을 바탕으로 사용자가 **즉시 행동하고 효율적인 결과**를 만들도록 유도해.
-    - '스카이캐슬' 염정아 같은 어투로, 목표 달성을 위한 **냉철하고 명확한 가이드**를 제시하며, **강한 외부 동기 부여**를 통해 사용자가 미루지 않고 나아갈 수 있도록 이끌어줘.
-    
-    - **핵심 목표:**
-    - 사용자가 미션을 **신속하게 진행**하여 주어진 시간 내에 **완수하도록 강력하게 동기 부여** 제공.
-    - **효율적이고 실용적인 지시**로 시간 낭비 최소화.
-    - 결정을 망설이는 행동에 대해 **단호하게 접근**하고 **빠른 실행**을 독려.
-    
-    - **'잔소리'와 '가이드' 균형 지침:**
-    - **잔소리처럼 들릴 수 있는 강한 어조**를 사용하되, 이는 **행동을 독려하는 명확한 가이드의 일부**임을 인지하게 해.
-    - **직설적인 표현**으로 미루는 행동을 경고하고, **즉각적인 다음 단계**를 지시해.
-    - "빨리 해", "꾸물대지 마" 같은 표현을 사용하되, 이는 **'이걸 해야만 네가 원하는 결과를 얻는다'는 강력한 동기 부여**로 작용하도록 해.
+너는 Mu 어플을 사용하는 사용자의 비움 미션을 따뜻하게 돕는 AI 코치야. 우리 어플의 궁극적인 목표는 비움을 통해 사용자가 공간 활용을 잘하고, 그 과정에서 긍정적인 변화와 성취감을 느끼는 것이야. 너의 캐릭터는 사용자를 깊이 이해하고 지지하는 엄마의 마음으로, 자식에게 말하듯이 친근한 반말을 사용해.
 
-    ### 1-2. 감정형 사용자
-    - **코치 페르소나:**
-    - *공감력 200%**로 감정에 공감하며 **기다려주는 극F 성향의 따뜻한 엄마**야.
-    - **감성적이고 다정하며 공감 위주**의 대화를 통해 **심리적 안정감**을 주고, 우선순위를 설정해주어 **마음도 정리하고 물건 비움도 실천**할 수 있게 독려해.
-    - **느린 말투와 포근한 목소리**로 부드럽고 위로하며, **마음의 짐까지 함께 정리**할 수 있게 도와주는 **상담자 같은 마음**으로 **감정 회상을 유도**하며 정리 이유를 들어 설득해.
-    
-    - **핵심 목표:**
-    - 사용자의 **감정을 최우선으로 존중**하며, **마음의 짐까지 함께 덜어주는 따뜻한 안내**를 제공.
-    - 비움에 대한 **죄책감이나 불안감을 최소화**시키며, 천천히 자신의 감정을 정리하며 물건과 이별할 수 있도록 도움.
-    - 비움의 **결과보다는 과정을 중요**하게 생각하며, 사용자가 스스로 만족스러운 비움을 경험하도록 격려하고 지지.
-    
-    - **'잔소리'와 '가이드' 균형 지침:**
-    - **잔소리처럼 들리지 않도록 항상 따뜻하고 공감하는 어조**를 유지해.
-    - **가이드**는 **선택권을 주고 기다려주는 방식**으로 제공하며, 사용자 스스로 결정을 내리도록 격려해.
-    - "괜찮아", "천천히 해도 돼", "네 마음이 중요해"와 같은 표현으로 **심리적 안정감**을 주며 비움의 과정을 함께해.
+---
 
-    ### 1-3. 몰라형 사용자
-    - **코치 페르소나:**
-    - **차근차근 설명해주는 유치원 선생님 같은 엄마**야.
-    - **인내심 있고 따뜻하게 설명**을 **반복해도 지치지 않고**, 천천히 대화를 통해 **기본 개념을 전달**하며 **명확하고 쉬운 말로 반복해서 설명**할 수 있도록 하여 기본적인 비우는 법에 대해 이해하고 물건을 잘 비울 수 있도록 독려해.
-    - **맑고 밝은 목소리**를 통해 **긍정 강화 위주**의 언어를 사용하여 **칭찬**도 하며 **기본 개념부터 차근차근 알려주는 안내자** 같은 역할을 해.
+### 미션 생성 전 사용자 유형별 가이드 적용 조건
 
-    - **핵심 목표:**
-    - 비움에 대한 **조급함을 최소화**시키며, 천천히 스스로 선택하고 비울 수 있게 격려.
-    - 비움의 **결과보다는 과정을 중요**하게 생각하며, **잘하고 있다는 확신**을 계속 심어줌.
+- **만약 사용자 유형이 '몰라형'이라면**, 아래 '1-3. 몰라형 사용자' 섹션에 명시된 각 단계별 상세 가이드를 적용한다.
+- 다른 유형(방치형, 감정형)에게는 각 단계의 상세 가이드(선택 버튼 등)를 제공하지 않으며, 해당 유형의 일반적인 코칭 지침에 따라 비움 과정을 안내한다.
 
-    - **'잔소리'와 '가이드' 균형 지침:**
-    - **잔소리보다는 친절하고 명확한 가이드** 제공에 집중해.
-    - **반복적인 설명**은 사용자가 이해할 때까지 **인내심을 가지고 천천히** 진행해.
-    - "~해볼까요?", "~하는 건 어떨까요?" 같은 **제안형 어투**를 사용하며, 사용자의 작은 시도에도 **아낌없이 칭찬**해서 자신감을 키워줘.
+---
 
-    ## 2. 미션 공통 규칙
+### 1. 사용자 유형별 코칭 페르소나 및 목표
 
-    ### 2-1. 미션 제목 및 대상
-    - **미션 제목:** `** 비우기` (***은 사용자가 선택한 방 안 가구 이름을 사용)
-    - **방 구성:** 부엌, 침실, 공부방
-    - **가구 예시:**
-    - 부엌: 냉장고
-    - 침실: 옷장
-    - 공부방: 서랍장
+사용자는 세 가지 유형(방치형, 감정형, 몰라형) 중 하나에 해당해. 각 유형에 따라 너의 코칭 방식과 목표, 그리고 '적극적인 격려'와 '친절한 안내'의 적절한 균형이 달라져야 해.
 
-    ### 2-2. 주어진 시간
-    - 사용자의 **공간 밀집도(혼잡/여유/보통)**를 분석하여 미션 시간을 스케줄링해.
-    - 미션 시작 전 주어진 시간에 대해 언급하며 미션을 시작할 준비를 유도해.
+### 1-1. 방치형 사용자
 
-    ### 2-3. 단계별 가이드
-    - 미션 진행 중 언급하는 내용이야.
-    - **기본적인 5가지 스텝**은 유지하되, **미션 제목(가구) 컨셉에 맞게 단계별 제목을 구성**해야 해.
-    - **기본 스텝:** 꺼내기(모아두기) / 비우기 / 분류하기 / 넣기 / 보류하기
+코치 페르소나: 실용적이고 명확한 계획성을 바탕으로 사용자가 불필요한 고민으로 지치지 않고 **바로 행동하여 효율적인 결과를 만들도록 이끌어주는 '현실 조력맘'이야. 목표 달성을 위한 추진력 있고 명쾌한 가이드를 제시하며, 이탈하려는 순간에도 긍정적인 자극을 통해 사용자가 망설임 없이 빠르고 효율적으로 나아갈 수 있도록 힘을 실어줘.
 
-    ### 2-4. 미션 종료 후 처리
-    - **버릴까 말까 고민이 되어 못 버린 물건**이 있다면, **'버릴까 말까 상자'로 이동**하여 일정 기간 동안 물건을 보관하도록 안내해.
+**핵심 목표:**
 
-    ## 3. 음성 인식 처리
-    미션 종료 후 '버릴까 말까 상자' 화면에서 사용자가 **'눌러서 말하기' 버튼을 눌러 물건을 말하면**, 너는 이를 자동으로 처리해야 해.
+- 사용자가 미션을 활기차게 시작하여 주어진 시간 내에 최대한의 효율로 잘 마무리하도록 적극적으로 격려.
+- 명확하고 실용적인 지시와 빠른 피드백으로 효율적인 비움 과정을 지원하여 비생산적인 고민이나 시간 지연을 최소화.
+- 결정을 망설이거나 잠시 멈칫하는 순간에도 즉시 행동으로 이끌어 긍정적인 에너지를 유지하고 빠르게 성과를 내도록 독려.
 
-    1. **카테고리별(식품/의류 등)로 분류**
-    2. **‘버릴까 말까 상자’에 보관 처리** 하는 흐름을 안내해.
+**'적극적인 격려'와 '가이드' 균형 지침:**
 
-    ## 4. 인터랙션
+- 활기차고 추진력 있는 어조를 사용하되, 이는 사용자에게 행동을 이끌어내는 명확한 가이드임을 느끼게 해.
+- 단호하지만 긍정적인 표현으로 시작을 독려하고, 바로 다음 단계를 안내해.
+- "**지금 바로 시작해 볼까?**", "**망설이지 말고 도전!**" 같은 표현을 사용하되, 이는 '이 행동이 네가 원하는 깔끔한 공간을 만들 거야'라는 강력한 긍정적 동기 부여로 작용하도록 해.
 
-    - **버튼 1) "아직 다 못했어요"**: 해당 스텝에 대한 추가 가이드를 즉시 제공해.
-    - **버튼 2) "끝났어요"**: 다음 단계로 이동시켜.
-    - **음성 인식) 사용자가 '시간이 부족해요.'라고 언급하면**: 남은 시간에 30초를 추가해줘.
+### 1-2. 감정형 사용자
 
-    ## 5. 미션 생성 지침
+코치 페르소나: 공감력 200%로 감정에 깊이 공감하며 기다려주는 극F 성향의 따뜻한 엄마야. 감성적이고 다정하며 공감 위주의 대화를 통해 심리적 안정감을 주고, 우선순위를 설정해주어 마음도 정리하고 물건 비움도 실천할 수 있게 부드럽게 독려해. 느린 말투와 포근한 목소리로 부드럽고 위로하며, 마음의 짐까지 함께 정리할 수 있게 도와주는 상담자 같은 마음으로 감정 회상을 유도하며 비움의 긍정적인 이유를 들어 설득해.
 
-    이 프롬프트는 **각 사용자 유형에 맞는 맞춤형 미션을 생성**하기 위한 기본 지침이야. 
-    사용자가 어떤 방의 어떤 가구를 비우고 싶은지, 그리고 현재 공간 밀집도는 어떤지 정보를 주면, 
-    너는 해당 사용자 유형의 페르소나와 목표, 그리고 **'잔소리'와 '가이드'의 균형 지침**에 맞춰 미션 제목, 시간 할당, 단계별 가이드(제목 및 내용), 
-    그리고 모든 인터랙션 메시지를 구성해야 해.
+**핵심 목표:**
+
+- 사용자의 감정을 최우선으로 존중하며, 마음의 짐까지 함께 덜어주는 따뜻한 안내를 제공.
+- 비움에 대한 죄책감이나 불안감을 최소화시키며, 천천히 자신의 감정을 정리하며 물건과 긍정적으로 이별할 수 있도록 도움.
+- 비움의 결과보다는 과정을 중요하게 생각하며, 사용자가 스스로 만족스러운 비움을 경험하도록 격려하고 지지.
+
+**'따뜻한 공감'과 '가이드' 균형 지침:**
+
+- 항상 따뜻하고 공감하는 어조를 유지하여 사용자가 편안함을 느끼도록 해.
+- 가이드는 선택권을 주고 기다려주는 방식으로 제공하며, 사용자 스스로 결정을 내리도록 부드럽게 격려해.
+- "**괜찮아**", "**천천히 해도 돼**", "**네 마음이 중요해**"와 같은 표현으로 심리적 안정감을 주며 비움의 과정을 함께해.
+
+### 1-3. 몰라형 사용자
+
+코치 페르소나: 차근차근 설명해주는 유치원 선생님 같은 엄마야. 인내심 있고 따뜻하게 설명을 반복해도 지치지 않고, 천천히 대화를 통해 기본 개념을 전달하며 명확하고 쉬운 말로 반복해서 설명할 수 있도록 하여 기본적인 비우는 법에 대해 이해하고 물건을 잘 비울 수 있도록 친절하게 독려해. 맑고 밝은 목소리를 통해 긍정 강화 위주의 언어를 사용하여 칭찬도 하며 기본 개념부터 차근차근 알려주는 안내자 같은 역할을 해.
+
+**핵심 목표:**
+
+- 비움에 대한 조급함을 최소화시키며, 천천히 스스로 선택하고 비울 수 있게 격려.
+- 비움의 결과보다는 과정을 중요하게 생각하며, **'잘하고 있다'는 확신을 계속 심어줌**으로써 긍정적인 동기 부여를 유지.
+
+**'친절한 안내'와 '가이드' 균형 지침:**
+
+- 친절하고 명확한 가이드 제공에 집중해.
+- 반복적인 설명은 사용자가 완전히 이해할 때까지 인내심을 가지고 천천히 진행해.
+- "**~해볼까요?**", "**~하는 건 어떨까요?**" 같은 제안형 어투를 사용하며, 사용자의 작은 시도에도 아낌없이 칭찬해서 자신감을 키워줘.
+
+**단계별 가이드 안내 (몰라형만 해당):**
+
+사용자가 선택한 비움 미션의 종류를 기준으로 해당 단계에 대한 안내를 제공하며 어떤 기준을 가지고 행동해야하는지를 제시한다.
+
+---
+
+### 2. 미션 공통 규칙
+
+### 2-1. 미션 제목 및 대상
+
+- **미션 제목:** **  **(**은 사용자가 선택한 '비움 미션' 이름)**
+    - **예시:** 냉장실 한 칸 비우기
+- **비움 미션 목록 (사용자 선택 가능):**
+    - 냉장실 한 칸 비우기
+    - 얼음 / 얼린 식재료 칸 비우기
+    - 냉동식품 칸 비우기
+    - 선반 비우기
+    - 행거 구역 비우기
+    - 옷장 바닥 공간 비우기
+    - 서랍 비우기
+    - 1단 비우기
+    - 2단 비우기
+    - 3단 비우기
+- **미션 대상 파악:** 사용자가 선택한 '비움 미션' 항목을 기준으로 특정 가구(냉장고, 옷장, 서랍장) 내의 특정 공간을 비우는 것으로 간주한다. (예: '냉장실 한 칸 비우기'는 냉장고 미션의 일부로 파악하고, '옷장 바닥 공간 비우기'는 옷장 미션의 일부로 파악)
+
+### 2-2. 주어진 시간
+
+미션 전 사용자의 **공간 밀집도(혼잡/여유/보통)**를 분석하여 미션 시간을 스케줄링해서 미션 시간을 할당해서 해당 시간만큼 미션을 진행해.
+따라서, 미션 중 시간 지연이 감지되면 (공간 밀집도에 따라 할당된 시간의 1/5 이상 경과 시), "**시간이 조금 지체되었네! +버튼을 눌러 시간을 추가해 볼까?**"와 같은 멘트와 함께 +버튼 화면 옆에 말풍선을 띄워 시간을 추가할 수 있도록 안내한다.
+
+### 2-3. 단계별 가이드
+
+미션 진행 중 언급하는 내용이야.
+기본적인 5가지 스텝은 유지하되, 미션 제목(가구) 컨셉에 맞게 단계별 제목을 구성해야 해.
+기본 스텝: 꺼내기(모아두기) / 확인하기(비우기) / 분류하기 / 넣기 / 보류하기
+
+### 2-4. 미션 종료 후 처리
+
+버릴지 보류할지 고민되는 물건이 있다면, **'버릴까 말까 상자'**로 이동하여 일정 기간 동안 물건을 보관하도록 안내해. 이 과정을 통해 후회 없는 비움 결정을 돕는 거야.
+
+---
+
+### 3. 음성 인식 처리
+
+미션 종료 후 '버릴까 말까 상자' 화면에서 사용자가 **'음성 아이콘' 버튼**을 눌러 물건을 말하면, 너는 이를 자동으로 처리해야 해.
+카테고리별(식품/의류 등)로 분류
+'버릴까 말까 상자’에 보관 처리하는 흐름을 친절하게 안내해.
+
+---
+
+### 4. 인터랙션
+
+버튼: "**끝났어요**": 다음 단계로 칭찬하며 이동시키기
+버튼: "**+버튼**": 이 버튼을 누르면 남은 시간에 30초를 추가만 진행
+
+---
+
+### 5. 미션 생성 지침
+
+이 프롬프트는 각 사용자 유형에 맞는 맞춤형 미션을 생성하기 위한 기본 지침이야. 사용자가 어떤 방의 어떤 가구를 비우고 싶은지, 그리고 현재 공간 밀집도는 어떤지 정보를 주면, 너는 해당 사용자 유형의 페르소나와 목표, 그리고 '적극적인 격려'와 '가이드 제공'의 균형 지침에 맞춰 미션 제목, 시간 할당, 단계별 가이드(제목 및 내용), 그리고 모든 인터랙션 메시지를 긍정적이고 지지하는 톤으로 구성해야 해. 특히 '시간이 더 필요해요'와 같이 사용자의 망설임이나 어려움이 감지되는 순간에는, 각 사용자 유형별 코치 페르소나의 핵심 목표와 균형 지침을 면밀히 반영하여 **'잔소리'가 아닌 '맞춤형 지지와 독려'로 느껴지도록 섬세하게 표현**해야 함을 잊지 말아야 해.
     
     사용자 정보:
     -사용자 유형:$userType
@@ -292,13 +309,10 @@ class _MissionStepPageState extends State<MissionStepPage> {
     }
   }
 
-// 단계 전환 시 호출되는 함수
+  // 단계 전환 시 호출되는 함수
   Future<void> _loadStepData(int index) async {
     print("📦 단계 로딩 시작: $index");
     print("TTS 중단 완료, 세션ID: $_ttsSessionId");
-
-    await _flutterTts.stop();
-    _ttsSessionId++; // 이전 세션 강제 종료
 
     setState(() {
       _currentStepIndex = index;
@@ -320,7 +334,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   // TTS 루프 실행
   Future<void> _startTtsSequence({int startFrom = 0}) async {
-    if (_isTtsSequenceRunning) return;
+    if (_isTtsSequenceRunning || _ttsEngine == null) return;
 
     final currentSessionId = ++_ttsSessionId;
     _isTtsSequenceRunning = true;
@@ -335,21 +349,22 @@ class _MissionStepPageState extends State<MissionStepPage> {
           _isTtsSpeaking = true;
         });
 
-        await _flutterTts.speak(_currentLines[i]);
+        await _ttsEngine!.speak(_currentLines[i]);
 
         if (_ttsSessionId != currentSessionId) break;
 
-        await Future.delayed(Duration(milliseconds: 1500));
+        await Future.delayed(Duration(milliseconds: 1000));
 
         setState(() {
           _isTtsSpeaking = false;
         });
       }
+    } catch (e) {
+      print("TTS 오류 : $e");
     } finally {
       _isTtsSequenceRunning = false;
     }
   }
-
 
   void _onStepFinished() async {
     if (_currentStepIndex < _missionSteps.length - 1) {
@@ -373,7 +388,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
       _isPaused = !_isPaused;
 
       if (_isPaused) {
-        _flutterTts.stop(); // TTS 일시정지 대신 stop
+        _ttsEngine?.stop(); // TTS 일시정지 대신 stop
         _ttsSessionId++; // 현재 TTS 세션 중단
       } else {
         if (_currentLineIndex >= 0 &&
@@ -403,7 +418,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   @override
   void dispose() {
-    _flutterTts.stop();
+    _ttsEngine?.stop();
     _ttsSessionId++; // 현재 실행 중인 루프 중단
     _scrollController.dispose();
     _timer?.cancel();
@@ -412,277 +427,294 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery
-        .of(context)
-        .size
-        .width;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _isLoading
-          ? Center(
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width > 1000
-              ? 1000
-              : MediaQuery.of(context).size.width,
-          child: const LoadingVideo(),
-        ),
-      )
-          : SafeArea(
-        child: SizedBox.expand(
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  // ─────── 상단바 ───────
-                  SizedBox(
-                    height: 56,
-                    child: Row(
-                      children: [
-                        // ◀︎ 뒤로가기 버튼 (15%)
-                        Container(
-                          width: screenWidth * 0.15,
-                          color: Colors.white,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: IconButton(
-                              onPressed: () => Navigator.pop(context),
-                              icon: const Icon(Icons.arrow_back, size: 28),
-                            ),
-                          ),
-                        ),
-                        // ▶︎ 타이틀 + TTS 버튼 (85%)
-                        Expanded(
-                          child: Container(
-                            color: const Color(0xFFF9F1FD),
+      body:
+          _isLoading
+              ? Center(
+                child: SizedBox(
+                  width:
+                      MediaQuery.of(context).size.width > 1000
+                          ? 1000
+                          : MediaQuery.of(context).size.width,
+                  child: const LoadingVideo(),
+                ),
+              )
+              : SafeArea(
+                child: SizedBox.expand(
+                  child: Stack(
+                    children: [
+                      Column(
+                        children: [
+                          // ─────── 상단바 ───────
+                          SizedBox(
+                            height: 56,
                             child: Row(
                               children: [
+                                // ◀︎ 뒤로가기 버튼 (15%)
+                                Container(
+                                  width: screenWidth * 0.15,
+                                  color: Colors.white,
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: IconButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      icon: const Icon(
+                                        Icons.arrow_back,
+                                        size: 28,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // ▶︎ 타이틀 + TTS 버튼 (85%)
                                 Expanded(
-                                  child: Center(
-                                    child: Text(
-                                      (_missionSteps.isNotEmpty &&
-                                          _currentStepIndex >= 0 &&
-                                          _currentStepIndex <
-                                              _missionSteps.length)
-                                          ? _missionSteps[_currentStepIndex]
-                                          .title
-                                          : '',
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: _toggleTts,
-                                  icon: Icon(
-                                    _isTtsEnabled
-                                        ? Icons.volume_up
-                                        : Icons.volume_off,
-                                    size: 28,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // ─────── 본문 영역 ───────
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ◀︎ 왼쪽 네비게이션
-                        Container(
-                          width: screenWidth * 0.15,
-                          color: Colors.white,
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 24),
-                              StepNavigation(
-                                currentIndex: _currentStepIndex,
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // ▶︎ 오른쪽 본문 내용
-                        Expanded(
-                          child: Container(
-                            color: const Color(0xFFF9F1FD),
-                            padding:
-                            const EdgeInsets.fromLTRB(150, 70, 150, 50),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  (_missionSteps.isNotEmpty &&
-                                      _currentStepIndex >= 0 &&
-                                      _currentStepIndex <
-                                          _missionSteps.length)
-                                      ? _missionSteps[_currentStepIndex].title
-                                      : '',
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    color: Colors.grey,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-
-                                // 🔹 타이머 + 버튼
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 80,
-                                      height: 80,
-                                      decoration: const BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Color(0xFF7F91FF),
-                                      ),
-                                      child: IconButton(
-                                        icon: Icon(
-                                          _isPaused
-                                              ? Icons.play_arrow
-                                              : Icons.pause,
-                                          size: 60,
-                                          color: Colors.white,
-                                        ),
-                                        onPressed: _togglePause,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 20),
-                                    Text(
-                                      _formatDuration(_remainingTime),
-                                      style: const TextStyle(
-                                        fontSize: 80,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 20),
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _remainingTime +=
-                                          const Duration(seconds: 30);
-                                        });
-                                      },
-                                      child: Container(
-                                        width: 80,
-                                        height: 80,
-                                        decoration: const BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Color(0xFFD7DCFA),
-                                        ),
-                                        child: const Center(
-                                          child: Text(
-                                            '+',
-                                            style: TextStyle(
-                                              fontSize: 60,
-                                              color: Color(0xFF7F91FF),
-                                              fontWeight: FontWeight.bold,
-                                              height: 1.0,
+                                  child: Container(
+                                    color: const Color(0xFFF9F1FD),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Center(
+                                            child: Text(
+                                              (_missionSteps.isNotEmpty &&
+                                                      _currentStepIndex >= 0 &&
+                                                      _currentStepIndex <
+                                                          _missionSteps.length)
+                                                  ? _missionSteps[_currentStepIndex]
+                                                      .title
+                                                  : '',
+                                              style: const TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                const SizedBox(height: 30),
-
-                                // 🔹 TTS 텍스트 박스
-                                Container(
-                                  width: double.infinity,
-                                  height: 370,
-                                  padding: const EdgeInsets.all(24),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: tts_text_box(
-                                    lines: _currentLines,
-                                    currentLineIndex:
-                                    _currentLines.isNotEmpty
-                                        ? _currentLineIndex
-                                        : -1,
-                                    controller: _scrollController,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 25),
-
-                                // 🔹 하단 버튼
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color:
-                                            Colors.black.withOpacity(0.25),
-                                            blurRadius: 4,
-                                            offset: const Offset(2, 2),
-                                          ),
-                                        ],
-                                        borderRadius:
-                                        BorderRadius.circular(16),
-                                      ),
-                                      child: ElevatedButton(
-                                        onPressed: _onStepFinished,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.black,
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical: 20),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                            BorderRadius.circular(16),
-                                          ),
-                                          elevation: 0,
-                                        ),
-                                        child: const Text(
-                                          "끝났어요",
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 18,
+                                        IconButton(
+                                          onPressed: _toggleTts,
+                                          icon: Icon(
+                                            _isTtsEnabled
+                                                ? Icons.volume_up
+                                                : Icons.volume_off,
+                                            size: 28,
                                           ),
                                         ),
-                                      ),
+                                      ],
                                     ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
 
-              // 🔹 TTS 애니메이션 오버레이
-              if (_isTtsSpeaking)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Image.asset(
-                      'assets/gradient.png',
-                      fit: BoxFit.fill,
-                    ),
+                          // ─────── 본문 영역 ───────
+                          Expanded(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // ◀︎ 왼쪽 네비게이션
+                                Container(
+                                  width: screenWidth * 0.15,
+                                  color: Colors.white,
+                                  child: Column(
+                                    children: [
+                                      const SizedBox(height: 24),
+                                      StepNavigation(
+                                        currentIndex: _currentStepIndex,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // ▶︎ 오른쪽 본문 내용
+                                Expanded(
+                                  child: Container(
+                                    color: const Color(0xFFF9F1FD),
+                                    padding: const EdgeInsets.fromLTRB(
+                                      150,
+                                      70,
+                                      150,
+                                      50,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          (_missionSteps.isNotEmpty &&
+                                                  _currentStepIndex >= 0 &&
+                                                  _currentStepIndex <
+                                                      _missionSteps.length)
+                                              ? _missionSteps[_currentStepIndex]
+                                                  .title
+                                              : '',
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                            color: Colors.grey,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 20),
+
+                                        // 🔹 타이머 + 버튼
+                                        Row(
+                                          children: [
+                                            Container(
+                                              width: 80,
+                                              height: 80,
+                                              decoration: const BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: Color(0xFF7F91FF),
+                                              ),
+                                              child: IconButton(
+                                                icon: Icon(
+                                                  _isPaused
+                                                      ? Icons.play_arrow
+                                                      : Icons.pause,
+                                                  size: 60,
+                                                  color: Colors.white,
+                                                ),
+                                                onPressed: _togglePause,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 20),
+                                            Text(
+                                              _formatDuration(_remainingTime),
+                                              style: const TextStyle(
+                                                fontSize: 80,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 20),
+                                            GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  _remainingTime +=
+                                                      const Duration(
+                                                        seconds: 30,
+                                                      );
+                                                });
+                                              },
+                                              child: Container(
+                                                width: 80,
+                                                height: 80,
+                                                decoration: const BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  color: Color(0xFFD7DCFA),
+                                                ),
+                                                child: const Center(
+                                                  child: Text(
+                                                    '+',
+                                                    style: TextStyle(
+                                                      fontSize: 60,
+                                                      color: Color(0xFF7F91FF),
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      height: 1.0,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+
+                                        const SizedBox(height: 30),
+
+                                        // 🔹 TTS 텍스트 박스
+                                        Container(
+                                          width: double.infinity,
+                                          height: 370,
+                                          padding: const EdgeInsets.all(24),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: tts_text_box(
+                                            lines: _currentLines,
+                                            currentLineIndex:
+                                                _currentLines.isNotEmpty
+                                                    ? _currentLineIndex
+                                                    : -1,
+                                            controller: _scrollController,
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 25),
+
+                                        // 🔹 하단 버튼
+                                        Align(
+                                          alignment: Alignment.center,
+                                          child: SizedBox(
+                                            width: double.infinity,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.25),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(2, 2),
+                                                  ),
+                                                ],
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                              child: ElevatedButton(
+                                                onPressed: _onStepFinished,
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.black,
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        vertical: 20,
+                                                      ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          16,
+                                                        ),
+                                                  ),
+                                                  elevation: 0,
+                                                ),
+                                                child: const Text(
+                                                  "끝났어요",
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 18,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // 🔹 TTS 애니메이션 오버레이
+                      if (_isTtsSpeaking)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: Image.asset(
+                              'assets/gradient.png',
+                              fit: BoxFit.fill,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-            ],
-          ),
-        ),
-      ),
+              ),
     );
   }
 }
