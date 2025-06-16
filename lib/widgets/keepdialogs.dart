@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-Future<void> showVoiceConfirmDialog({
+Future<void> keepdialogs({
   required BuildContext context,
   required String itemName,
   required String initialCategory,
+  required List<Map<String, dynamic>> categories,
   required Function(String selectedCategory) onConfirm,
   required Function(String) onAddCategory,
 }) async {
@@ -11,7 +12,6 @@ Future<void> showVoiceConfirmDialog({
   bool showEditMode = false;
   String selectedCategory = initialCategory;
 
-  final List<Map<String, dynamic>> categories = [];
   return showDialog(
     context: context,
     barrierDismissible: false,

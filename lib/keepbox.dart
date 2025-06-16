@@ -152,7 +152,7 @@ class _keepboxState extends State<keepbox> {
           // '기타' → 실제 카테고리로 이동
           for (final cat in categories) {
             (cat['items'] as List).removeWhere((it) =>
-            it['name'] == itemName && it['category'] == '분류 중...');
+            it['name'] == itemName); // ← category 상관없이 이름으로 정리
           }
           _pushItemToCategory(
             categoryName: geminiCat,
@@ -161,10 +161,11 @@ class _keepboxState extends State<keepbox> {
         });
 
         if (mounted) {
-          showVoiceConfirmDialog(
+          keepdialogs(
             context: context,
             itemName: itemName,
             initialCategory: geminiCat,
+            categories: categories,
             onConfirm: (chosenCat) {
               setState(() {
                 // 이동(=삭제 후 재추가)
@@ -181,7 +182,12 @@ class _keepboxState extends State<keepbox> {
             },
             onAddCategory: (newCat) {
               setState(() {
-                // 새 카테고리 생성 + 추가
+                // 먼저 모든 카테고리에서 제거
+                for (final cat in categories) {
+                  (cat['items'] as List).removeWhere((it) => it['name'] == itemName);
+                }
+
+                // 새 카테고리 추가
                 categories.add({
                   'name': newCat,
                   'items': [ {...newItem, 'category': newCat} ],
@@ -201,13 +207,21 @@ class _keepboxState extends State<keepbox> {
     required String categoryName,
     required Map<String, String> item,
   }) {
+    // 해당 카테고리 찾기
     final idx = categories.indexWhere((c) => c['name'] == categoryName);
     if (idx != -1) {
-      (categories[idx]['items'] as List).add(item);
+      // 중복 추가 방지
+      final items = categories[idx]['items'] as List;
+      if (!items.any((it) => it['name'] == item['name'])) {
+        items.add(item);
+      }
     } else {
-      // 분류 불가 → '기타'에 쌓기
+      // '기타'에 넣기
       final etcIdx = categories.indexWhere((c) => c['name'] == '기타');
-      (categories[etcIdx]['items'] as List).add(item);
+      final items = categories[etcIdx]['items'] as List;
+      if (!items.any((it) => it['name'] == item['name'])) {
+        items.add(item);
+      }
     }
   }
 
