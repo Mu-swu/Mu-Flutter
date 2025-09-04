@@ -22,6 +22,7 @@ dependencies:
   http: ^1.1.0
   just_audio: ^0.9.36
   path_provider: ^2.1.2
+  lottie: ^2.2.0
 
 dev_dependencies:
   flutter_test:
@@ -37,8 +38,11 @@ flutter:
     - assets/empty.jpg
     - assets/fill.jpg
     - assets/motion.gif
-    - assets/gradient.png
+    - assets/gradient/gradient.png
+    - assets/gradient/gradient_gam.png
+    - assets/gradient/gradient_mol.png
     - assets/loadingvideo.mp4
     - assets/still.png
     - assets/boximage.png
+    - assets/HourGlass.json
     - .env

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 class StepNavigation extends StatelessWidget {
   final int currentIndex;
+  final String missionType;
 
   const StepNavigation({
     Key? key,
     required this.currentIndex,
+    required this.missionType,
   }) : super(key: key);
 
   final List<String> stepTitles = const [
@@ -15,6 +17,8 @@ class StepNavigation extends StatelessWidget {
     '넣기',
     '보류하기',
   ];
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +42,19 @@ class StepNavigation extends StatelessWidget {
     final isLast = index == stepTitles.length - 1;
     final stepTop = index * 90.0;
 
+    Color selectedColor;
+    switch (missionType) {
+      case 'bas':
+        selectedColor = const Color(0xFFC484EF);
+        break;
+      case 'gam':
+        selectedColor = const Color(0xFFFFB472);
+        break;
+      case 'mol':
+      default:
+        selectedColor = const Color(0xFFACC79D);
+    }
+
     return Positioned(
       top: stepTop,
       left: 0,
@@ -51,7 +68,7 @@ class StepNavigation extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: ShapeDecoration(
-                  color: isCurrent ? const Color(0xFFC484EF) : const Color(0xFFD6DDE5),
+                  color: isCurrent ? selectedColor : const Color(0xFFD6DDE5),
                   shape: const OvalBorder(),
                 ),
                 alignment: Alignment.center,

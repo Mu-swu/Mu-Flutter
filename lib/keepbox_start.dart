@@ -17,25 +17,36 @@ class _Keepbox_startState extends State<Keepbox_start> {
       _isTtsEnabled = !_isTtsEnabled;
     });
   }
+
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery
+        .of(context)
+        .size
+        .width;
+    final screenHeight = MediaQuery
+        .of(context)
+        .size
+        .height;
 
-    final widthRatio = screenWidth / 1280;
-    final heightRatio = screenHeight / 800;
+    // 기준 해상도 (디자인 기준)
+    const baseWidth = 1280.0;
+    const baseHeight = 800.0;
+
+    // 비율 계산 (가로/세로 중 작은 값을 사용해 비율 유지)
+    final scale = (screenWidth / baseWidth).clamp(0.8, 1.3);
+    final widthRatio = scale;
+    final heightRatio = (screenHeight / baseHeight).clamp(0.8, 1.3);
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: Container(
-            width: screenWidth ,
-            height: screenHeight ,
+            width: screenWidth,
+            height: screenHeight,
             padding: EdgeInsets.all(24 * widthRatio),
-            decoration: BoxDecoration(
-              color: Colors.white,
-            ),
+            color: Colors.white,
             child: Stack(
               children: [
                 Column(
@@ -43,11 +54,13 @@ class _Keepbox_startState extends State<Keepbox_start> {
                     Align(
                       alignment: Alignment.topLeft,
                       child: IconButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => MissionStepPage()),
-                        ),
-                        icon: const Icon(Icons.arrow_back, size: 28),
+                        onPressed: () =>
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => MissionStepPage()),
+                            ),
+                        icon: Icon(Icons.arrow_back, size: 28 * widthRatio),
                       ),
                     ),
                     SizedBox(height: 16 * heightRatio),
@@ -82,7 +95,7 @@ class _Keepbox_startState extends State<Keepbox_start> {
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF3F5FF),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(10 * widthRatio),
                       ),
                       child: Text(
                         '버리지 못한 물건이 있다면 \n‘버릴까 말까 상자’로 이동하여 일정 기간 동안 물건을 보관해드려요.',
@@ -100,7 +113,6 @@ class _Keepbox_startState extends State<Keepbox_start> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        // 종료하기
                         _actionButton(
                           text: '종료하기',
                           backgroundColor: const Color(0xFFFBFCFF),
@@ -111,8 +123,6 @@ class _Keepbox_startState extends State<Keepbox_start> {
                           widthRatio: widthRatio,
                           heightRatio: heightRatio,
                         ),
-
-                        // 이동하기
                         _actionButton(
                           text: '이동하기',
                           backgroundColor: const Color(0xFF333333),
