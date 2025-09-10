@@ -24,6 +24,7 @@ class MissionStepPage extends StatefulWidget {
 }
 
 class _MissionStepPageState extends State<MissionStepPage> {
+  String _currentUserType = 'mol'; // 'gam', 'mol', 'bas'
   int _currentStepIndex = 0;
   int _currentLineIndex = -1;
   List<String> _currentLines = [];
@@ -35,8 +36,11 @@ class _MissionStepPageState extends State<MissionStepPage> {
   bool _isTtsSpeaking = false;
   bool _isTtsSequenceRunning = false;
   int _ttsSessionId = 0;
-  String _missionType = 'mol'; // bas | gam | mol
   bool _showChoices = false; // 몰라형 선택지 표시 여부
+
+  String _molQuestion = "";
+  List<String> _molChoices = [];
+  bool _isGeneratingChoices = false;
 
   List<StepData> _missionSteps = []; //API로부터 받을 미션 데이터
   bool _isLoading = true; //로딩 상태
@@ -46,7 +50,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
   bool _continueAfterExtraMessage = false;
 
   final ScrollController _scrollController = ScrollController();
-
 
   @override
   void initState() {
@@ -89,7 +92,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
 */
 
   Future<void> _generateMissionSteps() async {
-    final userType = "방치형";
+    final userTypeMap = {'gam': '감정형', 'mol': '몰라형', 'bas': '방치형'};
+    final userType = userTypeMap[_currentUserType] ?? '방치형';
+
     final room = "부엌";
     final furniture = "냉장고";
     final density = "혼잡";
@@ -336,7 +341,58 @@ class _MissionStepPageState extends State<MissionStepPage> {
     }
   }
 
-  // TTS 루프 실행
+  Future<void> _generateMolHelp() async {
+    if (_missionSteps.isEmpty) return;
+
+    setState(() {
+      _isGeneratingChoices = true;
+      _showChoices = true;
+    });
+
+    final currentStepTitle = _missionSteps[_currentStepIndex].title;
+
+    final prompt = """
+  너는 사용자의 비움 미션을 돕는 친절한 AI 코치야. 사용자가 '$currentStepTitle' 단계에서 막막함을 느껴 '모르겠어요' 버튼을 눌렀어.
+  
+  사용자가 비움을 잘 실천할 수 있도록, 질문 1개와 단답형 선택지 3개를 제안해줘.
+  -질문은 한문장을 넘어가지 않게 짧게 부탁해.
+  - 모든 텍스트는 반말로 작성해줘.
+
+  아래 JSON 형식에 맞춰서 답변해줘.
+  {
+    "question": "여기에 질문 생성",
+    "choices": ["선택지 1 생성", "선택지 2 생성", "선택지 3 생성"]
+  }
+  """;
+
+    try {
+      final response = await _model.generateContent([Content.text(prompt)]);
+      String? text = response.text?.trim() ?? "";
+
+      final startIndex = text.indexOf('{');
+      final endIndex = text.lastIndexOf('}');
+      if (startIndex != -1 && endIndex != -1) {
+        final jsonString = text.substring(startIndex, endIndex + 1);
+        final decoded = jsonDecode(jsonString);
+
+        setState(() {
+          _molQuestion = decoded['question'];
+          _molChoices = List<String>.from(decoded['choices']);
+        });
+      }
+    } catch (e) {
+      print("몰라형 도움말 생성 오류: $e");
+      setState(() {
+        _molQuestion = "어떤 것부터 시작해볼까?";
+        _molChoices = ["가장 쉬워 보이는 것", "가장 오래된 것", "가장 자리 차지하는 것"];
+      });
+    } finally {
+      setState(() {
+        _isGeneratingChoices = false;
+      });
+    }
+  }
+
   Future<void> _startTtsSequence({int startFrom = 0}) async {
     if (_isTtsSequenceRunning || _ttsEngine == null) return;
 
@@ -434,158 +490,151 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery
-        .of(context)
-        .size
-        .width;
-    final Color baseColor = _missionType == 'bas'
-        ? const Color(0xFFF9F1FD)
-        : _missionType == 'gam'
-        ? const Color(0xFFFFF4EE)
-        : const Color(0xFFF3FBF0); // mol
-
+    final screenWidth = MediaQuery.of(context).size.width;
+    final Color baseColor =
+        _currentUserType == 'bas'
+            ? const Color(0xFFF9F1FD)
+            : _currentUserType == 'gam'
+            ? const Color(0xFFFFF4EE)
+            : const Color(0xFFF3FBF0); // mol
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _isLoading
-          ? Center(
-        child: SizedBox(
-          width: MediaQuery
-              .of(context)
-              .size
-              .width > 1000
-              ? 1000
-              : MediaQuery
-              .of(context)
-              .size
-              .width,
-          child: const LoadingVideo(),
-        ),
-      )
-          : SafeArea(
-        child: SizedBox.expand(
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  // ─────── 상단바 ───────
-                  SizedBox(
-                    height: 56,
-                    child: Row(
-                      children: [
-                        // ◀︎ 뒤로가기 버튼 (15%)
-                        Container(
-                          width: screenWidth * 0.15,
-                          color: Colors.white,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: IconButton(
-                              onPressed: () => Navigator.pop(context),
-                              icon: const Icon(
-                                Icons.arrow_back,
-                                size: 28,
-                              ),
-                            ),
-                          ),
-                        ),
-                        // ▶︎ 타이틀 + TTS 버튼 (85%)
-                        Expanded(
-                          child: Container(
-                            color: baseColor,
+      body:
+          _isLoading
+              ? Center(
+                child: SizedBox(
+                  width:
+                      MediaQuery.of(context).size.width > 1000
+                          ? 1000
+                          : MediaQuery.of(context).size.width,
+                  child: const LoadingVideo(),
+                ),
+              )
+              : SafeArea(
+                child: SizedBox.expand(
+                  child: Stack(
+                    children: [
+                      Column(
+                        children: [
+                          // ─────── 상단바 ───────
+                          SizedBox(
+                            height: 56,
                             child: Row(
                               children: [
-                                Expanded(
-                                  child: Center(
-                                    child: Text(
-                                      (_missionSteps.isNotEmpty &&
-                                          _currentStepIndex >= 0 &&
-                                          _currentStepIndex <
-                                              _missionSteps.length)
-                                          ? _missionSteps[_currentStepIndex]
-                                          .title
-                                          : '',
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
+                                // ◀︎ 뒤로가기 버튼 (15%)
+                                Container(
+                                  width: screenWidth * 0.15,
+                                  color: Colors.white,
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: IconButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      icon: const Icon(
+                                        Icons.arrow_back,
+                                        size: 28,
                                       ),
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ),
-                                IconButton(
-                                  onPressed: _toggleTts,
-                                  icon: Icon(
-                                    _isTtsEnabled
-                                        ? Icons.volume_up
-                                        : Icons.volume_off,
-                                    size: 28,
+                                // ▶︎ 타이틀 + TTS 버튼 (85%)
+                                Expanded(
+                                  child: Container(
+                                    color: baseColor,
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Center(
+                                            child: Text(
+                                              (_missionSteps.isNotEmpty &&
+                                                      _currentStepIndex >= 0 &&
+                                                      _currentStepIndex <
+                                                          _missionSteps.length)
+                                                  ? _missionSteps[_currentStepIndex]
+                                                      .title
+                                                  : '',
+                                              style: const TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: _toggleTts,
+                                          icon: Icon(
+                                            _isTtsEnabled
+                                                ? Icons.volume_up
+                                                : Icons.volume_off,
+                                            size: 28,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
 
-                  // ─────── 본문 영역 ───────
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ◀︎ 왼쪽 네비게이션
-                        Container(
-                          width: screenWidth * 0.15,
-                          color: Colors.white,
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 24),
-                              StepNavigation(
-                                missionType: _missionType,
-                                currentIndex: _currentStepIndex,
-                              ),
-                            ],
-                          ),
-                        ),
+                          // ─────── 본문 영역 ───────
+                          Expanded(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // ◀︎ 왼쪽 네비게이션
+                                Container(
+                                  width: screenWidth * 0.15,
+                                  color: Colors.white,
+                                  child: Column(
+                                    children: [
+                                      const SizedBox(height: 24),
+                                      StepNavigation(
+                                        missionType: _currentUserType,
+                                        currentIndex: _currentStepIndex,
+                                      ),
+                                    ],
+                                  ),
+                                ),
 
-                        // ▶︎ 오른쪽 본문 내용
-                        Expanded(
-                          child: Container(
-                            color: baseColor,
-                            padding: const EdgeInsets.fromLTRB(
-                              150,
-                              70,
-                              150,
-                              50,
+                                // ▶︎ 오른쪽 본문 내용
+                                Expanded(
+                                  child: Container(
+                                    color: baseColor,
+                                    padding: const EdgeInsets.fromLTRB(
+                                      150,
+                                      70,
+                                      150,
+                                      50,
+                                    ),
+                                    child: _buildContentByType(context),
+                                  ),
+                                ),
+                              ],
                             ),
-                            child: _buildContentByType(context),
+                          ),
+                        ],
+                      ),
+
+                      // 🔹 TTS 애니메이션 오버레이
+                      if (_isTtsSpeaking)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: Image.asset(
+                              _currentUserType == 'bas'
+                                  ? 'assets/gradient/gradient.png'
+                                  : _currentUserType == 'gam'
+                                  ? 'assets/gradient/gradient_gam.png'
+                                  : 'assets/gradient/gradient_mol.png',
+                              fit: BoxFit.fill,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              // 🔹 TTS 애니메이션 오버레이
-              if (_isTtsSpeaking)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Image.asset(
-                      _missionType == 'bas'
-                          ? 'assets/gradient/gradient.png'
-                          : _missionType == 'gam'
-                          ? 'assets/gradient/gradient_gam.png'
-                          : 'assets/gradient/gradient_mol.png',
-                      fit: BoxFit.fill,
-                    ),
+                    ],
                   ),
                 ),
-            ],
-          ),
-        ),
-      ),
+              ),
     );
   }
 
@@ -593,7 +642,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
   /// 유형에 따라 분기
   ///
   Widget _buildContentByType(BuildContext context) {
-    switch (_missionType) {
+    switch (_currentUserType) {
       case 'gam':
         return _buildGamLayout(context);
       case 'mol':
@@ -612,8 +661,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
       children: [
         Text(
           (_missionSteps.isNotEmpty &&
-              _currentStepIndex >= 0 &&
-              _currentStepIndex < _missionSteps.length)
+                  _currentStepIndex >= 0 &&
+                  _currentStepIndex < _missionSteps.length)
               ? _missionSteps[_currentStepIndex].title
               : '',
           style: const TextStyle(
@@ -646,10 +695,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
             const SizedBox(width: 20),
             Text(
               _formatDuration(_remainingTime),
-              style: const TextStyle(
-                fontSize: 80,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 80, fontWeight: FontWeight.bold),
             ),
             const SizedBox(width: 20),
             GestureDetector(
@@ -694,8 +740,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
           ),
           child: tts_text_box(
             lines: _currentLines,
-            currentLineIndex:
-            _currentLines.isNotEmpty ? _currentLineIndex : -1,
+            currentLineIndex: _currentLines.isNotEmpty ? _currentLineIndex : -1,
             controller: _scrollController,
           ),
         ),
@@ -729,10 +774,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                 ),
                 child: const Text(
                   "끝났어요",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
               ),
             ),
@@ -794,7 +836,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
                               width: 200, // 원형 타이머 지름
                               height: 200,
                               child: CircularProgressIndicator(
-                                value: _remainingTime.inSeconds /
+                                value:
+                                    _remainingTime.inSeconds /
                                     const Duration(minutes: 30).inSeconds,
                                 strokeWidth: 16,
                                 backgroundColor: Colors.grey.shade200,
@@ -893,10 +936,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                 ),
                 child: const Text(
                   "끝났어요",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
               ),
             ),
@@ -906,9 +946,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
     );
   }
 
-
   ///
-  /// 몰라형 (mol)
+  /// 몰라형 (mol) - 수정된 코드
   ///
   Widget _buildMolLayout(BuildContext context) {
     return Column(
@@ -972,7 +1011,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
         ),
         const SizedBox(height: 20),
 
-        // 🔹 오른쪽 영역 → TTS or 선택지
+        // 🔹 메인 콘텐츠 영역 (TTS or 선택지)
         Expanded(
           child: Container(
             width: double.infinity,
@@ -990,19 +1029,40 @@ class _MissionStepPageState extends State<MissionStepPage> {
             ),
           ),
         ),
-        const SizedBox(height: 55),
+        const SizedBox(height: 25),
 
-        // 🔹 하단 버튼 2개
-        Row(
+        // 🔹 하단 버튼 영역
+        _showChoices
+            ? Align(
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _showChoices = false;
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: const Text(
+                "알겠어요",
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
+            ),
+          ),
+        )
+            : Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: () {
-                  setState(() {
-                    _showChoices = true; // 버튼 누르면 선택지 화면으로 전환
-                  });
-                },
+                onPressed: _generateMolHelp,
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Colors.black),
                   padding: const EdgeInsets.symmetric(vertical: 20),
@@ -1012,10 +1072,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                 ),
                 child: const Text(
                   "모르겠어요",
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 18,
-                  ),
+                  style: TextStyle(color: Colors.black, fontSize: 18),
                 ),
               ),
             ),
@@ -1033,10 +1090,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                 ),
                 child: const Text(
                   "끝났어요",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
               ),
             ),
@@ -1050,12 +1104,15 @@ class _MissionStepPageState extends State<MissionStepPage> {
   /// 몰라형 선택지 UI
   ///
   Widget _buildMolChoices() {
+    if (_isGeneratingChoices) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "질문?",
-          style: TextStyle(
+          _molQuestion,
+          style: const TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.bold,
             color: Color(0xFF463EC6),
@@ -1063,13 +1120,15 @@ class _MissionStepPageState extends State<MissionStepPage> {
         ),
         const SizedBox(height: 20),
         Row(
-          children: [
-            Expanded(child: _choiceBox("선택지 1")),
-            const SizedBox(width: 12),
-            Expanded(child: _choiceBox("선택지 2")),
-            const SizedBox(width: 12),
-            Expanded(child: _choiceBox("선택지 3")),
-          ],
+          children:
+              _molChoices.map((choiceText) {
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                    child: _choiceBox(choiceText),
+                  ),
+                );
+              }).toList(),
         ),
       ],
     );

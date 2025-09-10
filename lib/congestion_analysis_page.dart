@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_tflite/flutter_tflite.dart';
+import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
 
 class CongestionAnalysisPage extends StatefulWidget {
   @override
@@ -14,6 +15,11 @@ class _CongestionAnalysisPageState extends State<CongestionAnalysisPage> {
   bool _isLoading = false;
   String _resultText = '';
 
+  Interpreter? _interpreter;
+  List<String>? _labels;
+  final int _inputSize = 300;
+
+
   @override
   void initState() {
     super.initState();
@@ -22,17 +28,18 @@ class _CongestionAnalysisPageState extends State<CongestionAnalysisPage> {
 
   Future<void> _loadModel() async {
     try {
-      String? res = await Tflite.loadModel(
-        model: "assets/detect.tflite",
-        labels: "assets/labelmap.txt",
-      );
-      print("모델 로딩 결과: $res");
+      _interpreter = await Interpreter.fromAsset('detect.tflite');
+      print("Interpreter 로딩 성공");
+
+      final labelsData = await DefaultAssetBundle.of(context).loadString('assets/labelmap.txt');
+      _labels = labelsData.split('\n');
+      print("라벨 로딩 성공");
+
     } catch (e) {
-      print("모델 로딩 실패: $e");
+      print("모델 또는 라벨 로딩 실패: $e");
     }
   }
 
-  // 이미지 선택
   Future<void> _pickImage({required ImageSource source}) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(source: source);
@@ -44,7 +51,7 @@ class _CongestionAnalysisPageState extends State<CongestionAnalysisPage> {
         _resultText = '';
       });
 
-      await _analyzeImage(_image!.path);
+      await _analyzeImage(File(pickedFile.path));
     } catch (e) {
       print("이미지 선택 오류: $e");
       setState(() {
@@ -54,18 +61,65 @@ class _CongestionAnalysisPageState extends State<CongestionAnalysisPage> {
     }
   }
 
-  Future<void> _analyzeImage(String imagePath) async {
-    try {
-      final recognitions = await Tflite.detectObjectOnImage(
-        path: imagePath,
-        model: "SSDMobileNet",
-        threshold: 0.3,
-        imageMean: 127.5,
-        imageStd: 127.5,
-        numResultsPerClass: 10,
-      );
+  Future<void> _analyzeImage(File imageFile) async {
+    if (_interpreter == null || _labels == null) {
+      print("모델 또는 라벨이 로드되지 않았습니다.");
+      return;
+    }
 
-      if (recognitions == null || recognitions.isEmpty) {
+    try {
+      var imageBytes = imageFile.readAsBytesSync();
+      img.Image? originalImage = img.decodeImage(imageBytes);
+      if (originalImage == null) return;
+
+      img.Image resizedImage = img.copyResize(originalImage, width: _inputSize, height: _inputSize);
+
+      var inputBytes = resizedImage.getBytes();
+      var input = inputBytes.buffer.asUint8List();
+
+      var inputArray = input.reshape([1, _inputSize, _inputSize, 3]);
+
+      final outputLocations = List.generate(1, (_) => List.filled(10, List.filled(4, 0.0))).reshape([1, 10, 4]);
+      final outputClasses = List.generate(1, (_) => List.filled(10, 0.0)).reshape([1, 10]);
+      final outputScores = List.generate(1, (_) => List.filled(10, 0.0)).reshape([1, 10]);
+      final numDetections = List.filled(1, 0.0).reshape([1]);
+
+      Map<int, Object> outputs = {
+        0: outputLocations,
+        1: outputClasses,
+        2: outputScores,
+        3: numDetections,
+      };
+
+      _interpreter!.runForMultipleInputs([inputArray], outputs);
+
+      int objectCount = numDetections[0].toInt();
+      double threshold = 0.5;
+
+      final imageWidth = originalImage.width;
+      final imageHeight = originalImage.height;
+      final imageArea = imageWidth * imageHeight;
+
+      double totalBoxArea = 0;
+      List<Rect> boxes = [];
+
+      for (int i = 0; i < objectCount; i++) {
+        if (outputScores[0][i] < threshold) continue;
+
+        final box = outputLocations[0][i];
+        final ymin = box[0] * imageHeight;
+        final xmin = box[1] * imageWidth;
+        final ymax = box[2] * imageHeight;
+        final xmax = box[3] * imageWidth;
+
+        final w = xmax - xmin;
+        final h = ymax - ymin;
+
+        totalBoxArea += w * h;
+        boxes.add(Rect.fromLTWH(xmin, ymin, w, h));
+      }
+
+      if (boxes.isEmpty) {
         setState(() {
           _isLoading = false;
           _resultText = '혼잡도 낮음 (감지된 객체 없음)';
@@ -73,27 +127,6 @@ class _CongestionAnalysisPageState extends State<CongestionAnalysisPage> {
         return;
       }
 
-      final image = File(imagePath);
-      final decodedImage = await decodeImageFromList(image.readAsBytesSync());
-      final imageWidth = decodedImage.width;
-      final imageHeight = decodedImage.height;
-      final imageArea = imageWidth * imageHeight;
-
-      double totalBoxArea = 0;
-      List<Rect> boxes = [];
-
-      for (var obj in recognitions) {
-        final rect = obj['rect'];
-        final x = rect['x'] * imageWidth;
-        final y = rect['y'] * imageHeight;
-        final w = rect['w'] * imageWidth;
-        final h = rect['h'] * imageHeight;
-
-        totalBoxArea += w * h;
-        boxes.add(Rect.fromLTWH(x, y, w, h));
-      }
-
-      // 겹치는 면적 계산
       double overlapArea = 0;
       for (int i = 0; i < boxes.length; i++) {
         for (int j = i + 1; j < boxes.length; j++) {
@@ -104,14 +137,14 @@ class _CongestionAnalysisPageState extends State<CongestionAnalysisPage> {
         }
       }
 
-      final objectCount = recognitions.length;
+      final detectedCount = boxes.length;
       final areaRatio = totalBoxArea / imageArea;
       final overlapRatio = overlapArea / imageArea;
 
       String result;
-      if (objectCount > 6 && areaRatio > 0.3 && overlapRatio > 0.05) {
+      if (detectedCount > 6 && areaRatio > 0.3 && overlapRatio > 0.05) {
         result = "혼잡도가 높음 (물건 많고 겹쳐 있음)";
-      } else if (objectCount >= 3 && areaRatio > 0.15) {
+      } else if (detectedCount >= 3 && areaRatio > 0.15) {
         result = "혼잡도가 중간 (보통)";
       } else {
         result = "혼잡도가 낮음 (정리 쉬움)";
@@ -120,8 +153,9 @@ class _CongestionAnalysisPageState extends State<CongestionAnalysisPage> {
       setState(() {
         _isLoading = false;
         _resultText =
-        "$result\n- 감지 수: $objectCount개\n- 면적 비율: ${(areaRatio * 100).toStringAsFixed(1)}%\n- 겹침 비율: ${(overlapRatio * 100).toStringAsFixed(1)}%";
+        "$result\n- 감지 수: $detectedCount개\n- 면적 비율: ${(areaRatio * 100).toStringAsFixed(1)}%\n- 겹침 비율: ${(overlapRatio * 100).toStringAsFixed(1)}%";
       });
+
     } catch (e) {
       print("이미지 분석 오류: $e");
       setState(() {
@@ -133,10 +167,9 @@ class _CongestionAnalysisPageState extends State<CongestionAnalysisPage> {
 
   @override
   void dispose() {
-    Tflite.close();
+    _interpreter?.close();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
