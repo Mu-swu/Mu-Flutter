@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'MissionStepPage.dart';
+import 'surveyq.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 Future<void> main() async {
@@ -17,6 +18,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Flutter Timer Mission',
       theme: ThemeData(primarySwatch: Colors.blue),
+
       localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -25,10 +27,11 @@ class MyApp extends StatelessWidget {
       supportedLocales: [
         const Locale('ko'), // 🇰🇷 한국어 달력 등 지원
       ],
-      initialRoute: '/',
+      initialRoute: '/surveyq',
       routes: {
         '/': (context) => const FigmaHomePage(),
         '/mission': (context) => MissionStepPage(),
+        '/surveyq': (context) => const SurveyPage(),
       },
     );
   }
@@ -179,66 +182,7 @@ class FigmaHomePage extends StatelessWidget {
                     ),
                   ),
                 ),
-/*
 
-                // 왼쪽 말풍선
-                Positioned(
-                  left: 163,
-                  top: 259,
-                  child: Container(
-                    width: 309,
-                    height: 106,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F5FF),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 238,
-                  top: 288,
-                  child: Text(
-                    aiSentenceLeft,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFF5C5C5C),
-                      fontSize: 16,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w400,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-
-                // 오른쪽 말풍선
-                Positioned(
-                  left: 809,
-                  top: 369,
-                  child: Container(
-                    width: 308,
-                    height: 106,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F5FF),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 852,
-                  top: 398,
-                  child: Text(
-                    aiSentenceRight,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFF5C5C5C),
-                      fontSize: 16,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w400,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-*/
 
                 Center(
                   child: SizedBox(

@@ -24,7 +24,7 @@ class MissionStepPage extends StatefulWidget {
 }
 
 class _MissionStepPageState extends State<MissionStepPage> {
-  String _currentUserType = 'mol'; // 'gam', 'mol', 'bas'
+  String _currentUserType = 'gam'; // 'gam', 'mol', 'bas'
   int _currentStepIndex = 0;
   int _currentLineIndex = -1;
   List<String> _currentLines = [];
@@ -66,6 +66,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
     _model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
 
     _generateMissionSteps();
+
   }
 
   void _startTimer() {
@@ -836,9 +837,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                               width: 200, // 원형 타이머 지름
                               height: 200,
                               child: CircularProgressIndicator(
-                                value:
-                                    _remainingTime.inSeconds /
-                                    const Duration(minutes: 30).inSeconds,
+                                value: _remainingTime.inSeconds.toDouble() / Duration(minutes: 35).inSeconds.toDouble(),
                                 strokeWidth: 16,
                                 backgroundColor: Colors.grey.shade200,
                                 color: const Color(0xFF7F91FF),

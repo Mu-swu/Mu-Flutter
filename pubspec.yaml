@@ -51,3 +51,4 @@ flutter:
     - .env
     - assets/detect.tflite
     - assets/labelmap.txt
+    - assets/roadingyou.png
