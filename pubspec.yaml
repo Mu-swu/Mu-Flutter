@@ -52,3 +52,14 @@ flutter:
     - assets/detect.tflite
     - assets/labelmap.txt
     - assets/roadingyou.png
+    - assets/test/test1.png
+    - assets/test/test2.png
+    - assets/test/test3.png
+    - assets/test/test4.png
+    - assets/test/test5.png
+    - assets/test/test6.png
+    - assets/test/test7.png
+    - assets/test/test8.png
+    - assets/test/test9.png
+    - assets/test/test10.png
+    - assets/test/test_ba.png

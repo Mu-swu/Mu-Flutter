@@ -118,10 +118,11 @@ class _ResultPageState extends State<ResultPage> {
                   Container(
                     width: leftCardWidth,
                     height: cardHeight,
-                    decoration: ShapeDecoration(
+                    decoration: BoxDecoration(
                       color: const Color(0xFFFBF4FF),
-                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
+                        image: const DecorationImage(
+                          image: AssetImage('assets/test/test_ba.png'),
                       ),
                     ),
                   ),
