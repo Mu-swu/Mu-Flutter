@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'MissionStepPage.dart';
 import 'surveyq.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'congestion_analysis_page.dart';
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
@@ -27,11 +28,12 @@ class MyApp extends StatelessWidget {
       supportedLocales: [
         const Locale('ko'), // 🇰🇷 한국어 달력 등 지원
       ],
-      initialRoute: '/surveyq',
+      initialRoute: '/congestion',
       routes: {
         '/': (context) => const FigmaHomePage(),
         '/mission': (context) => MissionStepPage(),
         '/surveyq': (context) => const SurveyPage(),
+        '/congestion': (context) => CongestionAnalysisLayout(),
       },
     );
   }

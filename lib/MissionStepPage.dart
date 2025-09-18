@@ -10,6 +10,7 @@ import 'widgets/step_navigation.dart';
 import 'keepbox_start.dart';
 import 'widgets/loadingvideo.dart';
 import 'package:lottie/lottie.dart';
+import 'widgets/choice_popup.dart';
 
 class StepData {
   final String title;
@@ -91,6 +92,17 @@ class _MissionStepPageState extends State<MissionStepPage> {
     });
   }
 */
+  void _showChoicePopup(String imagePath) {
+    showDialog(
+      context: context,
+
+      builder: (context) => ChoicePopup(
+        message: "와, 좋은 생각이야!\n첫 단계부터 아주 멋진 선택인데?",
+        imagePath: 'assets/popup.png',
+        onConfirm: () => Navigator.pop(context),
+      ),
+    );
+  }
 
   Future<void> _generateMissionSteps() async {
     final userTypeMap = {'gam': '감정형', 'mol': '몰라형', 'bas': '방치형'};
@@ -413,6 +425,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
         await _ttsEngine!.speak(_currentLines[i]);
 
         if (_ttsSessionId != currentSessionId) break;
+
 
         await Future.delayed(Duration(milliseconds: 1000));
 
@@ -1124,7 +1137,10 @@ class _MissionStepPageState extends State<MissionStepPage> {
                 return Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                    child: _choiceBox(choiceText),
+                    child: _choiceBox(
+                      choiceText,
+                      imagePath: 'assets/popup.png', // 반드시 전달
+                    ),
                   ),
                 );
               }).toList(),
@@ -1133,20 +1149,27 @@ class _MissionStepPageState extends State<MissionStepPage> {
     );
   }
 
-  Widget _choiceBox(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 70),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F5FF),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 25,
-          fontWeight: FontWeight.w500,
-          color: Colors.black,
+  Widget _choiceBox(String text, {String? imagePath}) {
+    return GestureDetector(
+      onTap: () {
+        if (imagePath != null) {
+          _showChoicePopup(imagePath);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 70),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F5FF),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 25,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
         ),
       ),
     );
