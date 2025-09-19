@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/custom_tag.dart';
 
 class ResultPage extends StatefulWidget {
   const ResultPage({super.key});
@@ -148,10 +149,10 @@ class _ResultPageState extends State<ResultPage> {
                         children: [
                           Wrap(
                             spacing: 10,
-                            runSpacing: 30, // 태그 사이 상하 여백 증가
+                            runSpacing: 30,
                             children: [
-                              _buildTag('정리보단 쌓기'),
-                              _buildTag('열심히 미뤄야지'),
+                              CustomTag(label: '정리보단 쌓기', type: TagType.bang),
+                              CustomTag(label: '열심히 미뤄야지', type: TagType.bang),
                             ],
                           ),
                           SizedBox(height: 40 * heightRatio), // 태그와 텍스트 사이 여백 증가
@@ -226,24 +227,6 @@ class _ResultPageState extends State<ResultPage> {
     );
   }
 
-  Widget _buildTag(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: ShapeDecoration(
-        color: const Color(0xFFF1D7FF),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(100),
-        ),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFFE443C3),
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
+
 }
 

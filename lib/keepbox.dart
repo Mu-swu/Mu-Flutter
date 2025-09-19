@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import 'package:mu/widgets/keepdialogs.dart';
+import 'package:mu/widgets/longbutton.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'widgets/ItemSaveSection.dart';
@@ -378,24 +379,11 @@ class _keepboxState extends State<keepbox> {
                   ),
                 ),
                 SizedBox(height: 10 * heightRatio),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 16 * heightRatio,
-                      horizontal: 200 * widthRatio,
-                    ),
-                    backgroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                longbutton(
+                  text: '저장',
                   onPressed: () {
                     // 저장 로직
                   },
-                  child: Text(
-                    '저장',
-                    style: TextStyle(color: Colors.white, fontSize: 16 * widthRatio),
-                  ),
                 ),
                 SizedBox(height: 24 * heightRatio),
               ],

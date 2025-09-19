@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'shortbutton.dart';
 
 Future<void> keepdialogs({
   required BuildContext context,
@@ -89,44 +90,35 @@ Future<void> keepdialogs({
                                 textAlign: TextAlign.center,
                                 style: TextStyle(fontSize: 26 ),
                               ),
-                              const SizedBox(height: 30),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  OutlinedButton(
-                                    onPressed: () => setState(() => showEditMode = true),
-                                    style: OutlinedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      side: BorderSide(color: Colors.black, width: 1.5),
-                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
+                              const SizedBox(height: 60), // 텍스트와 버튼 사이 여백 증가
+                              Align(
+                                alignment: Alignment.bottomCenter, // 버튼을 아래쪽 정렬
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    ShortButton(
+                                      text: "아니요, 수정할게요",
+                                      isYes: false,
+                                      onPressed: () => setState(() => showEditMode = true),
+                                      width: 200, // 버튼 폭 증가
+                                      height: 60, // 버튼 높이 증가
+                                      fontSize: 18,
                                     ),
-                                    child: Text(
-                                      "아니요, 수정할게요",
-                                      style: TextStyle(color: Colors.black, fontSize: 18),
+                                    ShortButton(
+                                      text: "네",
+                                      isYes: true,
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        Future.microtask(() => onConfirm(selectedCategory));
+                                      },
+                                      width: 200,
+                                      height: 60,
+                                      fontSize: 18,
                                     ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                      Future.microtask(() => onConfirm(selectedCategory));
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.black,
-                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      "네",
-                                      style: TextStyle(color: Colors.white, fontSize: 18),
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
+                              const SizedBox(height: 20), // 버튼 아래 여백
                             ],
                           )
                               : Column(
@@ -150,7 +142,9 @@ Future<void> keepdialogs({
                                 ),
                               ),
                               const SizedBox(height: 28),
-                              ElevatedButton(
+                              ShortButton(
+                                text: "추가하기",
+                                isYes: true,
                                 onPressed: () {
                                   if (customCategory.trim().isNotEmpty) {
                                     Navigator.pop(context);
@@ -160,17 +154,9 @@ Future<void> keepdialogs({
                                     Future.microtask(() => onConfirm(selectedCategory));
                                   }
                                 },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.black,
-                                  padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 18),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: Text(
-                                  "추가하기",
-                                  style: TextStyle(color: Colors.white, fontSize: 16),
-                                ),
+                                width: 300,
+                                height: 50,
+                                fontSize: 16,
                               ),
                             ],
                           ),

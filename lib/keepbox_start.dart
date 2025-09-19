@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'keepbox.dart';
 import 'MissionStepPage.dart';
+import 'widgets/shortbutton.dart';
 
 class Keepbox_start extends StatefulWidget {
   const Keepbox_start({super.key});
@@ -108,26 +109,22 @@ class _Keepbox_startState extends State<Keepbox_start> {
                     ),
 
                     SizedBox(height: 40 * heightRatio),
-
-                    // 버튼 2개
+// 버튼 2개
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisAlignment: MainAxisAlignment.center, // 가운데 정렬
                       children: [
-                        _actionButton(
+                        ShortButton(
                           text: '종료하기',
-                          backgroundColor: const Color(0xFFFBFCFF),
-                          textColor: const Color(0xFF333333),
-                          onTap: () {
+                          isYes: false, // 흰색
+                          onPressed: () {
                             Navigator.pop(context);
                           },
-                          widthRatio: widthRatio,
-                          heightRatio: heightRatio,
                         ),
-                        _actionButton(
+                        SizedBox(width: 80 * widthRatio), // 버튼 사이 간격 조절
+                        ShortButton(
                           text: '이동하기',
-                          backgroundColor: const Color(0xFF333333),
-                          textColor: Colors.white,
-                          onTap: () {
+                          isYes: true, // 검은색/파란색 계열
+                          onPressed: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -135,8 +132,6 @@ class _Keepbox_startState extends State<Keepbox_start> {
                               ),
                             );
                           },
-                          widthRatio: widthRatio,
-                          heightRatio: heightRatio,
                         ),
                       ],
                     ),

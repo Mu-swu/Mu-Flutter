@@ -4,6 +4,8 @@ import 'MissionStepPage.dart';
 import 'surveyq.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'congestion_analysis_page.dart';
+import 'widgets/custom_tag.dart';
+import 'widgets/shortbutton.dart';
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
@@ -28,7 +30,7 @@ class MyApp extends StatelessWidget {
       supportedLocales: [
         const Locale('ko'), // 🇰🇷 한국어 달력 등 지원
       ],
-      initialRoute: '/congestion',
+      initialRoute: '/surveyq',
       routes: {
         '/': (context) => const FigmaHomePage(),
         '/mission': (context) => MissionStepPage(),
@@ -80,37 +82,12 @@ class FigmaHomePage extends StatelessWidget {
                 Positioned(
                   left: 653,
                   top: 653,
-                  child: GestureDetector(
-                    onTap: () {
+                  child: ShortButton(
+                    text: '시작하기',
+                    isYes: true, // 파란색
+                    onPressed: () {
                       Navigator.pushNamed(context, '/mission');
                     },
-                    child: Container(
-                      width: 465,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF333333),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.25), // 그림자 색상
-                            offset: Offset(2, 2), // x, y 방향 그림자 위치
-                            blurRadius: 5,
-                            spreadRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Text(
-                          '시작하기',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontFamily: 'Pretendard',
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
                   ),
                 ),
 
@@ -118,28 +95,12 @@ class FigmaHomePage extends StatelessWidget {
                 Positioned(
                   left: 162,
                   top: 653,
-                  child: Container(
-                    width: 463,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFBFCFF),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Color(0xFFB0B8C1),
-                        width: 2,
-                      ),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        '건너뛰기',
-                        style: TextStyle(
-                          color: Color(0xFF333333),
-                          fontSize: 18,
-                          fontFamily: 'Pretendard',
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
+                  child: ShortButton(
+                    text: '건너뛰기',
+                    isYes: false, // 흰색
+                    onPressed: () {
+                      // 건너뛰기 로직
+                    },
                   ),
                 ),
 
@@ -162,26 +123,9 @@ class FigmaHomePage extends StatelessWidget {
                 Positioned(
                   left: 607,
                   top: 117,
-                  child: Container(
-                    width: 64,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFC6C6),
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                  ),
-                ),
-                const Positioned(
-                  left: 623,
-                  top: 125,
-                  child: Text(
-                    '방치형',
-                    style: TextStyle(
-                      color: Color(0xFF5C5C5C),
-                      fontSize: 12,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w500,
-                    ),
+                  child: CustomTag(
+                    label: '방치형',
+                    type: TagType.bang, // 방치형 → bang
                   ),
                 ),
 

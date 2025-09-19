@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mu/widgets/longbutton.dart';
 import 'sresult_page.dart';
 import 'dart:math';
 
@@ -392,25 +393,10 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
                 left: horizontalPadding,
                 right: horizontalPadding,
               ),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF463EC6),
-                  padding: EdgeInsets.symmetric(vertical: 26 * heightRatio),
-                  minimumSize: Size(double.infinity, 70 * heightRatio),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 6,
-                  shadowColor: const Color(0x26463EC6),
-                ),
+              child: longbutton(
+                text: isLastQuestion ? "결과보기" : "다음",
+                isEnabled: isLastQuestion, // 마지막 질문에서만 활성화
                 onPressed: _onYesTap,
-                child: Text(
-                  isLastQuestion ? "결과보기" : "다음",
-                  style: TextStyle(
-                    fontSize: 22 * widthRatio,
-                    color: Colors.white,
-                  ),
-                ),
               ),
             ),
           ],

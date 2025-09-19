@@ -11,6 +11,7 @@ import 'keepbox_start.dart';
 import 'widgets/loadingvideo.dart';
 import 'package:lottie/lottie.dart';
 import 'widgets/choice_popup.dart';
+import 'widgets/longbutton.dart';
 
 class StepData {
   final String title;
@@ -761,38 +762,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
         const SizedBox(height: 25),
 
         // 🔹 하단 버튼
-        Align(
-          alignment: Alignment.center,
-          child: SizedBox(
-            width: double.infinity,
-            child: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.25),
-                    blurRadius: 4,
-                    offset: const Offset(2, 2),
-                  ),
-                ],
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: ElevatedButton(
-                onPressed: _onStepFinished,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  "끝났어요",
-                  style: TextStyle(color: Colors.white, fontSize: 18),
-                ),
-              ),
-            ),
-          ),
+        longbutton(
+          text: "끝났어요",
+          onPressed: _onStepFinished,
         ),
       ],
     );
@@ -921,38 +893,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
         const SizedBox(height: 25),
 
         // 하단 버튼
-        Align(
-          alignment: Alignment.center,
-          child: SizedBox(
-            width: double.infinity,
-            child: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.25),
-                    blurRadius: 4,
-                    offset: const Offset(2, 2),
-                  ),
-                ],
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: ElevatedButton(
-                onPressed: _onStepFinished,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  "끝났어요",
-                  style: TextStyle(color: Colors.white, fontSize: 18),
-                ),
-              ),
-            ),
-          ),
+        longbutton(
+          text: "끝났어요",
+          onPressed: _onStepFinished,
         ),
       ],
     );
@@ -1047,27 +990,15 @@ class _MissionStepPageState extends State<MissionStepPage> {
         _showChoices
             ? Align(
           alignment: Alignment.center,
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _showChoices = false;
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: const Text(
-                "알겠어요",
-                style: TextStyle(color: Colors.white, fontSize: 18),
-              ),
-            ),
+          child: longbutton(
+            text: "알겠어요",
+            onPressed: () {
+              setState(() {
+                _showChoices = false;
+              });
+            },
           ),
+
         )
             : Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1090,20 +1021,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: ElevatedButton(
+              child: longbutton(
+                text: "끝났어요",
                 onPressed: _onStepFinished,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  "끝났어요",
-                  style: TextStyle(color: Colors.white, fontSize: 18),
-                ),
               ),
             ),
           ],
