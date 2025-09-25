@@ -55,6 +55,8 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
   ];
 
   int _currentQuestionIndex = 0;
+  final List<bool> _answers = [];
+  bool _isSurveyFinished = false; // 설문 완료 상태를 추적
 
   late AnimationController _animationController;
   late Animation<Offset> _cardSlideAnimation;
@@ -68,7 +70,7 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 500),
     );
 
     _animationController.addListener(() {
@@ -97,10 +99,8 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
   void _onPanUpdate(DragUpdateDetails details) {
     setState(() {
       _cardOffset += details.delta;
-
       final screenWidth = MediaQuery.of(context).size.width;
-      final rotationFactor = (_cardOffset.dx / screenWidth) * 0.1;
-      _cardRotation = rotationFactor * (pi / 8);
+      _cardRotation = (_cardOffset.dx / screenWidth) * (pi / 20);
     });
   }
 
@@ -110,60 +110,58 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
     });
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final minDragDistance = screenWidth * 0.25;
-
-    if (_cardOffset.dx > minDragDistance) {
-      _animateCardOffScreen(1);
-    } else if (_cardOffset.dx < -minDragDistance) {
-      _animateCardOffScreen(-1);
+    if (_cardOffset.dx.abs() > screenWidth * 0.3) {
+      _handleAnswer(_cardOffset.dx > 0);
     } else {
       _animateCardBackToCenter();
     }
   }
 
+  void _handleAnswer(bool answer) {
+    if (_animationController.isAnimating) return;
+    _answers.add(answer);
+    _animateCardOffScreen(answer ? 1 : -1);
+  }
+
+  void _showResult() {
+    final resultType = _calculateResult();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              ResultPage(resultType: resultType),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      );
+    }
+  }
+
   void _animateCardBackToCenter() {
-    _cardSlideAnimation = Tween<Offset>(
-      begin: _cardOffset,
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
-
-    _cardRotationAnimation = Tween<double>(
-      begin: _cardRotation,
-      end: 0.0,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
-
+    _cardSlideAnimation = Tween<Offset>(begin: _cardOffset, end: Offset.zero)
+        .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
+    _cardRotationAnimation = Tween<double>(begin: _cardRotation, end: 0.0)
+        .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
     _animationController.forward().whenComplete(() {
+      _animationController.reset();
       setState(() {
         _cardOffset = Offset.zero;
         _cardRotation = 0.0;
       });
-      _animationController.reset();
     });
   }
 
   void _animateCardOffScreen(int direction) {
-    _cardSlideAnimation = Tween<Offset>(
-      begin: _cardOffset,
-      end: Offset(
-        direction * 2 * MediaQuery.of(context).size.width,
-        -0.2 * MediaQuery.of(context).size.height,
-      ),
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
-
-    _cardRotationAnimation = Tween<double>(
-      begin: _cardRotation,
-      end: direction * (pi / 2),
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
+    final screenWidth = MediaQuery.of(context).size.width;
+    _cardSlideAnimation = Tween<Offset>(begin: _cardOffset, end: Offset(direction * screenWidth * 1.5, 0))
+        .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeIn));
+    _cardRotationAnimation = Tween<double>(begin: _cardRotation, end: direction * (pi / 4))
+        .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeIn));
 
     _animationController.forward().whenComplete(() {
+      if (!mounted) return;
       setState(() {
         if (_currentQuestionIndex < _questions.length - 1) {
           _currentQuestionIndex++;
@@ -171,36 +169,36 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
           _cardRotation = 0.0;
           _animationController.reset();
         } else {
-          Future.delayed(const Duration(milliseconds: 400), () {
-            Navigator.pushReplacement(
-              context,
-              PageRouteBuilder(
-                pageBuilder:
-                    (context, animation, secondaryAnimation) =>
-                        const ResultPage(),
-                transitionsBuilder: (
-                  context,
-                  animation,
-                  secondaryAnimation,
-                  child,
-                ) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-                transitionDuration: const Duration(milliseconds: 600),
-              ),
-            );
-          });
+          _isSurveyFinished = true;
         }
       });
     });
   }
 
-  void _onNoTap() {
-    _animateCardOffScreen(-1);
-  }
+  String _calculateResult() {
+    int bangchiScore = 0;
+    int gamjeongScore = 0;
+    int mollaScore = 0;
 
-  void _onYesTap() {
-    _animateCardOffScreen(1);
+    for (int i = 0; i < _answers.length; i++) {
+      bool isYes = _answers[i];
+      switch (i + 1) {
+        case 1: if (isYes) bangchiScore++; break;
+        case 2: if (isYes) bangchiScore++; else mollaScore++; break;
+        case 3: if (isYes) gamjeongScore++; break;
+        case 4: if (isYes) bangchiScore++; break;
+        case 5: if (isYes) gamjeongScore++; break;
+        case 6: if (isYes) mollaScore++; break;
+        case 7: if (isYes) { gamjeongScore++; mollaScore++; } break;
+        case 8: if (isYes) bangchiScore++; else mollaScore++; break;
+        case 9: if (isYes) mollaScore++; break;
+        case 10: if (!isYes) bangchiScore++; break;
+      }
+    }
+
+    if (mollaScore >= gamjeongScore && mollaScore >= bangchiScore) return "몰라형";
+    if (gamjeongScore > mollaScore && gamjeongScore >= bangchiScore) return "감정형";
+    return "방치형";
   }
 
   @override
@@ -213,10 +211,8 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
     final widthRatio = screenWidth / baseWidth;
     final heightRatio = screenHeight / baseHeight;
 
-    // 상단바 좌우 여백만 100, 나머지는 180
     final topBarPadding = 100 * widthRatio;
     final horizontalPadding = 200 * widthRatio;
-
     final isLastQuestion = _currentQuestionIndex == _questions.length - 1;
 
     return Scaffold(
@@ -224,181 +220,113 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
       body: SafeArea(
         child: Column(
           children: [
-            // ───── 상단바 ─────
+            // Top Bar
             Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: topBarPadding,
-                vertical: 20 * heightRatio,
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(
-                      Icons.arrow_back,
-                      size: 32 * widthRatio,
-                      color: const Color(0xFFB0B8C1),
-                    ),
-                  ),
-                  Expanded(child: Container()),
-                  Text(
-                    "나의 정리 유형은?",
-                    style: TextStyle(
-                      fontSize: 24 * widthRatio,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  Expanded(child: Container()),
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(
-                      Icons.volume_up,
-                      size: 32 * widthRatio,
-                      color: const Color(0xFFB0B8C1),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ───── 진행바 ─────
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
-                vertical: 20 * heightRatio,
-              ),
-              child: Stack(
-                children: [
-                  Container(
-                    height: 15 * heightRatio,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(0), // 직각
-                    ),
-                  ),
-                  FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor:
-                        (_currentQuestionIndex + 1) / _questions.length,
-                    child: Container(
-                      height: 15 * heightRatio,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF7F91FF),
-                        borderRadius: BorderRadius.circular(0),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ───── 예/아니오 선택 ─────
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
-                vertical: 30 * heightRatio,
-              ),
+              padding: EdgeInsets.symmetric(horizontal: topBarPadding, vertical: 20 * heightRatio),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  GestureDetector(
-                    onTap: _onNoTap,
-                    child: Text(
-                      "<<    아니오",
-                      style: TextStyle(
-                        fontSize: 26 * widthRatio,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: _onYesTap,
-                    child: Text(
-                      "네    >>",
-                      style: TextStyle(
-                        fontSize: 26 * widthRatio,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ),
+                  IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.arrow_back, size: 32 * widthRatio, color: const Color(0xFFB0B8C1))),
+                  Text("나의 정리 유형은?", style: TextStyle(fontSize: 24 * widthRatio, fontWeight: FontWeight.w400, color: Colors.grey[600])),
+                  IconButton(onPressed: () {}, icon: Icon(Icons.volume_up, size: 32 * widthRatio, color: const Color(0xFFB0B8C1))),
                 ],
               ),
             ),
+            // Progress Bar
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 20 * heightRatio),
+              child: LinearProgressIndicator(
+                value: (_currentQuestionIndex + 1) / _questions.length,
+                backgroundColor: const Color(0xFFF5F5F5),
+                color: const Color(0xFF7F91FF),
+                minHeight: 15 * heightRatio,
+              ),
+            ),
 
-            // ───── 중앙 카드 (뒤 기울어진 카드 포함) ─────
-            Expanded(
-              child: Center(
-                child: Stack(
-                  alignment: Alignment.center,
+            // 설문 완료 여부에 따라 다른 UI 표시
+            if (_isSurveyFinished) ...[
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "검사가 완료되었습니다!",
+                        style: TextStyle(
+                          fontSize: 32 * widthRatio,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 20 * heightRatio),
+                      Text(
+                        "아래 버튼을 눌러 당신의 비움 성향을 확인하세요.",
+                        style: TextStyle(
+                          fontSize: 22 * widthRatio,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(horizontalPadding, 40 * heightRatio, horizontalPadding, 80 * heightRatio),
+                child: longbutton(
+                  text: "결과보기",
+                  isEnabled: true,
+                  onPressed: _showResult,
+                ),
+              ),
+            ] else ...[
+              // Yes/No Text
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 30 * heightRatio),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // 뒷배경용 빈 카드
-                    Transform.rotate(
-                      angle: -0.1, // 원하는 각도를 라디안(radian) 값으로 입력
-                      child: CardTestNo(
-                        widthRatio: widthRatio,
-                        heightRatio: heightRatio,
-                        horizontalPadding: horizontalPadding,
-                        imagePath: null,
-                        questionText: '검사 완료!',
-                      ),
-                    ),
-
-                    // --- 2. 다음 질문 카드 (중간) ---
-                    if (_currentQuestionIndex + 1 < _questions.length)
-                      Transform.scale(
-                        scale: 1.0,
-                        child: Padding(
-                          padding: EdgeInsets.only(top: 0 * heightRatio),
-                          child: CardTestNo(
-                            widthRatio: widthRatio,
-                            heightRatio: heightRatio,
-                            horizontalPadding: horizontalPadding,
-                            questionText: _questions[_currentQuestionIndex + 1],
-                            imagePath: _imagePaths[_currentQuestionIndex + 1],
-                          ),
-                        ),
-                      ),
-
-                    // --- 3. 현재 질문 카드 (맨 앞) ---
-                    if (_currentQuestionIndex < _questions.length)
-                      GestureDetector(
-                        onPanStart: _onPanStart,
-                        onPanUpdate: _onPanUpdate,
-                        onPanEnd: _onPanEnd,
-                        child: Transform.translate(
-                          offset: _cardOffset,
-                          child: Transform.rotate(
-                            angle: _cardRotation,
-                            child: CardTestNo(
-                              widthRatio: widthRatio,
-                              heightRatio: heightRatio,
-                              horizontalPadding: horizontalPadding,
-                              scale: 1.0,
-                              questionText: _questions[_currentQuestionIndex],
-                              imagePath: _imagePaths[_currentQuestionIndex],
-                            ),
-                          ),
-                        ),
-                      ),
+                    GestureDetector(onTap: () => _handleAnswer(false), child: Text("<<    아니오", style: TextStyle(fontSize: 26 * widthRatio, color: Colors.black54))),
+                    GestureDetector(onTap: () => _handleAnswer(true), child: Text("네    >>", style: TextStyle(fontSize: 26 * widthRatio, color: Colors.black54))),
                   ],
                 ),
               ),
-            ),
-            // ───── 다음 버튼 ─────
-            Padding(
-              padding: EdgeInsets.only(
-                bottom: 80 * heightRatio,
-                top: 40 * heightRatio,
-                left: horizontalPadding,
-                right: horizontalPadding,
+              // Card Stack
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(30 * widthRatio, 0, 30*widthRatio, 80 * heightRatio),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (!isLastQuestion)
+                        CardTestNo(
+                          widthRatio: widthRatio,
+                          heightRatio: heightRatio,
+                          questionText: _questions[_currentQuestionIndex + 1],
+                          imagePath: _imagePaths[_currentQuestionIndex + 1],
+                        ),
+                      if (_currentQuestionIndex < _questions.length)
+                        GestureDetector(
+                          onPanStart: _onPanStart,
+                          onPanUpdate: _onPanUpdate,
+                          onPanEnd: _onPanEnd,
+                          child: Transform.translate(
+                            offset: _cardOffset,
+                            child: Transform.rotate(
+                              angle: _cardRotation,
+                              child: CardTestNo(
+                                widthRatio: widthRatio,
+                                heightRatio: heightRatio,
+                                questionText: _questions[_currentQuestionIndex],
+                                imagePath: _imagePaths[_currentQuestionIndex],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
-              child: longbutton(
-                text: isLastQuestion ? "결과보기" : "다음",
-                isEnabled: isLastQuestion, // 마지막 질문에서만 활성화
-                onPressed: _onYesTap,
-              ),
-            ),
+            ]
           ],
         ),
       ),
@@ -406,12 +334,10 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
   }
 }
 
-// ───── 카드 ─────
+// Card Widget
 class CardTestNo extends StatelessWidget {
   final double widthRatio;
   final double heightRatio;
-  final double horizontalPadding;
-  final double scale;
   final String questionText;
   final String? imagePath;
 
@@ -419,67 +345,64 @@ class CardTestNo extends StatelessWidget {
     super.key,
     required this.widthRatio,
     required this.heightRatio,
-    required this.horizontalPadding,
-    this.scale = 1.0,
     required this.questionText,
     this.imagePath,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cardWidth = 549 * widthRatio * scale;
+    final cardWidth = 549 * widthRatio;
     final cardHeight = cardWidth + 40;
 
     return Container(
       width: cardWidth,
       height: cardHeight,
-      padding: EdgeInsets.symmetric(
-        horizontal: 48 * widthRatio * scale,
-        vertical: 0 * heightRatio * scale,
-      ),
-      decoration: ShapeDecoration(
+      padding: EdgeInsets.symmetric(horizontal: 48 * widthRatio, vertical: 20 * heightRatio),
+      decoration: BoxDecoration(
         color: const Color(0xFFF3F5FF),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30 * widthRatio * scale),
-        ),
-        shadows: [
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 16,
-            offset: Offset(0, 4),
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (imagePath != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18 * widthRatio * scale),
+          Expanded(
+            flex: 3,
+            child: imagePath != null
+                ? ClipRRect(
+              borderRadius: BorderRadius.circular(18),
               child: Image.asset(
                 imagePath!,
                 width: double.infinity,
-                height: 250 * heightRatio * scale,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  return Text(
-                    "",
-                  );
+                  return const Center(child: Text("Image not found"));
                 },
               ),
             )
-          else
-            SizedBox(height: 250 * heightRatio * scale),
-          SizedBox(height: 25 * heightRatio * scale),
-          Text(
-            questionText,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: const Color(0xFF5C5C5C),
-              fontSize: 27 * widthRatio * scale,
-              fontFamily: 'Pretendard',
-              fontWeight: FontWeight.w400,
-              height: 1.3,
+                : const SizedBox.shrink(),
+          ),
+          SizedBox(height: imagePath != null ? 25 * heightRatio : 0),
+          Expanded(
+            flex: 2,
+            child: Center(
+              child: Text(
+                questionText,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: const Color(0xFF5C5C5C),
+                  fontSize: 27 * widthRatio,
+                  fontFamily: 'Pretendard',
+                  fontWeight: FontWeight.w400,
+                  height: 1.3,
+                ),
+              ),
             ),
           ),
         ],
@@ -487,3 +410,4 @@ class CardTestNo extends StatelessWidget {
     );
   }
 }
+

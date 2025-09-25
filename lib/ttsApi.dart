@@ -7,7 +7,8 @@ import 'package:path_provider/path_provider.dart';
 
 class ElevenLabsTTS {
   final String apiKey;
-  final String voiceId = 'O06mWxUIqkxtwRmi6Klv';
+  final String voiceId = 'HGa3AcTzIsetvM211K1o';
+  //i9Zv36vHIRPyb4KMdMDQ
   final String modelId = 'eleven_multilingual_v2';
 
   final AudioPlayer _audioPlayer = AudioPlayer();
