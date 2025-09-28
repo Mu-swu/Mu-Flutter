@@ -284,7 +284,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: 80 * widthRatio,
+            horizontal: 150 * widthRatio,
             vertical: 40 * heightRatio,
           ),
           child: Column(

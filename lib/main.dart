@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'congestion_analysis_page.dart';
 import 'widgets/navigationbar.dart';
 import 'widgets/shortbutton.dart';
+import 'widgets/schedule_item.dart';
 import 'mission_start.dart';
 
 
@@ -39,13 +40,10 @@ class CustomTag extends StatelessWidget {
         backgroundColor = const Color(0xFFD7F2C2); // 몰라형 배경
         textColor = const Color(0xFF568316); // 몰라형 텍스트
         break;
-      default:
-        backgroundColor = Colors.grey[300]!;
-        textColor = Colors.black;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // 패딩을 늘려서 크기 키움
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 패딩을 늘려서 크기 키움
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(8),
@@ -54,7 +52,7 @@ class CustomTag extends StatelessWidget {
         label,
         style: TextStyle(
           color: textColor,
-          fontSize: 14, // 폰트 사이즈 키움
+          fontSize: 12, // 폰트 사이즈 키움
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -132,12 +130,17 @@ class FigmaHomePage extends StatelessWidget {
                       Navigator.pushNamed(context, '/surveyq');
                     },
                     child: Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE9F0FC),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.ac_unit, size: 32, color: Colors.blueAccent),
+                      child: Image.asset(
+                        'assets/retest.png',
+                        width: 42, // 아이콘 크기와 동일하게 설정
+                        height: 42, // 아이콘 크기와 동일하게 설정
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   SizedBox(width: 8 * widthRatio),
@@ -206,7 +209,7 @@ class FigmaHomePage extends StatelessWidget {
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Padding( // 상단에 작은 여백을 주어 텍스트 블록을 살짝 아래로 내림
+                                          Padding(
                                             padding: const EdgeInsets.only(top: 10),
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,9 +255,31 @@ class FigmaHomePage extends StatelessWidget {
                                 SizedBox(height: 5 * heightRatio),
                                 Expanded(
                                   child: Container(
+                                    padding: EdgeInsets.zero,
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFF3F5FF),
                                       borderRadius: BorderRadius.circular(24),
+                                    ),
+                                    child: ListView(
+                                      padding: EdgeInsets.zero,
+                                      children: const [
+                                        ScheduleItem(
+                                          title: '냉장실 한 칸',
+                                          time: '45분',
+                                          isCompleted: false,
+                                        ),
+                                        ScheduleItem(
+                                          title: '얼음/얼린 식재료 칸',
+                                          time: '1시간',
+                                          isCompleted: false,
+                                        ),
+                                        // 이미지에서는 완료된 항목 다음에 선이 없으므로, 마지막 항목은 isCompleted를 true로 설정하여 선이 그려지지 않도록 함
+                                        ScheduleItem(
+                                          title: '냉동식품 칸',
+                                          time: '30분',
+                                          isCompleted: true,
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -264,8 +289,8 @@ class FigmaHomePage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(height: spacing),
                     // 두 번째 행: 비움 현황과 버릴까 말까 상자 섹션 (1 비율)
+                    SizedBox(height: spacing),
                     Expanded(
                       flex: 10,
                       child: Row(
@@ -285,9 +310,70 @@ class FigmaHomePage extends StatelessWidget {
                                 Expanded(
                                   child: Container(
                                     margin: EdgeInsets.only(right: spacing),
+                                    padding: const EdgeInsets.all(40),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFF3F5FF),
                                       borderRadius: BorderRadius.circular(24),
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.center, // crossAxisAlignment를 center로 변경
+                                      children: [
+                                        // 왼쪽: refr.png 이미지 컨테이너 (정사각형)
+                                        Container(
+                                          width: 150,
+                                          height: 150,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(20.0),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(16),
+                                              child: Image.asset(
+                                                'assets/home/refr.png',
+                                                fit: BoxFit.contain,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 20),
+                                        // 오른쪽: '냉장고' 텍스트와 진행바
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Text(
+                                                '냉장고',
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 60),
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.start, // 시작 지점에서 정렬
+                                                children: List.generate(
+                                                  10,
+                                                      (index) {
+                                                    final isFilled = index < 4;
+                                                    return Container(
+                                                      width: 16,
+                                                      height: 36,
+                                                      margin: const EdgeInsets.symmetric(horizontal: 8), // 막대 사이 간격
+                                                      decoration: BoxDecoration(
+                                                        color: isFilled ? const Color(0xFF6AC992) : Colors.grey[300]!,
+                                                        borderRadius: BorderRadius.circular(12),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
