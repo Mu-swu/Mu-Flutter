@@ -14,35 +14,37 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 40, // 높이 고정
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration( // MARK: 높이를 제거하여 유연하게 조절되도록 함
         color: Colors.white,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          // 홈 탭
-          _buildNavItem(
-            icon: Icons.home,
-            label: '홈',
-            index: 0,
-            context: context,
-          ),
-          // 미션 탭
-          _buildNavItem(
-            icon: Icons.check_circle, // 톱니바퀴 아이콘
-            label: '미션',
-            index: 1,
-            context: context,
-          ),
-          // 마이 탭
-          _buildNavItem(
-            icon: Icons.person,
-            label: '마이',
-            index: 2,
-            context: context,
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 12.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // 홈 탭
+            _buildNavItem(
+              icon: Icons.home,
+              label: '홈',
+              index: 0,
+              context: context,
+            ),
+            // 미션 탭
+            _buildNavItem(
+              icon: Icons.check_circle,
+              label: '미션',
+              index: 1,
+              context: context,
+            ),
+            // 마이 탭
+            _buildNavItem(
+              icon: Icons.person,
+              label: '마이',
+              index: 2,
+              context: context,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -61,7 +63,7 @@ class BottomNavBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 22, color: color),
+          Icon(icon, size: 28, color: color),
           SizedBox(height: 1),
           Text(
             label,

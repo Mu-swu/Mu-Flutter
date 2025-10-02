@@ -70,7 +70,7 @@ flutter:
     - assets/test/test_ba.png
     - assets/test/test_mo.png
     - assets/test/test_ga.png
-    - assets/mom.png
+    - assets/home/mom_bang.png
     - assets/retest.png
     - assets/home/refr.png
     - assets/my/right_arrow.png
@@ -78,4 +78,5 @@ flutter:
     - assets/my/ex.png
     - assets/my/mymom_gam.png
     - assets/my/mymom_mol.png
-    - -assets/my/clover.png
+    - assets/my/clover.png
+    - assets/main_box.png

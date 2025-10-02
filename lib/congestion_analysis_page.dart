@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:mu/scheduling.dart';
 
 class longbutton extends StatelessWidget {
   final String text;
@@ -487,7 +488,18 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
               SizedBox(height: 40 * heightRatio),
               longbutton(
                 text: "다음",
-                onPressed: () {},
+                onPressed: () async {
+                  // 카메라 닫기
+                  await _cameraController?.dispose();
+                  _cameraController = null;
+
+                  // 다음 페이지로 이동
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const EmptyingSchedulePage(),
+                    ),
+                  );
+                },
                 isEnabled: true,
               ),
             ],
