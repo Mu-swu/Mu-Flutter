@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:mu/my_page.dart';
 import 'MissionStepPage.dart';
 import 'surveyq.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -82,13 +83,14 @@ class MyApp extends StatelessWidget {
       supportedLocales: const [
         Locale('ko'), // 🇰🇷 한국어 달력 등 지원
       ],
-      initialRoute: '/',
+      initialRoute: '/my',
       routes: {
         '/': (context) => const FigmaHomePage(),
         '/mission': (context) => MissionStepPage(),
         '/surveyq': (context) => const SurveyPage(),
         '/congestion': (context) => CongestionAnalysisLayout(),
         '/mission_start': (context) => const MissionStartPage(),
+        '/my':(context)=> const MyPage(),
       },
     );
   }
@@ -417,7 +419,7 @@ class FigmaHomePage extends StatelessWidget {
                   } else if (index == 1) {
                     Navigator.pushNamed(context, '/congestion'); // 미션
                   } else if (index == 2) {
-                    Navigator.pushNamed(context, '/surveyq'); // 마이 (예시)
+                    Navigator.pushNamed(context, '/my'); // 마이
                   }
                 },
               ),

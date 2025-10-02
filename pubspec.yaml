@@ -12,6 +12,7 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  fl_chart: ^0.68.0
   flutter_tts: ^3.8.3
   intl: ^0.20.2
   google_generative_ai: ^0.4.7
@@ -72,3 +73,9 @@ flutter:
     - assets/mom.png
     - assets/retest.png
     - assets/home/refr.png
+    - assets/my/right_arrow.png
+    - assets/my/mymom_bang.png
+    - assets/my/ex.png
+    - assets/my/mymom_gam.png
+    - assets/my/mymom_mol.png
+    - -assets/my/clover.png
