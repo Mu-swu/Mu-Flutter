@@ -2,13 +2,10 @@
 import 'package:flutter/material.dart';
 import 'widgets/custom_tag.dart';
 import 'widgets/shortbutton.dart';
+import 'user_theme_manager.dart'; // Import the user theme manager
 
 class MissionStartPage extends StatelessWidget {
   const MissionStartPage({super.key});
-
-  // AI 응답으로 대체될 문장 변수
-  final String aiSentenceLeft = '오늘까지 싹 치워!\n안 그러면 내가 다 버린다.';
-  final String aiSentenceRight = '네 물건 때문에 발 디딜 틈도 없겠다!\n그러고도 사람이 사니?';
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +18,45 @@ class MissionStartPage extends StatelessWidget {
 
     // 확대 비율 계산 (비율 유지하며 살짝 확대)
     final scale = (screenWidth / baseWidth).clamp(1.0, 1.3);
+    // Get current user type from the manager
+    final currentUserType = UserThemeManager.currentUserType;
+
+    // Determine the tag label and type based on the user type
+    String tagLabel;
+    TagType tagType;
+    switch (currentUserType) {
+      case UserType.bang:
+        tagLabel = '방치형';
+        tagType = TagType.bang;
+        break;
+      case UserType.gam:
+        tagLabel = '감정형';
+        tagType = TagType.gam;
+        break;
+      case UserType.mol:
+        tagLabel = '몰라형';
+        tagType = TagType.mol;
+        break;
+    }
+
+    // Determine the mission title and image based on the user type
+    String missionTitle;
+    String missionImage;
+    switch (currentUserType) {
+      case UserType.bang:
+        missionTitle = '냉장실 한 칸 비우기';
+        missionImage = 'assets/still.png'; // Example image for 'bang'
+        break;
+      case UserType.gam:
+        missionTitle = '옷장 한 칸 비우기';
+        missionImage = 'assets/still.png'; // Replace with actual image path
+        break;
+      case UserType.mol:
+        missionTitle = '서랍장 한 칸 비우기';
+        missionImage = 'assets/still.png'; // Replace with actual image path
+        break;
+    }
+
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -71,8 +107,8 @@ class MissionStartPage extends StatelessWidget {
                   left: 506,
                   top: 159,
                   child: Text(
-                    '냉장실 한 칸 비우기',
-                    style: TextStyle(
+                    missionTitle,
+                    style: const TextStyle(
                       color: Colors.black,
                       fontSize: 36,
                       fontFamily: 'Pretendard',
@@ -81,13 +117,13 @@ class MissionStartPage extends StatelessWidget {
                   ),
                 ),
 
-                // 방치형 태그
+                // 유형 태그
                 Positioned(
                   left: 607,
                   top: 117,
                   child: CustomTag(
-                    label: '방치형',
-                    type: TagType.bang, // 방치형 → bang
+                    label: tagLabel,
+                    type: tagType,
                   ),
                 ),
 
@@ -96,7 +132,7 @@ class MissionStartPage extends StatelessWidget {
                     width: 1000,
                     height: 350,
                     child: Image.asset(
-                      'assets/still.png',
+                      missionImage,
                       fit: BoxFit.cover,
                     ),
                   ),

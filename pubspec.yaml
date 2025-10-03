@@ -71,8 +71,14 @@ flutter:
     - assets/test/test_mo.png
     - assets/test/test_ga.png
     - assets/home/mom_bang.png
-    - assets/retest.png
+    - assets/home/mom_gam.png
+    - assets/home/mom_mol.png
+    - assets/home/retest_bang.png
+    - assets/home/retest_gam.png
+    - assets/home/retest_mol.png
     - assets/home/refr.png
+    - assets/home/closet.png
+    - assets/home/drawer.png
     - assets/my/right_arrow.png
     - assets/my/mymom_bang.png
     - assets/my/ex.png

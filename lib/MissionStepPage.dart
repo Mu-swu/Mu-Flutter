@@ -12,6 +12,7 @@ import 'widgets/loadingvideo.dart';
 import 'package:lottie/lottie.dart';
 import 'widgets/choice_popup.dart';
 import 'widgets/longbutton.dart';
+import 'user_theme_manager.dart';
 
 class StepData {
   final String title;
@@ -26,7 +27,7 @@ class MissionStepPage extends StatefulWidget {
 }
 
 class _MissionStepPageState extends State<MissionStepPage> {
-  String _currentUserType = 'gam'; // 'gam', 'mol', 'bas'
+  late UserType _currentUserType;
   int _currentStepIndex = 0;
   int _currentLineIndex = -1;
   List<String> _currentLines = [];
@@ -56,6 +57,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
   @override
   void initState() {
     super.initState();
+    _currentUserType = UserThemeManager.currentUserType;
 
     _ttsEngine = ElevenLabsTTS(apiKey: dotenv.env['ELEVENLABS_API_KEY']!);
 
@@ -506,12 +508,18 @@ class _MissionStepPageState extends State<MissionStepPage> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final Color baseColor =
-        _currentUserType == 'bas'
-            ? const Color(0xFFF9F1FD)
-            : _currentUserType == 'gam'
-            ? const Color(0xFFFFF4EE)
-            : const Color(0xFFF3FBF0); // mol
+    final Color baseColor;
+    switch (UserThemeManager.currentUserType) {
+      case UserType.bang:
+        baseColor = const Color(0xFFF9F1FD);
+        break;
+      case UserType.gam:
+        baseColor = const Color(0xFFFFF4EE);
+        break;
+      case UserType.mol:
+        baseColor = const Color(0xFFF3FBF0);
+        break;
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -606,7 +614,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                                     children: [
                                       const SizedBox(height: 24),
                                       StepNavigation(
-                                        missionType: _currentUserType,
+                                        missionType: _currentUserType == UserType.gam ? 'gam' : (_currentUserType == UserType.mol ? 'mol' : 'bas'),
                                         currentIndex: _currentStepIndex,
                                       ),
                                     ],
@@ -637,9 +645,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
                         Positioned.fill(
                           child: IgnorePointer(
                             child: Image.asset(
-                              _currentUserType == 'bas'
+                              _currentUserType == UserType.bang
                                   ? 'assets/gradient/gradient.png'
-                                  : _currentUserType == 'gam'
+                                  : _currentUserType == UserType.gam
                                   ? 'assets/gradient/gradient_gam.png'
                                   : 'assets/gradient/gradient_mol.png',
                               fit: BoxFit.fill,
@@ -658,12 +666,12 @@ class _MissionStepPageState extends State<MissionStepPage> {
   ///
   Widget _buildContentByType(BuildContext context) {
     switch (_currentUserType) {
-      case 'gam':
+      case UserType.gam:
         return _buildGamLayout(context);
-      case 'mol':
+      case UserType.mol:
         return _buildMolLayout(context);
       default:
-        return _buildBasLayout(context); // 기존 기본형
+        return _buildBasLayout(context);
     }
   }
 

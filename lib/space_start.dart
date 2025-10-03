@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // Add this import for kIsWeb
 import 'package:mu/widgets/navigationbar.dart'; // Import your BottomNavBar
 import 'package:mu/congestion_analysis_page.dart'; // Import the destination page
+import 'user_theme_manager.dart'; // Import the user theme manager
 
 class SpaceUnitCard extends StatelessWidget {
   final String title;
@@ -103,9 +103,8 @@ class SpaceUnitCard extends StatelessWidget {
       ),
     );
   }
-
-
 }
+
 class SpaceStartScreen extends StatefulWidget {
   const SpaceStartScreen({super.key});
 
@@ -157,6 +156,89 @@ class _SpaceStartScreenState extends State<SpaceStartScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final scaleFactor = screenWidth / 1280;
 
+    // Determine the order of cards based on the current user type
+    final List<Widget> spaceCards;
+    switch (UserThemeManager.currentUserType) {
+      case UserType.bang:
+        spaceCards = [
+          SpaceUnitCard(
+            title: '냉장고',
+            imagePath: 'assets/home/refr.png',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CongestionAnalysisLayout(),
+                ),
+              );
+            },
+          ),
+          const SpaceUnitCard(
+            title: '서랍장',
+            imagePath: 'assets/home/drawer.png',
+            isLocked: true,
+          ),
+          const SpaceUnitCard(
+            title: '옷장',
+            imagePath: 'assets/home/closet.png',
+            isLocked: true,
+          ),
+        ];
+        break;
+      case UserType.gam:
+        spaceCards = [
+          SpaceUnitCard(
+            title: '옷장',
+            imagePath: 'assets/home/closet.png',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CongestionAnalysisLayout(),
+                ),
+              );
+            },
+          ),
+          const SpaceUnitCard(
+            title: '냉장고',
+            imagePath: 'assets/home/refr.png',
+            isLocked: true,
+          ),
+          const SpaceUnitCard(
+            title: '서랍장',
+            imagePath: 'assets/home/drawer.png',
+            isLocked: true,
+          ),
+        ];
+        break;
+      case UserType.mol:
+        spaceCards = [
+          SpaceUnitCard(
+            title: '서랍장',
+            imagePath: 'assets/home/drawer.png',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CongestionAnalysisLayout(),
+                ),
+              );
+            },
+          ),
+          const SpaceUnitCard(
+            title: '냉장고',
+            imagePath: 'assets/home/refr.png',
+            isLocked: true,
+          ),
+          const SpaceUnitCard(
+            title: '옷장',
+            imagePath: 'assets/home/closet.png',
+            isLocked: true,
+          ),
+        ];
+        break;
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -181,38 +263,7 @@ class _SpaceStartScreenState extends State<SpaceStartScreen> {
                   SizedBox(height: 146 * scaleFactor),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      SpaceUnitCard(
-                        title: '냉장고',
-                        imagePath: 'assets/home/refr.png',
-                        isLocked: false,
-                        onTap: () {
-                          // Correctly navigate to the congestion analysis page
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CongestionAnalysisLayout(),
-                            ),
-                          );
-                        },
-                      ),
-                      SpaceUnitCard(
-                        title: '서랍장',
-                        imagePath: 'assets/home/refr.png', // Replace with drawer image
-                        isLocked: true,
-                        onTap: () {
-                          // This will not be called because isLocked is true
-                        },
-                      ),
-                      SpaceUnitCard(
-                        title: '옷장',
-                        imagePath: 'assets/home/refr.png', // Replace with closet image
-                        isLocked: true,
-                        onTap: () {
-                          // This will not be called because isLocked is true
-                        },
-                      ),
-                    ],
+                    children: spaceCards, // Use the dynamically created list of cards
                   ),
                 ],
               ),

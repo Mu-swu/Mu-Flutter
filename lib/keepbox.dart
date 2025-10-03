@@ -7,6 +7,8 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'widgets/ItemSaveSection.dart';
 import 'package:mu/data/sampledata.dart';
+import 'user_theme_manager.dart'; // Import the user theme manager
+
 class keepbox extends StatefulWidget {
   const keepbox({super.key});
 
@@ -38,7 +40,7 @@ class _keepboxState extends State<keepbox> {
     _initGemini();
     _initSpeech();
     categories = List<Map<String, dynamic>>.from(sampleCategories);
-}
+  }
 
   Future<void> _initGemini() async {
     final apiKey = dotenv.env['GEMINI_API_KEY'];
@@ -137,7 +139,7 @@ class _keepboxState extends State<keepbox> {
       final newItem = {
         'name': itemName,
         'startDate': formattedDate,
-        'endDate': formattedendDate,            // 만료일 선택 전
+        'endDate': formattedendDate,
       };
       setState(() {
         _pushItemToCategory(
@@ -150,10 +152,9 @@ class _keepboxState extends State<keepbox> {
         final geminiCat = await _getCategoryFromGemini(itemName) ?? '기타';
 
         setState(() {
-          // '기타' → 실제 카테고리로 이동
           for (final cat in categories) {
             (cat['items'] as List).removeWhere((it) =>
-            it['name'] == itemName); // ← category 상관없이 이름으로 정리
+            it['name'] == itemName);
           }
           _pushItemToCategory(
             categoryName: geminiCat,
@@ -169,7 +170,6 @@ class _keepboxState extends State<keepbox> {
             categories: categories,
             onConfirm: (chosenCat) {
               setState(() {
-                // 이동(=삭제 후 재추가)
                 for (final cat in categories) {
                   (cat['items'] as List)
                       .removeWhere((it) => it['name'] == itemName);
@@ -183,12 +183,10 @@ class _keepboxState extends State<keepbox> {
             },
             onAddCategory: (newCat) {
               setState(() {
-                // 먼저 모든 카테고리에서 제거
                 for (final cat in categories) {
                   (cat['items'] as List).removeWhere((it) => it['name'] == itemName);
                 }
 
-                // 새 카테고리 추가
                 categories.add({
                   'name': newCat,
                   'items': [ {...newItem, 'category': newCat} ],
@@ -198,26 +196,22 @@ class _keepboxState extends State<keepbox> {
           );
         }
       }
-    }
-     else{
+    } else {
       print('인식된 텍스트가 없습니다.');
+    }
   }
-}
 
   void _pushItemToCategory({
     required String categoryName,
     required Map<String, String> item,
   }) {
-    // 해당 카테고리 찾기
     final idx = categories.indexWhere((c) => c['name'] == categoryName);
     if (idx != -1) {
-      // 중복 추가 방지
       final items = categories[idx]['items'] as List;
       if (!items.any((it) => it['name'] == item['name'])) {
         items.add(item);
       }
     } else {
-      // '기타'에 넣기
       final etcIdx = categories.indexWhere((c) => c['name'] == '기타');
       final items = categories[etcIdx]['items'] as List;
       if (!items.any((it) => it['name'] == item['name'])) {
@@ -250,9 +244,10 @@ class _keepboxState extends State<keepbox> {
           Container(
             width: screenWidth * 0.15,
             decoration: BoxDecoration(
+              // Dynamically set the gradient based on user type
               gradient: _speechToText.isListening
-                  ? const LinearGradient(
-                colors: [Color(0xFFF3CDCD), Color(0xFFC9C6F2)],
+                  ? LinearGradient(
+                colors: [UserThemeManager.keepboxGradientStartColor, const Color(0xFFD7DCFA)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               )
@@ -392,4 +387,5 @@ class _keepboxState extends State<keepbox> {
         ],
       ),
     );
-  }}
+  }
+}

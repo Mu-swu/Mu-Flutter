@@ -9,7 +9,12 @@ import 'widgets/navigationbar.dart';
 import 'widgets/shortbutton.dart';
 import 'widgets/schedule_item.dart';
 import 'mission_start.dart';
+import 'keepbox.dart';
 import 'package:mu/data/sampledata.dart';
+import 'user_theme_manager.dart'; // Import the new file
+
+// You should create this file separately: user_theme_manager.dart
+// I've included the content of this new file in the response for your convenience.
 
 int calculateRemainingDays(String endDateString) {
   final now = DateTime.now();
@@ -21,7 +26,9 @@ int calculateRemainingDays(String endDateString) {
   );
   return endDate.difference(now).inDays;
 }
+
 // CustomTag 위젯 (요청에 따라 색상과 크기 수정)
+// 기존 TagType enum은 UserThemeManager.currentUserType에 맞게 사용합니다.
 enum TagType { bang, gam, mol }
 class CustomTag extends StatelessWidget {
   final String label;
@@ -53,12 +60,8 @@ class CustomTag extends StatelessWidget {
         break;
     }
 
-
-
-
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 패딩을 늘려서 크기 키움
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(8),
@@ -67,7 +70,7 @@ class CustomTag extends StatelessWidget {
         label,
         style: TextStyle(
           color: textColor,
-          fontSize: 12, // 폰트 사이즈 키움
+          fontSize: 12,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -105,22 +108,26 @@ class MyApp extends StatelessWidget {
         '/congestion': (context) => SpaceStartScreen(),
         '/mission_start': (context) => const MissionStartPage(),
         '/my':(context)=> const MyPage(),
+        '/keepbox': (context) => const keepbox(),
       },
     );
   }
 }
 
-class FigmaHomePage extends StatelessWidget {
+class FigmaHomePage extends StatefulWidget {
   const FigmaHomePage({super.key});
 
+  @override
+  State<FigmaHomePage> createState() => _FigmaHomePageState();
+}
+
+class _FigmaHomePageState extends State<FigmaHomePage> {
   @override
   Widget build(BuildContext context) {
     const baseWidth = 1280.0;
     const baseHeight = 800.0;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-
-    // 화면 너비와 높이 비율 중 작은 값을 기준으로 전체적인 비율을 계산
     final overallRatio = screenWidth / baseWidth < screenHeight / baseHeight ? screenWidth / baseWidth : screenHeight / baseHeight;
 
     final horizontalPadding = 150.0 * overallRatio;
@@ -149,7 +156,7 @@ class FigmaHomePage extends StatelessWidget {
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.only(
-            top: verticalPadding + 20,   // 👈 위쪽 여백에 20 추가
+            top: verticalPadding + 20,
             left: horizontalPadding,
             right: horizontalPadding,
             bottom: 0,
@@ -157,7 +164,6 @@ class FigmaHomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 헤더 섹션 (아이콘과 텍스트)
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
@@ -172,7 +178,7 @@ class FigmaHomePage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12 * overallRatio),
                       ),
                       child: Image.asset(
-                        'assets/retest.png',
+                        UserThemeManager.retestImage, // Dynamic image
                         width: 42 * overallRatio,
                         height: 42 * overallRatio,
                         fit: BoxFit.contain,
@@ -184,12 +190,12 @@ class FigmaHomePage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CustomTag(
-                        label: '#정리보단 숨기기',
-                        type: TagType.bang,
+                        label: UserThemeManager.tagLabel, // Dynamic tag label
+                        type: UserThemeManager.currentUserType == UserType.gam ? TagType.gam : (UserThemeManager.currentUserType == UserType.mol ? TagType.mol : TagType.bang),
                       ),
                       SizedBox(height: 5 * overallRatio),
                       Text(
-                        '방치형 비움이',
+                        UserThemeManager.userTitle, // Dynamic user title
                         style: TextStyle(
                           fontSize: 32 * overallRatio,
                           fontWeight: FontWeight.bold,
@@ -201,7 +207,7 @@ class FigmaHomePage extends StatelessWidget {
                   const Spacer(),
                   GestureDetector(
                     onTap: () {
-                      // help page navigation
+                      Navigator.pushNamed(context, '/keepbox');
                     },
                     child: Container(
                       padding: EdgeInsets.all(12 * overallRatio),
@@ -220,25 +226,21 @@ class FigmaHomePage extends StatelessWidget {
                 ],
               ),
               SizedBox(height: 20 * overallRatio),
-
-              // 메인 콘텐츠 섹션 (2x2 그리드 구조)
               Expanded(
                 child: Column(
                   children: [
-                    // 첫 번째 행: mom 섹션과 비움 스케줄 섹션
                     Expanded(
                       flex: 13,
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // 왼쪽: mom 섹션
                           Expanded(
                             flex: 18,
                             child: Container(
                               margin: EdgeInsets.only(right: spacing),
                               padding: EdgeInsets.all(20 * overallRatio),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFBF4FF),
+                                color: UserThemeManager.momBackgroundColor, // Dynamic background color
                                 borderRadius: BorderRadius.circular(24 * overallRatio),
                               ),
                               child: Column(
@@ -246,7 +248,7 @@ class FigmaHomePage extends StatelessWidget {
                                   Expanded(
                                     flex: 2,
                                     child: Image.asset(
-                                      'assets/home/mom_bang.png',
+                                      UserThemeManager.momImage, // Dynamic image
                                       fit: BoxFit.contain,
                                     ),
                                   ),
@@ -294,7 +296,6 @@ class FigmaHomePage extends StatelessWidget {
                               ),
                             ),
                           ),
-                          // 오른쪽: 비움 스케줄 섹션
                           Expanded(
                             flex: 10,
                             child: Column(
@@ -315,7 +316,7 @@ class FigmaHomePage extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(24 * overallRatio),
                                       child: ListView(
                                         padding: EdgeInsets.zero,
-                                        children: [
+                                        children: const [
                                           ScheduleItem(
                                             title: '냉장실 한 칸',
                                             time: '45분',
@@ -343,7 +344,6 @@ class FigmaHomePage extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: spacing),
-                    // 두 번째 행: 비움 현황과 보관 잔여일 섹션
                     Expanded(
                       flex: 10,
                       child: LayoutBuilder(
@@ -355,7 +355,6 @@ class FigmaHomePage extends StatelessWidget {
                           return Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 왼쪽: 비움 현황 섹션
                               Expanded(
                                 flex: 18,
                                 child: Column(
@@ -389,7 +388,7 @@ class FigmaHomePage extends StatelessWidget {
                                               child: ClipRRect(
                                                 borderRadius: BorderRadius.circular(16 * overallRatio),
                                                 child: Image.asset(
-                                                  'assets/home/refr.png',
+                                                  UserThemeManager.statusImage, // Dynamic image
                                                   fit: BoxFit.contain,
                                                 ),
                                               ),
@@ -407,8 +406,7 @@ class FigmaHomePage extends StatelessWidget {
                                                 ),
                                                 SizedBox(height: 40 * overallRatio),
                                                 Row(
-                                                  mainAxisAlignment:
-                                                  MainAxisAlignment.start,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
                                                   children: List.generate(
                                                     10,
                                                         (index) {
@@ -416,14 +414,10 @@ class FigmaHomePage extends StatelessWidget {
                                                       return Container(
                                                         width: 16 * overallRatio,
                                                         height: 36 * overallRatio,
-                                                        margin: EdgeInsets.symmetric(
-                                                            horizontal: 6 * overallRatio),
+                                                        margin: EdgeInsets.symmetric(horizontal: 6 * overallRatio),
                                                         decoration: BoxDecoration(
-                                                          color: isFilled
-                                                              ? const Color(0xFF6AC992)
-                                                              : Colors.grey[300]!,
-                                                          borderRadius:
-                                                          BorderRadius.circular(6 * overallRatio),
+                                                          color: isFilled ? const Color(0xFF6AC992) : Colors.grey[300]!,
+                                                          borderRadius: BorderRadius.circular(6 * overallRatio),
                                                         ),
                                                       );
                                                     },
@@ -438,8 +432,6 @@ class FigmaHomePage extends StatelessWidget {
                                   ],
                                 ),
                               ),
-
-                              // 오른쪽: 보관 잔여일 섹션
                               Expanded(
                                 flex: 10,
                                 child: Column(
@@ -450,13 +442,10 @@ class FigmaHomePage extends StatelessWidget {
                                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                                     ),
                                     SizedBox(height: spacing / 4),
-
-                                    // 높이를 직접 맞춰줌 (왼쪽 냉장고 박스 높이와 동일하게)
                                     SizedBox(
-                                      height: proportionalHeight, // ← 왼쪽 "비움 현황" 박스 높이와 동일
+                                      height: proportionalHeight,
                                       child: Row(
                                         children: [
-                                          // 첫 번째 칸
                                           Expanded(
                                             child: Container(
                                               margin: EdgeInsets.only(right: spacing / 2),
@@ -467,12 +456,11 @@ class FigmaHomePage extends StatelessWidget {
                                               ),
                                               child: item1 != null
                                                   ? Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start, // 좌측정렬
+                                                crossAxisAlignment: CrossAxisAlignment.start,
                                                 mainAxisAlignment: MainAxisAlignment.center,
                                                 children: [
                                                   Container(
-                                                    padding: const EdgeInsets.symmetric(
-                                                        horizontal: 8, vertical: 4),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                     decoration: BoxDecoration(
                                                       color: const Color(0xFFFFE0E0),
                                                       borderRadius: BorderRadius.circular(8),
@@ -509,7 +497,6 @@ class FigmaHomePage extends StatelessWidget {
                                                   : const Center(child: Text('데이터 없음')),
                                             ),
                                           ),
-                                          // 두 번째 칸
                                           Expanded(
                                             child: Container(
                                               margin: EdgeInsets.only(left: spacing / 2),
@@ -520,10 +507,10 @@ class FigmaHomePage extends StatelessWidget {
                                               ),
                                               child: item2 != null
                                                   ? Padding(
-                                                padding: EdgeInsets.only(top: 34 * overallRatio), // 태그 높이만큼 내려줌
+                                                padding: EdgeInsets.only(top: 34 * overallRatio),
                                                 child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start, // 좌측정렬
-                                                  mainAxisAlignment: MainAxisAlignment.start,   // 상단 정렬
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  mainAxisAlignment: MainAxisAlignment.start,
                                                   children: [
                                                     Text(
                                                       item2['name'] as String,
