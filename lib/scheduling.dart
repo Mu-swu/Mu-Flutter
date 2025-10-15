@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mu/mission_start.dart';
 import 'widgets/shortbutton.dart';
 
 // ===== ScheduleCard =====
@@ -9,6 +10,7 @@ class ScheduleCard extends StatelessWidget {
   final double cardWidth;
   final double cardHeight;
   final double fontScale;
+  final int? orderNumber;
 
   const ScheduleCard({
     super.key,
@@ -18,6 +20,7 @@ class ScheduleCard extends StatelessWidget {
     required this.cardWidth,
     required this.cardHeight,
     required this.fontScale,
+    this.orderNumber,
   });
 
   @override
@@ -46,6 +49,10 @@ class ScheduleCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(20 * fontScale),
+        border:
+            orderNumber != null
+                ? Border.all(color: Colors.indigo[600]!, width: 2.0)
+                : null,
       ),
       padding: EdgeInsets.all(24 * fontScale),
       child: Stack(
@@ -55,7 +62,9 @@ class ScheduleCard extends StatelessWidget {
             children: [
               Container(
                 padding: EdgeInsets.symmetric(
-                    horizontal: 8 * fontScale, vertical: 4 * fontScale),
+                  horizontal: 8 * fontScale,
+                  vertical: 4 * fontScale,
+                ),
                 decoration: BoxDecoration(
                   color: statusBackgroundColor,
                   borderRadius: BorderRadius.circular(8 * fontScale),
@@ -96,9 +105,22 @@ class ScheduleCard extends StatelessWidget {
               width: 28 * fontScale,
               height: 28 * fontScale,
               decoration: BoxDecoration(
-                color: Colors.grey[400],
+                color:
+                    orderNumber != null ? Colors.indigo[600] : Colors.grey[400],
                 shape: BoxShape.circle,
               ),
+              alignment: Alignment.center,
+              child:
+                  orderNumber != null
+                      ? Text(
+                        orderNumber.toString(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16 * fontScale,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                      : null,
             ),
           ),
         ],
@@ -109,7 +131,9 @@ class ScheduleCard extends StatelessWidget {
 
 // ===== EmptyingSchedulePage =====
 class EmptyingSchedulePage extends StatefulWidget {
-  const EmptyingSchedulePage({super.key});
+  final Map<String, String> analysisResults;
+
+  const EmptyingSchedulePage({super.key, required this.analysisResults});
 
   @override
   _EmptyingSchedulePageState createState() => _EmptyingSchedulePageState();
@@ -117,15 +141,54 @@ class EmptyingSchedulePage extends StatefulWidget {
 
 class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
   // 카드 데이터 리스트
-  final List<Map<String, String>> cardData = [
-    {'status': '여유', 'section': '1단', 'time': '30분'},
-    {'status': '보통', 'section': '2단', 'time': '45분'},
-    {'status': '혼잡', 'section': '3단', 'time': '1시간'},
-    //{'status': '보통', 'section': '4단', 'time': '50분'},
-  ];
+  List<String> _selectedOrder = [];
+
+  String _getTimeForStatus(String status) {
+    switch (status) {
+      case '혼잡':
+        return '1시간';
+      case '보통':
+        return '45분';
+      case '여유':
+        return '30분';
+      default:
+        return '30분';
+    }
+  }
+
+  Duration _parseDuration(String timeString) {
+    if (timeString.contains('시간')) {
+      final hours = int.tryParse(timeString.replaceAll('시간', '').trim()) ?? 0;
+      return Duration(hours: hours);
+    } else if (timeString.contains('분')) {
+      final minutes = int.tryParse(timeString.replaceAll('분', '').trim()) ?? 0;
+      return Duration(minutes: minutes);
+    }
+    return const Duration(minutes: 30);
+  }
+
+  void _toggleSelection(String section) {
+    setState(() {
+      if (_selectedOrder.contains(section)) {
+        _selectedOrder.remove(section);
+      } else {
+        _selectedOrder.add(section);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final List<Map<String, String>> cardData =
+        widget.analysisResults.entries.map((entry) {
+          final section = entry.key;
+          final status = entry.value;
+          return {
+            'status': status,
+            'section': section,
+            'time': _getTimeForStatus(status),
+          };
+        }).toList();
     return Scaffold(
       backgroundColor: Colors.white,
       body: LayoutBuilder(
@@ -145,7 +208,9 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
           return SafeArea(
             child: Padding(
               padding: EdgeInsets.symmetric(
-                  horizontal: 150 * widthRatio, vertical: 20 * heightRatio),
+                horizontal: 150 * widthRatio,
+                vertical: 20 * heightRatio,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -153,8 +218,11 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: IconButton(
-                      icon: Icon(Icons.arrow_back_ios,
-                          color: const Color(0xFF8D93A1), size: 24 * fontScale),
+                      icon: Icon(
+                        Icons.arrow_back_ios,
+                        color: const Color(0xFF8D93A1),
+                        size: 24 * fontScale,
+                      ),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ),
@@ -181,21 +249,32 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
 
                   // 카드 영역
                   Expanded(
-                    child: Center(
+                    child: Align(
+                      alignment: Alignment.topLeft,
                       child: Wrap(
                         spacing: 40 * widthRatio,
                         runSpacing: 40 * heightRatio,
-                        alignment: WrapAlignment.center,
-                        children: cardData.map((c) {
-                          return ScheduleCard(
-                            status: c['status']!,
-                            section: c['section']!,
-                            time: c['time']!,
-                            cardWidth: cardWidth,
-                            cardHeight: cardHeight,
-                            fontScale: fontScale,
-                          );
-                        }).toList(),
+                        alignment: WrapAlignment.start,
+                        children:
+                            cardData.map((c) {
+                              final sectionName = c['section']!;
+                              final int? order =
+                                  _selectedOrder.contains(sectionName)
+                                      ? _selectedOrder.indexOf(sectionName) + 1
+                                      : null;
+                              return GestureDetector(
+                                onTap: () => _toggleSelection(sectionName),
+                                child: ScheduleCard(
+                                  status: c['status']!,
+                                  section: sectionName,
+                                  time: c['time']!,
+                                  cardWidth: cardWidth,
+                                  cardHeight: cardHeight,
+                                  fontScale: fontScale,
+                                  orderNumber: order,
+                                ),
+                              );
+                            }).toList(),
                       ),
                     ),
                   ),
@@ -208,7 +287,11 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                         child: ShortButton(
                           text: "초기화",
                           isYes: false,
-                          onPressed: () {},
+                          onPressed: () {
+                            setState(() {
+                              _selectedOrder.clear();
+                            });
+                          },
                           height: 60 * heightRatio,
                           fontSize: 18 * fontScale,
                         ),
@@ -217,8 +300,32 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                       Expanded(
                         child: ShortButton(
                           text: "미션 시작",
-                          isYes: true,
-                          onPressed: () {},
+                          isYes: _selectedOrder.isNotEmpty,
+                          onPressed:
+                              _selectedOrder.isEmpty
+                                  ? null
+                                  : () {
+                                    final firstMissionName =
+                                        _selectedOrder.first;
+                                    final missionData = cardData.firstWhere(
+                                      (data) =>
+                                          data['section'] == firstMissionName,
+                                    );
+                                    final timeString = missionData['time']!;
+                                    final missionDuration = _parseDuration(
+                                      timeString,
+                                    );
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => MissionStartPage(
+                                              missionOrder: _selectedOrder,
+                                              missionTime: missionDuration,
+                                            ),
+                                      ),
+                                    );
+                                  },
                           height: 60 * heightRatio,
                           fontSize: 18 * fontScale,
                         ),
@@ -235,4 +342,3 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
     );
   }
 }
-

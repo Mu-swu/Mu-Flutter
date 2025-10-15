@@ -100,13 +100,11 @@ class MyApp extends StatelessWidget {
       supportedLocales: const [
         Locale('ko'), // 🇰🇷 한국어 달력 등 지원
       ],
-      initialRoute: '/',
+      initialRoute: '/congestion',
       routes: {
         '/': (context) => const FigmaHomePage(),
-        '/mission': (context) => MissionStepPage(),
         '/surveyq': (context) => const SurveyPage(),
         '/congestion': (context) => SpaceStartScreen(),
-        '/mission_start': (context) => const MissionStartPage(),
         '/my':(context)=> const MyPage(),
         '/keepbox': (context) => const keepbox(),
       },
@@ -485,9 +483,9 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                   ),
                                                   SizedBox(height: 5 * overallRatio),
                                                   Text(
-                                                    'D-${item1['remainingDays']}',
+                                                    'D${item1['remainingDays']}',
                                                     style: TextStyle(
-                                                      fontSize: 40 * overallRatio,
+                                                      fontSize: 30 * overallRatio,
                                                       fontWeight: FontWeight.bold,
                                                       color: Colors.black,
                                                     ),
@@ -524,7 +522,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                     Text(
                                                       'D-${item2['remainingDays']}',
                                                       style: TextStyle(
-                                                        fontSize: 40 * overallRatio,
+                                                        fontSize: 30 * overallRatio,
                                                         fontWeight: FontWeight.bold,
                                                         color: Colors.black,
                                                       ),

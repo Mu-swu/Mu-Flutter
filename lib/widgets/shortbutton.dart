@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class ShortButton extends StatelessWidget {
   final String text;
   final bool isYes;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final double? width;
   final double? height;
   final double? fontSize;
@@ -12,7 +12,7 @@ class ShortButton extends StatelessWidget {
     super.key,
     required this.text,
     required this.isYes,
-    required this.onPressed,
+    this.onPressed,
     this.width,
     this.height,
     this.fontSize,
@@ -23,6 +23,7 @@ class ShortButton extends StatelessWidget {
     final btnWidth = width ?? 463;
     final btnHeight = height ?? 64;
     final txtSize = fontSize ?? 18;
+    final bool isEnabled = onPressed != null;
 
     return GestureDetector(
       onTap: onPressed,

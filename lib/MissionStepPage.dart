@@ -22,6 +22,10 @@ class StepData {
 }
 
 class MissionStepPage extends StatefulWidget {
+  final List<String> missionOrder;
+  final Duration missionTime;
+
+  const MissionStepPage({super.key, required this.missionOrder,required this.missionTime, });
   @override
   _MissionStepPageState createState() => _MissionStepPageState();
 }
@@ -32,7 +36,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
   int _currentLineIndex = -1;
   List<String> _currentLines = [];
   Timer? _timer;
-  Duration _remainingTime = Duration(minutes: 35);
+  late Duration _remainingTime;
   ElevenLabsTTS? _ttsEngine;
   bool _isTtsEnabled = true;
   bool _isPaused = false;
@@ -60,14 +64,14 @@ class _MissionStepPageState extends State<MissionStepPage> {
     _currentUserType = UserThemeManager.currentUserType;
 
     _ttsEngine = ElevenLabsTTS(apiKey: dotenv.env['ELEVENLABS_API_KEY']!);
-
+    _remainingTime = widget.missionTime;
     //API 키 사용해 gemini 모델 초기화
     final apiKey = dotenv.env['GEMINI_API_KEY'];
     if (apiKey == null) {
       print('No API key found');
       return;
     }
-    _model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
+    _model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
 
     _generateMissionSteps();
 
@@ -110,6 +114,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
   Future<void> _generateMissionSteps() async {
     final userTypeMap = {'gam': '감정형', 'mol': '몰라형', 'bas': '방치형'};
     final userType = userTypeMap[_currentUserType] ?? '방치형';
+    final missionName = widget.missionOrder.isNotEmpty ? widget.missionOrder[0] : '미션';
 
     final room = "부엌";
     final furniture = "냉장고";
@@ -243,6 +248,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
     
     사용자 정보:
     -사용자 유형:$userType
+     -비움 미션:$missionName
     -비울 공간:$room
     -비울 가구:$furniture
     -공간 밀집도:$density
@@ -753,9 +759,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
         const SizedBox(height: 30),
 
         // 🔹 TTS 텍스트 박스
-        Container(
+        Expanded(
+        child:Container(
           width: double.infinity,
-          height: 370,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -766,6 +772,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
             currentLineIndex: _currentLines.isNotEmpty ? _currentLineIndex : -1,
             controller: _scrollController,
           ),
+        ),
         ),
         const SizedBox(height: 25),
 
@@ -830,7 +837,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
                               width: 200, // 원형 타이머 지름
                               height: 200,
                               child: CircularProgressIndicator(
-                                value: _remainingTime.inSeconds.toDouble() / Duration(minutes: 35).inSeconds.toDouble(),
+                                value: _remainingTime.inSeconds.toDouble() /
+                                    widget.missionTime.inSeconds.toDouble(),
                                 strokeWidth: 16,
                                 backgroundColor: Colors.grey.shade200,
                                 color: const Color(0xFF7F91FF),
@@ -882,7 +890,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
               // ▶︎ 오른쪽 TTS 박스
               Expanded(
                 child: Container(
-                  height: 446,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),

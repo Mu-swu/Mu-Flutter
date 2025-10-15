@@ -12,7 +12,8 @@ class MyPage extends StatefulWidget {
 }
 
 class _MyPageState extends State<MyPage> {
-  TagType _currentUserType = TagType.mol;
+  TagType _currentUserType = TagType.bang;
+  int _currentMissionLevel = 4;
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +24,7 @@ class _MyPageState extends State<MyPage> {
     final widthRatio = screenWidth / baseWidth;
     final heightRatio = screenHeight / baseHeight;
 
-    final horizontalPadding = screenWidth * 0.15;
-    final verticalPadding = screenHeight * 0.02;
-    final spacing = 20 * heightRatio;
+    final horizontalPadding = screenWidth * 0.1;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -45,21 +44,58 @@ class _MyPageState extends State<MyPage> {
                       SizedBox(height: 32 * heightRatio),
                       _buildTypeSection(widthRatio),
                       SizedBox(height: 30 * heightRatio),
-                      _buildSubTitleSection(widthRatio),
-                      SizedBox(height: 10 * heightRatio),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: _buildMissionSection(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '나의 비움 여정',
+                              style: TextStyle(
+                                fontSize: 20*widthRatio,
+                                fontWeight: FontWeight.bold,
+                              ),
+                      ),
+                              SizedBox(height: 10*heightRatio),
+                              _buildMissionSection(
                               widthRatio,
                               heightRatio,
                             ),
+                            ],
+                          ),
                           ),
                           SizedBox(width: 20 * widthRatio),
-                          Expanded(child: _buildProgressSection(widthRatio)),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                (_currentUserType==TagType.mol)
+                            ?Text(
+                              '오늘의 비움 꿀팁',
+                              style: TextStyle(
+                                fontSize: 20*widthRatio,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                            :Text(
+                                  '',
+                                  style: TextStyle(
+                                    fontSize: 20*widthRatio,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              SizedBox(height: 10*heightRatio),
+                              _buildSectionForType(
+                              widthRatio,
+                              heightRatio,
+                            ),
+                            ],
+                          ),
+                          ),
                         ],
                       ),
-                      SizedBox(height: spacing),
                     ],
                   ),
                 ),
@@ -87,6 +123,22 @@ class _MyPageState extends State<MyPage> {
     );
   }
 
+  Widget _buildSectionForType(double widthRatio, double heightRatio) {
+    switch (_currentUserType) {
+      case TagType.bang:
+        return _buildProgressSection(widthRatio);
+      case TagType.gam:
+        return _buildMessageSection(widthRatio, heightRatio);
+      case TagType.mol:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [_buildTipsSection(widthRatio, heightRatio)],
+        );
+      default:
+        return _buildProgressSection(widthRatio);
+    }
+  }
+
   Widget _buildTypeSection(double widthRatio) {
     String title;
     String description;
@@ -103,8 +155,7 @@ class _MyPageState extends State<MyPage> {
         break;
       case TagType.gam:
         title = '감정형';
-        description =
-            '마음이 가라앉을 땐, 뭐든 손에 잘 안 잡혀요.\n그럴땐 욕심내지 말고, 하나만 비워봐요.';
+        description = '마음이 가라앉을 땐, 뭐든 손에 잘 안 잡혀요.\n그럴땐 욕심내지 말고, 하나만 비워봐요.';
         imagePath = 'assets/my/mymom_gam.png';
         backgroundColor = const Color(0xFFFFF6EF);
         break;
@@ -148,7 +199,7 @@ class _MyPageState extends State<MyPage> {
                     ),
                   ],
                 ),
-                SizedBox(height: 30 * widthRatio), // 제목과 설명 사이 간격
+                SizedBox(height: 30 * widthRatio),
                 Text(
                   description,
                   style: TextStyle(
@@ -167,22 +218,34 @@ class _MyPageState extends State<MyPage> {
     );
   }
 
-  Widget _buildSubTitleSection(double widthRatio) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '나의 비움 여정',
-          style: TextStyle(
-            fontSize: 20 * widthRatio,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildMissionSection(double widthRatio, double heightRatio) {
+    String imagePrefix;
+    int maxLevel;
+    double imageWidth;
+
+    switch (_currentUserType) {
+      case TagType.bang:
+        imagePrefix = 're';
+        maxLevel = 3;
+        imageWidth = 305;
+        break;
+      case TagType.gam:
+        imagePrefix = 'cl';
+        maxLevel = 4;
+        imageWidth = 450;
+        break;
+      case TagType.mol:
+        imagePrefix = 'dr';
+        maxLevel = 3;
+        imageWidth = 305;
+        break;
+    }
+
+    final actualMissionLevel = _currentMissionLevel.clamp(0, maxLevel);
+
+    final missionImagePath =
+        'assets/my/${imagePrefix}${actualMissionLevel}.png';
+
     return Container(
       padding: EdgeInsets.all(30 * widthRatio),
       decoration: BoxDecoration(
@@ -192,15 +255,16 @@ class _MyPageState extends State<MyPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.asset('assets/my/ex.png', width: 260 * widthRatio),
-          SizedBox(height: 30 * widthRatio),
+          SizedBox(height: 10 * widthRatio),
+          Image.asset(missionImagePath, width: imageWidth * widthRatio),
+          SizedBox(height: 50 * widthRatio),
           Row(
             children: [
               Expanded(
                 child: Container(
                   padding: EdgeInsets.all(18 * widthRatio),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Color(0xFFFAFBFF),
                     borderRadius: BorderRadius.circular(8 * widthRatio),
                   ),
                   child: Column(
@@ -213,7 +277,7 @@ class _MyPageState extends State<MyPage> {
                           color: const Color(0xFF5D5D5D),
                         ),
                       ),
-                      SizedBox(height: 10 * heightRatio),
+                      SizedBox(height: 20 * heightRatio),
                       Text(
                         '1/3',
                         style: TextStyle(
@@ -225,12 +289,12 @@ class _MyPageState extends State<MyPage> {
                   ),
                 ),
               ),
-              SizedBox(width: 10 * widthRatio),
+              SizedBox(width: 15 * widthRatio),
               Expanded(
                 child: Container(
                   padding: EdgeInsets.all(18 * widthRatio),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Color(0xFFFAFBFF),
                     borderRadius: BorderRadius.circular(8 * widthRatio),
                   ),
                   child: Column(
@@ -243,7 +307,7 @@ class _MyPageState extends State<MyPage> {
                           color: const Color(0xFF5D5D5D),
                         ),
                       ),
-                      SizedBox(height: 10 * heightRatio),
+                      SizedBox(height: 20 * heightRatio),
                       Text(
                         '30%',
                         style: TextStyle(
@@ -264,7 +328,7 @@ class _MyPageState extends State<MyPage> {
 
   Widget _buildProgressSection(double widthRatio) {
     return Container(
-      height: 253,
+      height: 302,
       padding: EdgeInsets.all(30 * widthRatio),
       decoration: BoxDecoration(
         color: const Color(0xFFF3F5FF),
@@ -371,64 +435,28 @@ class _MyPageState extends State<MyPage> {
         borderRadius: BorderRadius.circular(10 * widthRatio),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Image.asset('assets/my/clover.png', width: 260 * widthRatio),
-          SizedBox(height: 30 * widthRatio),
+          SizedBox(height: 20 * widthRatio),
+          Image.asset('assets/my/clover.png', width: 400 * widthRatio),
+          SizedBox(height: 46 * widthRatio),
           Row(
             children: [
               Expanded(
                 child: Container(
                   padding: EdgeInsets.all(18 * widthRatio),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Color(0xFFFAFBFF),
                     borderRadius: BorderRadius.circular(8 * widthRatio),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      SizedBox(height: 1 * heightRatio),
                       Text(
-                        '완료한 미션',
+                        '잘하고 있어. 정말 기특하다. 지금처럼 잘 해내갈 수 있길 엄마가 응원할게. 화이팅!',
                         style: TextStyle(
                           fontSize: 16 * widthRatio,
-                          color: const Color(0xFF5D5D5D),
-                        ),
-                      ),
-                      SizedBox(height: 10 * heightRatio),
-                      Text(
-                        '1/3',
-                        style: TextStyle(
-                          fontSize: 32 * widthRatio,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(width: 10 * widthRatio),
-              Expanded(
-                child: Container(
-                  padding: EdgeInsets.all(18 * widthRatio),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8 * widthRatio),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '달성률',
-                        style: TextStyle(
-                          fontSize: 16 * widthRatio,
-                          color: const Color(0xFF5D5D5D),
-                        ),
-                      ),
-                      SizedBox(height: 10 * heightRatio),
-                      Text(
-                        '30%',
-                        style: TextStyle(
-                          fontSize: 32 * widthRatio,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -437,6 +465,74 @@ class _MyPageState extends State<MyPage> {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTipsSection(double widthRatio, double heightRatio) {
+    final List<Map<String, String>> tips = [
+      {
+        'title': '필요한 개수만 남기기',
+        'description':
+            '같은 종류의 물건이 여러개라면 무작정 비우기보다는 중복 물건을 최소화하는 전략을 세워봐요. 펜, 메모지, 고무줄, 비닐봉투 등 중복되는 물건의 가장 적절한 개수를 미리 정해 비워가는 거에요.(예:볼펜 5개, 집게 10개씩 남긴다.)',
+      },
+      {
+        'title': '물건 종류별로 정리하기',
+        'description':
+            '물건의 품목별로 분류하여 정리해 보세요. 물건을 종류별로 모으는 것만큼 비우기에 확실한 방법은 없어요. 흩어져 있던 물건들을 한 곳에 모아 전체 양을 파악할 수 있고, 중복되거나 필요 없는 것을 쉽게 구분할 수 있는 가장 확실한 방법이에요. (예: 볼펜은 볼펜끼리, 문서는 문서끼리 한 구역에 모으기)',
+      },
+      {
+        'title': '사용 주기로 판단해 비우기',
+        'description':
+            '물건을 마지막으로 사용했거나 사용할수 있는 최대 기간을 정해 바로 비울 수 있도록 결정해요. 화장품, 건강기능식품, 식재료 등 사용 기한이 있는 모든 품목에 구매 또는 개봉일을 라벨로 붙여 관리해주는 거에요. (예: 9월 5일 구매, 2026년 10월 5일까지)...',
+      },
+    ];
+
+    final int todayTipIndex = DateTime.now().day % tips.length;
+    final Map<String, String> todayTip = tips[todayTipIndex];
+
+    return Container(
+      height: 302,
+      padding: EdgeInsets.all(30 * widthRatio),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F5FF),
+        borderRadius: BorderRadius.circular(10 * widthRatio),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(height: 10 * heightRatio),
+          Row(
+            children: [
+              Image.asset('assets/my/idea.png', width: 36 * widthRatio),
+              SizedBox(width: 12 * widthRatio),
+              Text(
+                todayTip['title']!,
+                style: TextStyle(
+                  fontSize: 18 * widthRatio,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 20 * heightRatio),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(25 * widthRatio),
+            decoration: BoxDecoration(
+              color: Color(0xFFFAFBFF),
+              borderRadius: BorderRadius.circular(8 * widthRatio),
+            ),
+            child: Text(
+              todayTip['description']!,
+              style: TextStyle(
+                fontSize: 16 * widthRatio,
+                fontWeight: FontWeight.w500,
+                height: 1.8,
+              ),
+            ),
           ),
         ],
       ),

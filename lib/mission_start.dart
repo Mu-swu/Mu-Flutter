@@ -1,11 +1,14 @@
 // mission_start.dart
 import 'package:flutter/material.dart';
+import 'MissionStepPage.dart';
 import 'widgets/custom_tag.dart';
 import 'widgets/shortbutton.dart';
 import 'user_theme_manager.dart'; // Import the user theme manager
 
 class MissionStartPage extends StatelessWidget {
-  const MissionStartPage({super.key});
+  final List<String> missionOrder;
+  final Duration missionTime;
+  const MissionStartPage({super.key, required this.missionOrder,required this.missionTime});
 
   @override
   Widget build(BuildContext context) {
@@ -40,19 +43,21 @@ class MissionStartPage extends StatelessWidget {
     }
 
     // Determine the mission title and image based on the user type
-    String missionTitle;
+    final String missionTitle = missionOrder.isNotEmpty
+        ? missionOrder[0]
+        : '미션을 선택해주세요';
     String missionImage;
     switch (currentUserType) {
       case UserType.bang:
-        missionTitle = '냉장실 한 칸 비우기';
+        missionTitle;
         missionImage = 'assets/still.png'; // Example image for 'bang'
         break;
       case UserType.gam:
-        missionTitle = '옷장 한 칸 비우기';
+        missionTitle;
         missionImage = 'assets/still.png'; // Replace with actual image path
         break;
       case UserType.mol:
-        missionTitle = '서랍장 한 칸 비우기';
+        missionTitle;
         missionImage = 'assets/still.png'; // Replace with actual image path
         break;
     }
@@ -84,11 +89,18 @@ class MissionStartPage extends StatelessWidget {
                     text: '시작하기',
                     isYes: true, // 파란색
                     onPressed: () {
-                      Navigator.pushNamed(context, '/mission');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MissionStepPage(
+                            missionOrder: missionOrder,
+                            missionTime: missionTime,
+                          ),
+                        ),
+                      );
                     },
                   ),
                 ),
-
                 // "건너뛰기" 버튼
                 Positioned(
                   left: 162,

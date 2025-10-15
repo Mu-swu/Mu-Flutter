@@ -55,7 +55,7 @@ class _keepboxState extends State<keepbox> {
 
     try {
       _model = GenerativeModel(
-        model: 'gemini-1.5-flash-latest',
+        model: 'gemini-2.5-flash',
         apiKey: apiKey,
       );
       setState(() {

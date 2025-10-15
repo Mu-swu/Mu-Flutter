@@ -29,6 +29,7 @@ dependencies:
   tflite_flutter: ^0.11.0
   camera: ^0.11.0+2
   audioplayers: ^6.0.0
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:
@@ -86,3 +87,17 @@ flutter:
     - assets/my/mymom_mol.png
     - assets/my/clover.png
     - assets/main_box.png
+    - assets/my/re0.png
+    - assets/my/re1.png
+    - assets/my/re2.png
+    - assets/my/re3.png
+    - assets/my/dr0.png
+    - assets/my/dr1.png
+    - assets/my/dr2.png
+    - assets/my/dr3.png
+    - assets/my/cl0.png
+    - assets/my/cl1.png
+    - assets/my/cl2.png
+    - assets/my/cl3.png
+    - assets/my/cl4.png
+    - assets/my/idea.png

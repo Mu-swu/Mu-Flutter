@@ -1,40 +1,18 @@
 import 'package:flutter/material.dart';
 import 'keepbox.dart';
-import 'MissionStepPage.dart';
 import 'widgets/shortbutton.dart';
 
-class Keepbox_start extends StatefulWidget {
+class Keepbox_start extends StatelessWidget {
   const Keepbox_start({super.key});
 
   @override
-  State<Keepbox_start> createState() => _Keepbox_startState();
-}
-
-class _Keepbox_startState extends State<Keepbox_start> {
-  bool _isTtsEnabled = true;
-
-  void _toggleTts() {
-    setState(() {
-      _isTtsEnabled = !_isTtsEnabled;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery
-        .of(context)
-        .size
-        .width;
-    final screenHeight = MediaQuery
-        .of(context)
-        .size
-        .height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
-    // 기준 해상도 (디자인 기준)
     const baseWidth = 1280.0;
     const baseHeight = 800.0;
 
-    // 비율 계산 (가로/세로 중 작은 값을 사용해 비율 유지)
     final scale = (screenWidth / baseWidth).clamp(0.8, 1.3);
     final widthRatio = scale;
     final heightRatio = (screenHeight / baseHeight).clamp(0.8, 1.3);
@@ -48,127 +26,87 @@ class _Keepbox_startState extends State<Keepbox_start> {
             height: screenHeight,
             padding: EdgeInsets.all(24 * widthRatio),
             color: Colors.white,
-            child: Stack(
+            child: Column(
               children: [
-                Column(
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Icon(Icons.arrow_back, size: 28 * widthRatio),
+                  ),
+                ),
+                SizedBox(height: 16 * heightRatio),
+
+                Text(
+                  '못 버린 물건이 있나요?\n 버릴까 말까 상자에 잠시 보관하세요',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 30 * widthRatio,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+                SizedBox(height: 20 * heightRatio),
+
+                Expanded(
+                  child: Image.asset(
+                    'assets/box.jpg',
+                    width: 400 * widthRatio,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+
+                SizedBox(height: 10 * heightRatio),
+
+                Container(
+                  width: screenWidth * 0.7,
+                  padding: EdgeInsets.symmetric(
+                    vertical: 24 * heightRatio,
+                    horizontal: 20 * widthRatio,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F5FF),
+                    borderRadius: BorderRadius.circular(10 * widthRatio),
+                  ),
+                  child: Text(
+                    '버리지 못한 물건이 있다면 \n‘버릴까 말까 상자’로 이동하여 일정 기간 동안 물건을 보관해드려요.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16 * widthRatio,
+                      color: const Color(0xFF5C5C5C),
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: 40 * heightRatio),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Align(
-                      alignment: Alignment.topLeft,
-                      child: IconButton(
-                        onPressed: () =>
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => MissionStepPage()),
-                            ),
-                        icon: Icon(Icons.arrow_back, size: 28 * widthRatio),
-                      ),
+                    ShortButton(
+                      text: '종료하기',
+                      isYes: false,
+                      onPressed: () {
+                        Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+                      },
                     ),
-                    SizedBox(height: 16 * heightRatio),
-
-                    // 제목
-                    Text(
-                      '못 버린 물건이 있나요?\n 버릴까 말까 상자에 잠시 보관하세요',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 30 * widthRatio,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
-                    SizedBox(height: 20 * heightRatio),
-
-                    Image.asset(
-                      'assets/box.jpg',
-                      width: 400 * widthRatio,
-                      height: 300 * heightRatio,
-                      fit: BoxFit.contain,
-                    ),
-
-                    SizedBox(height: 10 * heightRatio),
-
-                    // 설명 박스
-                    Container(
-                      width: screenWidth * 0.7,
-                      padding: EdgeInsets.symmetric(
-                        vertical: 24 * heightRatio,
-                        horizontal: 20 * widthRatio,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F5FF),
-                        borderRadius: BorderRadius.circular(10 * widthRatio),
-                      ),
-                      child: Text(
-                        '버리지 못한 물건이 있다면 \n‘버릴까 말까 상자’로 이동하여 일정 기간 동안 물건을 보관해드려요.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16 * widthRatio,
-                          color: const Color(0xFF5C5C5C),
-                        ),
-                      ),
-                    ),
-
-                    SizedBox(height: 40 * heightRatio),
-// 버튼 2개
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center, // 가운데 정렬
-                      children: [
-                        ShortButton(
-                          text: '종료하기',
-                          isYes: false, // 흰색
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                        SizedBox(width: 80 * widthRatio), // 버튼 사이 간격 조절
-                        ShortButton(
-                          text: '이동하기',
-                          isYes: true, // 검은색/파란색 계열
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const keepbox(),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
+                    SizedBox(width: 80 * widthRatio),
+                    ShortButton(
+                      text: '이동하기',
+                      isYes: true,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const keepbox(),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
+                SizedBox(height: 20 * heightRatio),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _actionButton({
-    required String text,
-    required Color backgroundColor,
-    required Color textColor,
-    required VoidCallback onTap,
-    required double widthRatio,
-    required double heightRatio,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 400 * widthRatio,
-        height: 64 * heightRatio,
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(8 * widthRatio),
-        ),
-        child: Center(
-          child: Text(
-            text,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 18 * widthRatio,
-              fontWeight: FontWeight.w500,
             ),
           ),
         ),
