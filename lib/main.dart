@@ -100,7 +100,7 @@ class MyApp extends StatelessWidget {
       supportedLocales: const [
         Locale('ko'), // 🇰🇷 한국어 달력 등 지원
       ],
-      initialRoute: '/congestion',
+      initialRoute: '/',
       routes: {
         '/': (context) => const FigmaHomePage(),
         '/surveyq': (context) => const SurveyPage(),
@@ -330,6 +330,11 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                             time: '30분',
                                             isCompleted: true,
                                           ),
+                                          ScheduleItem(
+                                            title: '냉장실 포켓',
+                                            time: '30분',
+                                            isCompleted: true,
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -405,21 +410,23 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                 SizedBox(height: 40 * overallRatio),
                                                 Row(
                                                   mainAxisAlignment: MainAxisAlignment.start,
-                                                  children: List.generate(
-                                                    10,
-                                                        (index) {
-                                                      final isFilled = index < 4;
-                                                      return Container(
-                                                        width: 16 * overallRatio,
-                                                        height: 36 * overallRatio,
-                                                        margin: EdgeInsets.symmetric(horizontal: 6 * overallRatio),
-                                                        decoration: BoxDecoration(
-                                                          color: isFilled ? const Color(0xFF6AC992) : Colors.grey[300]!,
-                                                          borderRadius: BorderRadius.circular(6 * overallRatio),
+                                                  children: [
+                                                    Expanded(
+                                                      child: ClipRRect(
+                                                        borderRadius: BorderRadius.circular(20), // Adjust to match desired corner radius
+                                                        child: SizedBox(
+                                                          height: 20, // Set a fixed height for the progress bar
+                                                          child: LinearProgressIndicator(
+                                                            value: 0.3, // 30% progress
+                                                            backgroundColor: Colors.grey[300], // Gray background
+                                                            valueColor: const AlwaysStoppedAnimation<Color>(
+                                                              Color(0xFF6AC992), // Green fill color
+                                                            ),
+                                                          ),
                                                         ),
-                                                      );
-                                                    },
-                                                  ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ],
                                             ),

@@ -1,14 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:mu/user_theme_manager.dart';
 Widget tts_text_box({
   required List<String> lines,
   required int currentLineIndex,
   ScrollController? controller,
 
 }) {
+  final UserType userType = UserThemeManager.currentUserType;
   // 안전하게 currentLineIndex 처리
   final safeCurrentLineIndex = (currentLineIndex >= 0 && currentLineIndex < lines.length)
       ? currentLineIndex
       : -1;
+  String missionImage;
+  switch (userType) {
+    case UserType.bang:
+      missionImage = 'assets/mission/mission_re.png';
+      break;
+    case UserType.gam:
+      missionImage = 'assets/mission/mission_cl.png';
+      break;
+    case UserType.mol:
+      missionImage = 'assets/mission/mission_dr.png';
+      break;
+  }
   return Container(
     width: double.infinity,
     margin: const EdgeInsets.symmetric(vertical: 24),
@@ -57,7 +71,7 @@ Widget tts_text_box({
             width: 200,
             height: 80,
             child: Image.asset(
-              'assets/boximage.png',
+              missionImage,
               fit: BoxFit.cover,
             ),
           ),

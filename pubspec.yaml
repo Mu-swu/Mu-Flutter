@@ -48,9 +48,15 @@ flutter:
     - assets/gradient/gradient.png
     - assets/gradient/gradient_gam.png
     - assets/gradient/gradient_mol.png
-    - assets/loadingvideo.mp4
-    - assets/still.png
-    - assets/boximage.png
+    - assets/mission/loading_dr.mp4
+    - assets/mission/loading_cl.mp4
+    - assets/mission/loading_re.mp4
+    - assets/mission/still_re.png
+    - assets/mission/still_dr.png
+    - assets/mission/still_cl.png
+    - assets/mission/mission_cl.png
+    - assets/mission/mission_dr.png
+    - assets/mission/mission_re.png
     - assets/HourGlass.json
     - .env
     - assets/detect.tflite

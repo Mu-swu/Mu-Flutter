@@ -1,4 +1,3 @@
-// mission_start.dart
 import 'package:flutter/material.dart';
 import 'MissionStepPage.dart';
 import 'widgets/custom_tag.dart';
@@ -8,25 +7,16 @@ import 'user_theme_manager.dart'; // Import the user theme manager
 class MissionStartPage extends StatelessWidget {
   final List<String> missionOrder;
   final Duration missionTime;
-  const MissionStartPage({super.key, required this.missionOrder,required this.missionTime});
+  const MissionStartPage({super.key, required this.missionOrder, required this.missionTime});
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    // 기준 해상도 (디자인 기준)
-    const baseWidth = 1280.0;
-    const baseHeight = 800.0;
-
-    // 확대 비율 계산 (비율 유지하며 살짝 확대)
-    final scale = (screenWidth / baseWidth).clamp(1.0, 1.3);
-    // Get current user type from the manager
-    final currentUserType = UserThemeManager.currentUserType;
 
     // Determine the tag label and type based on the user type
     String tagLabel;
     TagType tagType;
+    final currentUserType = UserThemeManager.currentUserType;
     switch (currentUserType) {
       case UserType.bang:
         tagLabel = '방치형';
@@ -49,106 +39,93 @@ class MissionStartPage extends StatelessWidget {
     String missionImage;
     switch (currentUserType) {
       case UserType.bang:
-        missionTitle;
-        missionImage = 'assets/still.png'; // Example image for 'bang'
+        missionImage = 'assets/mission/still_re.png'; // Example image for 'bang'
         break;
       case UserType.gam:
-        missionTitle;
-        missionImage = 'assets/still.png'; // Replace with actual image path
+        missionImage = 'assets/mission/still_cl.png'; // Replace with actual image path
         break;
       case UserType.mol:
-        missionTitle;
-        missionImage = 'assets/still.png'; // Replace with actual image path
+        missionImage = 'assets/mission/still_dr.png'; // Replace with actual image path
         break;
     }
-
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: Transform.scale(
-          scale: scale,
-          alignment: Alignment.center,
-          child: SizedBox(
-            width: baseWidth,
-            height: baseHeight,
-            child: Stack(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 배경
-                Container(
-                  width: baseWidth,
-                  height: baseHeight,
-                  color: Colors.white,
+                // Tag and Title section
+                CustomTag(
+                  label: tagLabel,
+                  type: tagType,
                 ),
+                const SizedBox(height: 16),
+                Text(
+                  missionTitle,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 36,
+                    fontFamily: 'Pretendard',
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 48),
 
-                // "시작하기" 버튼
-                Positioned(
-                  left: 653,
-                  top: 653,
-                  child: ShortButton(
-                    text: '시작하기',
-                    isYes: true, // 파란색
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MissionStepPage(
-                            missionOrder: missionOrder,
-                            missionTime: missionTime,
-                          ),
+                // Mission Image section (with a fixed proportional width)
+                Image.asset(
+                  missionImage,
+                  width: screenWidth * 0.8,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 48),
+
+                // Buttons section 🚀 수정된 부분
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.1), // 좌우 여백을 이미지와 동일하게 설정
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        flex: 1,
+                        child: ShortButton(
+                          text: '건너뛰기',
+                          isYes: false,
+                          onPressed: () {
+                            // Skip logic
+                          },
+                          // width와 height를 제거하여 Flexible에 맡깁니다.
                         ),
-                      );
-                    },
+                      ),
+                      const SizedBox(width: 24),
+                      Flexible(
+                        flex: 1,
+                        child: ShortButton(
+                          text: '시작하기',
+                          isYes: true,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => MissionStepPage(
+                                  missionOrder: missionOrder,
+                                  missionTime: missionTime,
+                                ),
+                              ),
+                            );
+                          },
+                          // width와 height를 제거하여 Flexible에 맡깁니다.
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                // "건너뛰기" 버튼
-                Positioned(
-                  left: 162,
-                  top: 653,
-                  child: ShortButton(
-                    text: '건너뛰기',
-                    isYes: false, // 흰색
-                    onPressed: () {
-                      // 건너뛰기 로직
-                    },
-                  ),
-                ),
-
-                // 미션 제목
-                Positioned(
-                  left: 506,
-                  top: 159,
-                  child: Text(
-                    missionTitle,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 36,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-
-                // 유형 태그
-                Positioned(
-                  left: 607,
-                  top: 117,
-                  child: CustomTag(
-                    label: tagLabel,
-                    type: tagType,
-                  ),
-                ),
-
-                Center(
-                  child: SizedBox(
-                    width: 1000,
-                    height: 350,
-                    child: Image.asset(
-                      missionImage,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 24),
               ],
             ),
           ),

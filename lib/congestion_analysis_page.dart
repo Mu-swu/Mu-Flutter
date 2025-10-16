@@ -45,6 +45,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
   final int _inputSize = 300;
   List<String>? _labels;
   String? _currentSection;
+  bool _isCapturing = false;
 
   Future<void>? _initializationFuture;
 
@@ -211,9 +212,9 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
 
       final areaRatio = totalBoxArea / imageArea;
 
-      if (detectedCount > 6 && areaRatio > 0.3) {
+      if (detectedCount > 10 && areaRatio > 0.4) {
         return "혼잡";
-      } else if (detectedCount >= 3 && areaRatio > 0.15) {
+      } else if (detectedCount > 6 && areaRatio > 0.3) {
         return "보통";
       } else {
         return "여유";
