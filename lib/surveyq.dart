@@ -56,7 +56,7 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
 
   int _currentQuestionIndex = 0;
   final List<bool> _answers = [];
-  bool _isSurveyFinished = false; // 설문 완료 상태를 추적
+  bool _isSurveyFinished = false;
 
   late AnimationController _animationController;
   late Animation<Offset> _cardSlideAnimation;
@@ -108,13 +108,7 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
     setState(() {
       _isDragging = false;
     });
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    if (_cardOffset.dx.abs() > screenWidth * 0.3) {
-      _handleAnswer(_cardOffset.dx > 0);
-    } else {
-      _animateCardBackToCenter();
-    }
+    _handleAnswer(_cardOffset.dx > 0);
   }
 
   void _handleAnswer(bool answer) {
@@ -129,8 +123,9 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              ResultPage(resultType: resultType),
+          pageBuilder:
+              (context, animation, secondaryAnimation) =>
+                  ResultPage(resultType: resultType),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -139,35 +134,31 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
     }
   }
 
-  void _animateCardBackToCenter() {
-    _cardSlideAnimation = Tween<Offset>(begin: _cardOffset, end: Offset.zero)
-        .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
-    _cardRotationAnimation = Tween<double>(begin: _cardRotation, end: 0.0)
-        .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
-    _animationController.forward().whenComplete(() {
-      _animationController.reset();
-      setState(() {
-        _cardOffset = Offset.zero;
-        _cardRotation = 0.0;
-      });
-    });
-  }
-
   void _animateCardOffScreen(int direction) {
     final screenWidth = MediaQuery.of(context).size.width;
-    _cardSlideAnimation = Tween<Offset>(begin: _cardOffset, end: Offset(direction * screenWidth * 1.5, 0))
-        .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeIn));
-    _cardRotationAnimation = Tween<double>(begin: _cardRotation, end: direction * (pi / 4))
-        .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeIn));
+    _cardSlideAnimation = Tween<Offset>(
+      begin: _cardOffset,
+      end: Offset(direction * screenWidth * 1.5, 0),
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
+    );
+    _cardRotationAnimation = Tween<double>(
+      begin: _cardRotation,
+      end: direction * (pi / 4),
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
+    );
 
     _animationController.forward().whenComplete(() {
       if (!mounted) return;
+
+      _animationController.reset();
+
       setState(() {
         if (_currentQuestionIndex < _questions.length - 1) {
           _currentQuestionIndex++;
           _cardOffset = Offset.zero;
           _cardRotation = 0.0;
-          _animationController.reset();
         } else {
           _isSurveyFinished = true;
         }
@@ -183,21 +174,51 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
     for (int i = 0; i < _answers.length; i++) {
       bool isYes = _answers[i];
       switch (i + 1) {
-        case 1: if (isYes) bangchiScore++; break;
-        case 2: if (isYes) bangchiScore++; else mollaScore++; break;
-        case 3: if (isYes) gamjeongScore++; break;
-        case 4: if (isYes) bangchiScore++; break;
-        case 5: if (isYes) gamjeongScore++; break;
-        case 6: if (isYes) mollaScore++; break;
-        case 7: if (isYes) { gamjeongScore++; mollaScore++; } break;
-        case 8: if (isYes) bangchiScore++; else mollaScore++; break;
-        case 9: if (isYes) mollaScore++; break;
-        case 10: if (!isYes) bangchiScore++; break;
+        case 1:
+          if (isYes) bangchiScore++;
+          break;
+        case 2:
+          if (isYes)
+            bangchiScore++;
+          else
+            mollaScore++;
+          break;
+        case 3:
+          if (isYes) gamjeongScore++;
+          break;
+        case 4:
+          if (isYes) bangchiScore++;
+          break;
+        case 5:
+          if (isYes) gamjeongScore++;
+          break;
+        case 6:
+          if (isYes) mollaScore++;
+          break;
+        case 7:
+          if (isYes) {
+            gamjeongScore++;
+            mollaScore++;
+          }
+          break;
+        case 8:
+          if (isYes)
+            bangchiScore++;
+          else
+            mollaScore++;
+          break;
+        case 9:
+          if (isYes) mollaScore++;
+          break;
+        case 10:
+          if (!isYes) bangchiScore++;
+          break;
       }
     }
 
     if (mollaScore >= gamjeongScore && mollaScore >= bangchiScore) return "몰라형";
-    if (gamjeongScore > mollaScore && gamjeongScore >= bangchiScore) return "감정형";
+    if (gamjeongScore > mollaScore && gamjeongScore >= bangchiScore)
+      return "감정형";
     return "방치형";
   }
 
@@ -220,30 +241,44 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Bar
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: topBarPadding, vertical: 20 * heightRatio),
+              padding: EdgeInsets.symmetric(
+                horizontal: topBarPadding,
+                vertical: 20 * heightRatio,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.arrow_back, size: 32 * widthRatio, color: const Color(0xFFB0B8C1))),
-                  Text("나의 정리 유형은?", style: TextStyle(fontSize: 24 * widthRatio, fontWeight: FontWeight.w400, color: Colors.grey[600])),
-                  IconButton(onPressed: () {}, icon: Icon(Icons.volume_up, size: 32 * widthRatio, color: const Color(0xFFB0B8C1))),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(
+                      Icons.arrow_back_ios,
+                      size: 36 * widthRatio,
+                      color: const Color(0xFFB0B8C1),
+                    ),
+                  ),
+                  Icon(
+                    Icons.volume_up,
+                    size: 36 * widthRatio,
+                    color: const Color(0xFFB0B8C1),
+                  ),
                 ],
               ),
             ),
             // Progress Bar
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 20 * heightRatio),
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: 10 * heightRatio,
+              ),
               child: LinearProgressIndicator(
                 value: (_currentQuestionIndex + 1) / _questions.length,
                 backgroundColor: const Color(0xFFF5F5F5),
                 color: const Color(0xFF7F91FF),
-                minHeight: 15 * heightRatio,
+                minHeight: 10 * heightRatio,
               ),
             ),
 
-            // 설문 완료 여부에 따라 다른 UI 표시
             if (_isSurveyFinished) ...[
               Expanded(
                 child: Center(
@@ -271,62 +306,112 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.fromLTRB(horizontalPadding, 40 * heightRatio, horizontalPadding, 80 * heightRatio),
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  40 * heightRatio,
+                  horizontalPadding,
+                  80 * heightRatio,
+                ),
                 child: longbutton(
-                  text: "결과보기",
+                  text: "결과 보기",
                   isEnabled: true,
                   onPressed: _showResult,
                 ),
               ),
             ] else ...[
-              // Yes/No Text
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 30 * heightRatio),
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: 50 * heightRatio,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    GestureDetector(onTap: () => _handleAnswer(false), child: Text("<<    아니오", style: TextStyle(fontSize: 26 * widthRatio, color: Colors.black54))),
-                    GestureDetector(onTap: () => _handleAnswer(true), child: Text("네    >>", style: TextStyle(fontSize: 26 * widthRatio, color: Colors.black54))),
+                    GestureDetector(
+                      onTap: () => _handleAnswer(false),
+                      child: Text(
+                        "<<    아니오",
+                        style: TextStyle(
+                          fontSize: 26 * widthRatio,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _handleAnswer(true),
+                      child: Text(
+                        "네    >>",
+                        style: TextStyle(
+                          fontSize: 26 * widthRatio,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
               // Card Stack
               Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(30 * widthRatio, 0, 30*widthRatio, 80 * heightRatio),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      if (!isLastQuestion)
-                        CardTestNo(
-                          widthRatio: widthRatio,
-                          heightRatio: heightRatio,
-                          questionText: _questions[_currentQuestionIndex + 1],
-                          imagePath: _imagePaths[_currentQuestionIndex + 1],
-                        ),
-                      if (_currentQuestionIndex < _questions.length)
-                        GestureDetector(
-                          onPanStart: _onPanStart,
-                          onPanUpdate: _onPanUpdate,
-                          onPanEnd: _onPanEnd,
-                          child: Transform.translate(
-                            offset: _cardOffset,
-                            child: Transform.rotate(
-                              angle: _cardRotation,
-                              child: CardTestNo(
-                                widthRatio: widthRatio,
-                                heightRatio: heightRatio,
-                                questionText: _questions[_currentQuestionIndex],
-                                imagePath: _imagePaths[_currentQuestionIndex],
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    AnimatedOpacity(
+                      opacity: isLastQuestion ? 0.0 : 1.0,
+                      duration: const Duration(milliseconds: 300),
+                      child: Image.asset(
+                        'assets/test/card_background.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    Stack(
+                      alignment: Alignment.topCenter,
+                      children: [
+                        if (!isLastQuestion)
+                          CardTestNo(
+                            widthRatio: widthRatio,
+                            heightRatio: heightRatio,
+                            questionText: _questions[_currentQuestionIndex + 1],
+                            imagePath: _imagePaths[_currentQuestionIndex + 1],
+                          ),
+                        if (_currentQuestionIndex < _questions.length)
+                          GestureDetector(
+                            key: ValueKey(_currentQuestionIndex),
+                            onPanStart: _onPanStart,
+                            onPanUpdate: _onPanUpdate,
+                            onPanEnd: _onPanEnd,
+                            child: Transform.translate(
+                              offset: _cardOffset,
+                              child: Transform.rotate(
+                                angle: _cardRotation,
+                                child: CardTestNo(
+                                  widthRatio: widthRatio,
+                                  heightRatio: heightRatio,
+                                  questionText:
+                                      _questions[_currentQuestionIndex],
+                                  imagePath: _imagePaths[_currentQuestionIndex],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ]
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  40 * heightRatio,
+                  horizontalPadding,
+                  80 * heightRatio,
+                ),
+                child: longbutton(
+                  text: "결과 보기",
+                  isEnabled: false,
+                  onPressed: _showResult,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -351,21 +436,21 @@ class CardTestNo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardWidth = 549 * widthRatio;
-    final cardHeight = cardWidth + 40;
+    final cardWidth = 630 * widthRatio;
+    final cardHeight = cardWidth + 23;
 
     return Container(
       width: cardWidth,
       height: cardHeight,
-      padding: EdgeInsets.symmetric(horizontal: 48 * widthRatio, vertical: 20 * heightRatio),
+      padding: EdgeInsets.only(top: 25, left: 25, right: 25),
       decoration: BoxDecoration(
         color: const Color(0xFFF3F5FF),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -373,22 +458,22 @@ class CardTestNo extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Expanded(
-            flex: 3,
-            child: imagePath != null
-                ? ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Image.asset(
-                imagePath!,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Center(child: Text("Image not found"));
-                },
-              ),
-            )
-                : const SizedBox.shrink(),
+            flex: 5,
+            child:
+                imagePath != null
+                    ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        imagePath!,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Center(child: Text("Image not found"));
+                        },
+                      ),
+                    )
+                    : const SizedBox.shrink(),
           ),
-          SizedBox(height: imagePath != null ? 25 * heightRatio : 0),
           Expanded(
             flex: 2,
             child: Center(
@@ -410,4 +495,3 @@ class CardTestNo extends StatelessWidget {
     );
   }
 }
-

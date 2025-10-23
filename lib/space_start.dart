@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:mu/widgets/navigationbar.dart'; // Import your BottomNavBar
-import 'package:mu/congestion_analysis_page.dart'; // Import the destination page
-import 'user_theme_manager.dart'; // Import the user theme manager
+import 'package:mu/widgets/navigationbar.dart';
+import 'package:mu/congestion_analysis_page.dart';
+import 'package:mu/data/database.dart';
 
 class SpaceUnitCard extends StatelessWidget {
   final String title;
@@ -19,7 +19,6 @@ class SpaceUnitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1280x800 화면 비율 기준
     final screenWidth = MediaQuery.of(context).size.width;
     final scaleFactor = screenWidth / 1280;
 
@@ -27,7 +26,7 @@ class SpaceUnitCard extends StatelessWidget {
       onTap: isLocked ? null : onTap,
       child: Container(
         width: 300 * scaleFactor,
-        height: 324 * scaleFactor,
+        height: 330 * scaleFactor,
         decoration: BoxDecoration(
           color: isLocked ? const Color(0xFFF5F5F5) : const Color(0xFFE9F0FC),
           borderRadius: BorderRadius.circular(10),
@@ -42,18 +41,16 @@ class SpaceUnitCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // Column을 전체 카드 너비로 확장
             SizedBox(
               width: double.infinity,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.center, // 가로 중앙
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SizedBox(height: 70 * scaleFactor), // 카드 상단 여백
-                  // 이미지 흰색 상자
+                  SizedBox(height: 75 * scaleFactor),
                   Container(
                     width: 110 * scaleFactor,
-                    height: 110 * scaleFactor,
+                    height: 130 * scaleFactor,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
@@ -66,8 +63,7 @@ class SpaceUnitCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(height: 24 * scaleFactor), // 이미지와 텍스트 간격
-                  // 텍스트
+                  SizedBox(height: 24 * scaleFactor),
                   Text(
                     title,
                     textAlign: TextAlign.center,
@@ -81,7 +77,6 @@ class SpaceUnitCard extends StatelessWidget {
                 ],
               ),
             ),
-            // 잠금 상태 오버레이
             if (isLocked)
               Positioned.fill(
                 child: Container(
@@ -113,41 +108,87 @@ class SpaceStartScreen extends StatefulWidget {
 }
 
 class _SpaceStartScreenState extends State<SpaceStartScreen> {
-  // Use a nullable int to avoid issues with initial index on web/desktop
   int? _selectedIndex;
-
-  // Function to determine the initial index based on the current route
-  int _getInitialIndex() {
-    final route = ModalRoute.of(context)?.settings.name;
-    if (route == '/') return 0;
-    if (route == '/congestion') return 1;
-    if (route == '/my') return 2;
-    return 1; // Default to '미션' if the route is unknown
-  }
+  bool _isLoading = true;
+  String? _userType;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Only set the initial index once
-    if (_selectedIndex == null) {
-      _selectedIndex = _getInitialIndex();
+  void initState() {
+    super.initState();
+    _loadUserType();
+  }
+
+  Future<void> _loadUserType() async {
+    try {
+      final db = AppDatabase.instance;
+      const userId = 1;
+      final userType = await db.getUserType(userId);
+
+      if (mounted) {
+        setState(() {
+          _userType = userType ?? '방치형';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("사용자 유형 불러오기 에러 : $e");
+      if (mounted) {
+        setState(() {
+          _userType = "방치형";
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  // The method to handle navigation bar taps
-  void _onItemTapped(int index) {
-    if (index == _selectedIndex) return;
-
-    setState(() {
-      _selectedIndex = index;
-    });
-
-    if (index == 0) {
-      Navigator.pushNamed(context, '/'); // Home
-    } else if (index == 1) {
-      Navigator.pushNamed(context, '/congestion'); // Mission
-    } else if (index == 2) {
-      Navigator.pushNamed(context, '/my'); // My Page
+  List<Widget> _buildSpaceCards() {
+    switch (_userType) {
+      case '방치형':
+        return [
+          SpaceUnitCard(
+            title: '냉장고',
+            imagePath: 'assets/home/refr.png',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CongestionAnalysisLayout()),
+              );
+            },
+          ),
+          const SpaceUnitCard(title: '서랍장', imagePath: 'assets/home/drawer.png', isLocked: true),
+          const SpaceUnitCard(title: '옷장', imagePath: 'assets/home/closet.png', isLocked: true),
+        ];
+      case '감정형':
+        return [
+          SpaceUnitCard(
+            title: '옷장',
+            imagePath: 'assets/home/closet.png',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CongestionAnalysisLayout()),
+              );
+            },
+          ),
+          const SpaceUnitCard(title: '냉장고', imagePath: 'assets/home/refr.png', isLocked: true),
+          const SpaceUnitCard(title: '서랍장', imagePath: 'assets/home/drawer.png', isLocked: true),
+        ];
+      case '몰라형':
+      default:
+        return [
+          SpaceUnitCard(
+            title: '서랍장',
+            imagePath: 'assets/home/drawer.png',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CongestionAnalysisLayout()),
+              );
+            },
+          ),
+          const SpaceUnitCard(title: '냉장고', imagePath: 'assets/home/refr.png', isLocked: true),
+          const SpaceUnitCard(title: '옷장', imagePath: 'assets/home/closet.png', isLocked: true),
+        ];
     }
   }
 
@@ -156,114 +197,39 @@ class _SpaceStartScreenState extends State<SpaceStartScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final scaleFactor = screenWidth / 1280;
 
-    // Determine the order of cards based on the current user type
-    final List<Widget> spaceCards;
-    switch (UserThemeManager.currentUserType) {
-      case UserType.bang:
-        spaceCards = [
-          SpaceUnitCard(
-            title: '냉장고',
-            imagePath: 'assets/home/refr.png',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CongestionAnalysisLayout(),
-                ),
-              );
-            },
-          ),
-          const SpaceUnitCard(
-            title: '서랍장',
-            imagePath: 'assets/home/drawer.png',
-            isLocked: true,
-          ),
-          const SpaceUnitCard(
-            title: '옷장',
-            imagePath: 'assets/home/closet.png',
-            isLocked: true,
-          ),
-        ];
-        break;
-      case UserType.gam:
-        spaceCards = [
-          SpaceUnitCard(
-            title: '옷장',
-            imagePath: 'assets/home/closet.png',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CongestionAnalysisLayout(),
-                ),
-              );
-            },
-          ),
-          const SpaceUnitCard(
-            title: '냉장고',
-            imagePath: 'assets/home/refr.png',
-            isLocked: true,
-          ),
-          const SpaceUnitCard(
-            title: '서랍장',
-            imagePath: 'assets/home/drawer.png',
-            isLocked: true,
-          ),
-        ];
-        break;
-      case UserType.mol:
-        spaceCards = [
-          SpaceUnitCard(
-            title: '서랍장',
-            imagePath: 'assets/home/drawer.png',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CongestionAnalysisLayout(),
-                ),
-              );
-            },
-          ),
-          const SpaceUnitCard(
-            title: '냉장고',
-            imagePath: 'assets/home/refr.png',
-            isLocked: true,
-          ),
-          const SpaceUnitCard(
-            title: '옷장',
-            imagePath: 'assets/home/closet.png',
-            isLocked: true,
-          ),
-        ];
-        break;
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
+
+    final List<Widget> spaceCards = _buildSpaceCards();
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Main content
           Positioned.fill(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 163 * scaleFactor),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: 64 * scaleFactor),
+                  SizedBox(height: 110 * scaleFactor),
                   Text(
                     '미션',
                     style: TextStyle(
                       color: const Color(0xFF333333),
                       fontSize: 28 * scaleFactor,
                       fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                  SizedBox(height: 146 * scaleFactor),
+                  SizedBox(height: 150 * scaleFactor),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: spaceCards, // Use the dynamically created list of cards
+                    children: spaceCards,
                   ),
                 ],
               ),
@@ -272,9 +238,40 @@ class _SpaceStartScreenState extends State<SpaceStartScreen> {
         ],
       ),
       bottomNavigationBar: BottomNavBar(
-        selectedIndex: _selectedIndex ?? 1, // Default to 1 if not set
+        selectedIndex: _selectedIndex ?? 1,
         onItemTapped: _onItemTapped,
       ),
     );
+  }
+
+  int _getInitialIndex() {
+    final route = ModalRoute.of(context)?.settings.name;
+    if (route == '/') return 0;
+    if (route == '/congestion') return 1;
+    if (route == '/my') return 2;
+    return 1;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_selectedIndex == null) {
+      _selectedIndex = _getInitialIndex();
+    }
+  }
+
+  void _onItemTapped(int index) {
+    if (index == _selectedIndex) return;
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    if (index == 0) {
+      Navigator.pushNamed(context, '/');
+    } else if (index == 1) {
+      Navigator.pushNamed(context, '/congestion');
+    } else if (index == 2) {
+      Navigator.pushNamed(context, '/my');
+    }
   }
 }

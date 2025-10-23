@@ -5,6 +5,8 @@ import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:mu/scheduling.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:mu/data/database.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 class longbutton extends StatelessWidget {
   final String text;
@@ -49,11 +51,8 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
 
   Future<void>? _initializationFuture;
 
-  Map<String, String> _results = {
-    "냉장실 한 칸": "분석 전", // 초기 상태는 "분석 전"으로 변경
-    "얼음/얼린 식재료 칸": "분석 전",
-    "냉동식품 칸": "분석 전",
-  };
+  Map<String, String> _results = {};
+  String _headerTitle = "";
 
   @override
   void initState() {
@@ -63,17 +62,64 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
 
   Future<void> _initializeAll() async {
     var status = await Permission.camera.status;
-
     if (!status.isGranted) {
       status = await Permission.camera.request();
     }
-
-    if (status.isGranted) {
-      await _initCamera();
-      await _loadModel();
-    } else {
+    if (!status.isGranted) {
       throw Exception('카메라 권한이 거부되었습니다.');
     }
+
+    final db = AppDatabase.instance;
+    final userType = await db.getUserType(1) ?? '방치형';
+
+    switch (userType) {
+      case '감정형':
+        _headerTitle = "옷장 속 물건이\n얼마나 많은지 볼까요?";
+        break;
+      case '몰라형':
+        _headerTitle = "서랍장 속 물건이\n얼마나 많은지 볼까요?";
+        break;
+      case '방치형':
+      default:
+        _headerTitle = "냉장고 속 물건이\n얼마나 많은지 볼까요?";
+        break;
+    }
+
+    List<String> defaultSections;
+    switch (userType) {
+      case '감정형':
+        defaultSections = ["선반", "행거 구역", "옷장 바닥 공간", "서랍"];
+        break;
+      case '몰라형':
+        defaultSections = ["1단", "2단", "3단"];
+        break;
+      case '방치형':
+      default:
+        defaultSections = ["냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"];
+        break;
+    }
+
+    final dbSections = await db.getSectionsForUser(1);
+
+    bool needsReset = false;
+    if (dbSections.isEmpty) {
+      needsReset = true;
+    } else {
+      String firstDBSectionName = dbSections.first.name;
+      if (!defaultSections.contains(firstDBSectionName)) {
+        needsReset = true;
+      }
+    }
+    if (needsReset) {
+      print("사용자 유형이 변경되었거나 첫 실행입니다. 섹션을 리셋합니다.");
+      await db.deleteAllSectionsForUser(1);
+      await db.batchInsertSections(1, defaultSections);
+      _results = {for (var section in defaultSections) section: "분석 전"};
+    } else {
+      _results = {for (var s in dbSections) s.name: s.clutterLevel};
+    }
+    await _initCamera();
+    await _loadModel();
   }
 
   Future<void> _initCamera() async {
@@ -114,6 +160,9 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
       final result = await _analyzeImage(imageFile);
 
       setState(() => _results[section] = result);
+
+      final db = AppDatabase.instance;
+      await db.updateSectionClutterByName(1, section, result);
     } catch (e) {
       setState(() => _results[section] = "분석 오류");
     }
@@ -226,6 +275,13 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
   }
 
   void _addSection() {
+    if (_results.length >= 5) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('칸은 최대 5개까지 추가할 수 있습니다.')));
+      return;
+    }
+
     TextEditingController controller = TextEditingController();
 
     showModalBottomSheet(
@@ -273,11 +329,16 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
                 const SizedBox(height: 40),
                 longbutton(
                   text: "추가하기",
-                  onPressed: () {
+                  onPressed: () async {
                     if (controller.text.trim().isNotEmpty) {
+                      final newName = controller.text.trim();
+
                       setState(() {
                         _results[controller.text.trim()] = "분석 전";
                       });
+                      final db = AppDatabase.instance;
+                      await db.addSection(1, newName);
+
                       Navigator.of(context).pop();
                     } else {
                       // 입력값이 없으면 경고 표시
@@ -294,6 +355,23 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
         );
       },
     );
+  }
+
+  void _deleteSection(String section) async {
+    setState(() {
+      _results.remove(section);
+      if (_currentSection == section) {
+        _currentSection = null;
+      }
+    });
+
+    final db = AppDatabase.instance;
+    await db.deleteSectionByName(1, section);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('\'$section\'이(가) 삭제되었습니다.')));
   }
 
   @override
@@ -324,313 +402,422 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
           }
 
           return SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 150 * widthRatio,
-                vertical: 40 * heightRatio,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 뒤로가기 버튼과 제목
-                  IconButton(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 20, top: 20),
+                  child: IconButton(
                     icon: const Icon(Icons.arrow_back_ios, color: Colors.grey),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
-                  SizedBox(height: 20 * heightRatio),
-                  const Text(
-                    "냉장고 속 물건이\n얼마나 많은지 볼까요?",
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: 20 * heightRatio),
-                  const Text(
-                    "현재 상태를 촬영하면, 혼잡/보통/여유 중 하나로 알려드릴게요.\n불필요한 공간은 밀어서 삭제할 수 있어요.",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                      height: 1.4,
-                    ),
-                  ),
-                  SizedBox(height: 40 * heightRatio),
-
-                  // 메인 콘텐츠: 카메라와 목록
-                  Expanded(
-                    child: Row(
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 160 * widthRatio),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          flex: 3,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  _cameraController == null ||
-                                          !_cameraController!
-                                              .value
-                                              .isInitialized
-                                      ? const Center(
-                                        child: CircularProgressIndicator(),
-                                      )
-                                      : CameraPreview(_cameraController!),
-                                  // 코너 가이드 라인
-                                  Positioned(
-                                    top: 20 * heightRatio,
-                                    left: 20 * widthRatio,
-                                    child: Container(
-                                      width: 50,
-                                      height: 2,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 20 * heightRatio,
-                                    left: 20 * widthRatio,
-                                    child: Container(
-                                      width: 2,
-                                      height: 50,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 20 * heightRatio,
-                                    right: 20 * widthRatio,
-                                    child: Container(
-                                      width: 50,
-                                      height: 2,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 20 * heightRatio,
-                                    right: 20 * widthRatio,
-                                    child: Container(
-                                      width: 2,
-                                      height: 50,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  Positioned(
-                                    bottom: 20 * heightRatio,
-                                    left: 20 * widthRatio,
-                                    child: Container(
-                                      width: 50,
-                                      height: 2,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  Positioned(
-                                    bottom: 20 * heightRatio,
-                                    left: 20 * widthRatio,
-                                    child: Container(
-                                      width: 2,
-                                      height: 50,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  Positioned(
-                                    bottom: 20 * heightRatio,
-                                    right: 20 * widthRatio,
-                                    child: Container(
-                                      width: 50,
-                                      height: 2,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  Positioned(
-                                    bottom: 20 * heightRatio,
-                                    right: 20 * widthRatio,
-                                    child: Container(
-                                      width: 2,
-                                      height: 50,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  // 카메라 뷰의 텍스트 오버레이 (조건부)
-                                  if (_currentSection != null)
-                                    Positioned(
-                                      bottom: 40 * heightRatio,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(0.5),
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          _currentSection!,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
+                        SizedBox(height: 25 * heightRatio),
+                        Text(
+                          _headerTitle,
+                          style: TextStyle(
+                            fontSize: 25,
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
                           ),
                         ),
-                        SizedBox(width: 40 * widthRatio),
+                        SizedBox(height: 20 * heightRatio),
+                        const Text(
+                          "현재 상태를 촬영하면, 혼잡/보통/여유 중 하나로 알려드릴게요.\n불필요한 공간은 밀어서 삭제할 수 있어요.",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF5D5D5D),
+                            height: 1.4,
+                          ),
+                        ),
+                        SizedBox(height: 25 * heightRatio),
+
                         Expanded(
-                          flex: 2,
-                          child: ListView(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              ..._results.keys.map((section) {
-                                Color statusBackgroundColor =
-                                    Colors.transparent;
-                                Color statusTextColor = Colors.black;
-                                bool showStatus =
-                                    true; // "분석 전"일 때는 상태를 숨기기 위한 플래그
-
-                                switch (_results[section]!) {
-                                  case '혼잡':
-                                    statusBackgroundColor = const Color(
-                                      0xFFF9C0C0,
-                                    );
-                                    statusTextColor = const Color(0xFFF16767);
-                                    break;
-                                  case '보통':
-                                    statusBackgroundColor = const Color(
-                                      0xFFE9F0FC,
-                                    );
-                                    statusTextColor = const Color(0xFF678FF1);
-                                    break;
-                                  case '여유':
-                                    statusBackgroundColor = const Color(
-                                      0xFFC6E9C6,
-                                    );
-                                    statusTextColor = const Color(0xFF63BB63);
-                                    break;
-                                  default: // "분석 전" 또는 "분석 중..."
-                                    showStatus = false;
-                                    break;
-                                }
-
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 4.0,
+                              Expanded(
+                                flex: 4,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: Card(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                      side: BorderSide(
-                                        color: Colors.grey[300]!,
-                                      ),
-                                    ),
-                                    elevation: 0,
-                                    color: Colors.grey[100],
-                                    // 카드 배경색을 연한 회색으로 변경
-                                    child: ListTile(
-                                      leading:
-                                          showStatus // "분석 전"이 아닐 때만 상태 박스 표시
-                                              ? Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 4,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: statusBackgroundColor,
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        _cameraController == null ||
+                                                !_cameraController!
+                                                    .value
+                                                    .isInitialized
+                                            ? const Center(
+                                              child:
+                                                  CircularProgressIndicator(),
+                                            )
+                                            : Align(
+                                              alignment: Alignment.topCenter,
+                                              child: AspectRatio(
+                                                aspectRatio:
+                                                    2.29 /
+                                                    _cameraController!
+                                                        .value
+                                                        .aspectRatio,
+                                                child: CameraPreview(
+                                                  _cameraController!,
                                                 ),
-                                                child: Text(
-                                                  _results[section]!,
+                                              ),
+                                            ),
+                                        // 코너 가이드 라인
+                                        Positioned(
+                                          top: 40 * heightRatio,
+                                          left: 40 * widthRatio,
+                                          child: Container(
+                                            width: 30,
+                                            height: 4,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 40 * heightRatio,
+                                          left: 40 * widthRatio,
+                                          child: Container(
+                                            width: 4,
+                                            height: 30,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 40 * heightRatio,
+                                          right: 40 * widthRatio,
+                                          child: Container(
+                                            width: 30,
+                                            height: 4,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 40 * heightRatio,
+                                          right: 40 * widthRatio,
+                                          child: Container(
+                                            width: 4,
+                                            height: 30,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          bottom: 40 * heightRatio,
+                                          left: 40 * widthRatio,
+                                          child: Container(
+                                            width: 30,
+                                            height: 4,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          bottom: 40 * heightRatio,
+                                          left: 40 * widthRatio,
+                                          child: Container(
+                                            width: 4,
+                                            height: 30,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          bottom: 40 * heightRatio,
+                                          right: 40 * widthRatio,
+                                          child: Container(
+                                            width: 30,
+                                            height: 4,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          bottom: 40 * heightRatio,
+                                          right: 40 * widthRatio,
+                                          child: Container(
+                                            width: 4,
+                                            height: 30,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                        // 카메라 뷰의 텍스트 오버레이 (조건부)
+                                        if (_currentSection != null)
+                                          Positioned(
+                                            bottom: 30 * heightRatio,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 8,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(
+                                                  0.5,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                _currentSection!,
+                                                style: const TextStyle(
+                                                  color: Color(0xFf5D5D5D),
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 20 * widthRatio),
+                              Expanded(
+                                flex: 2,
+                                child: ListView(
+                                  children: [
+                                    ..._results.keys.map((section) {
+                                      Color statusBackgroundColor =
+                                          Colors.transparent;
+                                      Color statusTextColor = Colors.black;
+                                      bool showStatus =
+                                          true; // "분석 전"일 때는 상태를 숨기기 위한 플래그
+
+                                      switch (_results[section]!) {
+                                        case '혼잡':
+                                          statusBackgroundColor = const Color(
+                                            0xFFF9C0C0,
+                                          );
+                                          statusTextColor = const Color(
+                                            0xFFF16767,
+                                          );
+                                          break;
+                                        case '보통':
+                                          statusBackgroundColor = const Color(
+                                            0xFFE9F0FC,
+                                          );
+                                          statusTextColor = const Color(
+                                            0xFF678FF1,
+                                          );
+                                          break;
+                                        case '여유':
+                                          statusBackgroundColor = const Color(
+                                            0xFFC6E9C6,
+                                          );
+                                          statusTextColor = const Color(
+                                            0xFF63BB63,
+                                          );
+                                          break;
+                                        default: // "분석 전" 또는 "분석 중..."
+                                          showStatus = false;
+                                          break;
+                                      }
+
+                                      return Slidable(
+                                        key: ValueKey(section),
+
+                                        endActionPane: ActionPane(
+                                          motion: const ScrollMotion(),
+                                          extentRatio: 0.25,
+                                          children: [
+                                            SlidableAction(
+                                              onPressed: (context) {
+                                                _deleteSection(section);
+                                              },
+                                              backgroundColor: Colors.redAccent,
+                                              foregroundColor: Colors.white,
+                                              icon: Icons.delete,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 4.0,
+                                            horizontal: 3,
+                                          ),
+                                          child: Card(
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            elevation: 0,
+                                            color: Color(0xFFF5F5F5),
+                                            // 카드 배경색을 연한 회색으로 변경
+                                            child: ListTile(
+                                              leading:
+                                                  showStatus // "분석 전"이 아닐 때만 상태 박스 표시
+                                                      ? Container(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 10,
+                                                              vertical: 4,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color:
+                                                              statusBackgroundColor,
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                2,
+                                                              ),
+                                                        ),
+                                                        child: Text(
+                                                          _results[section]!,
+                                                          style: TextStyle(
+                                                            color:
+                                                                statusTextColor,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 13,
+                                                          ),
+                                                        ),
+                                                      )
+                                                      : null,
+                                              title: Text(
+                                                section,
+                                                style: const TextStyle(
+                                                  color: Color(0xFF5D5D5D),
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 4,
+                                                  ),
+                                              onTap:
+                                                  () => _captureAndAnalyze(
+                                                    section,
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                    // "추가" 버튼
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 4.0,
+                                      ),
+                                      child: Card(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        elevation: 0,
+                                        color: const Color(0xFFF3F5FF),
+                                        // 추가 버튼 배경색 연하늘색
+                                        child: ListTile(
+                                          title: Text.rich(
+                                            TextSpan(
+                                              style: TextStyle(
+                                                color: const Color(0xFF5D5D5D),
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                              children: [
+                                                TextSpan(text: " 추가"),
+                                                TextSpan(
+                                                  text: "  +",
                                                   style: TextStyle(
-                                                    color: statusTextColor,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 12,
+                                                    color: const Color(
+                                                      0xFFB0B8C1,
+                                                    ),
+                                                    fontSize: 23,
+                                                    fontWeight:
+                                                        FontWeight.normal,
                                                   ),
                                                 ),
-                                              )
-                                              : null,
-                                      title: Text(
-                                        section,
-                                        style: const TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 16,
+                                              ],
+                                            ),
+                                          ),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 14,
+                                                vertical: 4.0,
+                                              ),
+                                          onTap: _addSection,
                                         ),
                                       ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 8,
-                                          ),
-                                      onTap: () => _captureAndAnalyze(section),
                                     ),
-                                  ),
-                                );
-                              }).toList(),
-                              // "추가" 버튼
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 4.0,
-                                ),
-                                child: Card(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                    side: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  elevation: 0,
-                                  color: const Color(0xFFF0F5FD),
-                                  // 추가 버튼 배경색 연하늘색
-                                  child: ListTile(
-                                    title: Text(
-                                      "추가 +",
-                                      style: TextStyle(
-                                        color: const Color(0xFF678FF1),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ), // 추가 버튼 글자색 파란색
-                                    ),
-                                    onTap: _addSection,
-                                  ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
+                        SizedBox(height: 100 * heightRatio),
+                        longbutton(
+                          text: "다음",
+                          onPressed: () {
+                            // 다음 페이지로 이동
+                            final analyzedResults = Map<String, String>.from(
+                              _results,
+                            )..removeWhere(
+                              (key, value) =>
+                                  value == '분석 전' || value.contains('분석'),
+                            );
+
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => EmptyingSchedulePage(
+                                      analysisResults: analyzedResults,
+                                    ),
+                              ),
+                            );
+                          },
+                          isEnabled: true,
+                        ),
+                        SizedBox(height: 100 * heightRatio),
                       ],
                     ),
                   ),
-                  SizedBox(height: 40 * heightRatio),
-                  longbutton(
-                    text: "다음",
-                    onPressed: () {
-                      // 다음 페이지로 이동
-                      final analyzedResults = Map<String, String>.from(
-                        _results,
-                      )..removeWhere(
-                        (key, value) => value == '분석 전' || value.contains('분석'),
-                      );
-
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder:
-                              (context) => EmptyingSchedulePage(
-                                analysisResults: analyzedResults,
-                              ),
-                        ),
-                      );
-                    },
-                    isEnabled: true,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },

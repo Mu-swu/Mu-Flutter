@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mu/data/database.dart';
 import 'widgets/custom_tag.dart';
 
 class ResultPage extends StatefulWidget {
@@ -16,11 +17,27 @@ class _ResultPageState extends State<ResultPage> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
+    _saveResultAndLoad();
+  }
+
+  void _saveResultAndLoad() async {
+    try {
+      final db = AppDatabase.instance;
+      const userId = 1;
+      await db.getOrCreateUser(userId);
+      await db.updateUserType(userId, widget.resultType);
+      print("사용자 유형 '${widget.resultType}' 저장 완료!");
+    } catch (e) {
+      print("DB 저장 중 에러 발생 : $e");
+    }
+
+    await Future.delayed(const Duration(seconds: 3));
+
+    if (mounted) {
       setState(() {
         _isLoading = false;
       });
-    });
+    }
   }
 
   Map<String, dynamic> _getResultData(String type) {
@@ -29,7 +46,7 @@ class _ResultPageState extends State<ResultPage> {
         return {
           'mainTitle': '감정형',
           'leftCardImagePath': 'assets/test/test_ga.png',
-          'cardColor': const Color(0xFFFBF4FF),
+          'cardColor': const Color(0xFFFFF6EF),
           'tags': [
             {'label': '추억이 너무 많아', 'type': TagType.gam},
             {'label': '미련 뚝뚝', 'type': TagType.gam},
@@ -83,8 +100,8 @@ class _ResultPageState extends State<ResultPage> {
 
     final horizontalPadding = 200 * widthRatio;
 
-    final leftCardWidth = 450 * widthRatio; // 왼쪽 카드
-    final cardHeight = 550 * heightRatio; // 카드 높이 증가
+    final leftCardWidth = 550 * widthRatio; // 왼쪽 카드
+    final cardHeight = 500 * heightRatio; // 카드 높이 증가
     final cardSpacing = 40 * widthRatio; // 카드 간격
 
     final resultData = _getResultData(widget.resultType);
@@ -135,20 +152,42 @@ class _ResultPageState extends State<ResultPage> {
                   ),
                 )
                 : Padding(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 60 * heightRatio,
+                  ),
                   child: Column(
                     children: [
-                      SizedBox(height: 60 * heightRatio),
-                      // 상단 문구
-                      Center(
-                        child: Text(
-                          "나의 비움 성향은?",
-                          style: TextStyle(
-                            fontSize: 24 * widthRatio,
-                            fontWeight: FontWeight.w400,
-                            color: const Color(0xFF5D5D5D),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: Icon(
+                              Icons.arrow_back_ios,
+                              size: 36 * widthRatio,
+                              color: const Color(0xFFB0B8C1),
+                            ),
                           ),
-                        ),
+                          Center(
+                            child: Text(
+                              "나의 비움 성향은?",
+                              style: TextStyle(
+                                fontSize: 24 * widthRatio,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF5D5D5D),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {},
+                            icon: Icon(
+                              Icons.volume_up,
+                              size: 36 * widthRatio,
+                              color: const Color(0xFFB0B8C1),
+                            ),
+                          ),
+                        ],
                       ),
                       SizedBox(height: 30 * heightRatio),
 
@@ -156,8 +195,8 @@ class _ResultPageState extends State<ResultPage> {
                       Text(
                         resultData['mainTitle'],
                         style: TextStyle(
-                          fontSize: 60 * widthRatio,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 55 * widthRatio,
+                          fontWeight: FontWeight.w900,
                           color: const Color(0xFF333333),
                         ),
                         textAlign: TextAlign.center,
@@ -189,8 +228,7 @@ class _ResultPageState extends State<ResultPage> {
                             child: Container(
                               height: cardHeight,
                               padding: EdgeInsets.symmetric(
-                                horizontal: 150 * widthRatio, // 내부 좌우 여백 증가
-                                vertical: 30 * heightRatio,
+                                horizontal: 120 * widthRatio, // 내부 좌우 여백 증가
                               ),
                               decoration: ShapeDecoration(
                                 color: resultData['cardColor'],
@@ -222,10 +260,10 @@ class _ResultPageState extends State<ResultPage> {
                                     resultData['descriptionTitle'],
                                     style: TextStyle(
                                       color: const Color(0xFF5C5C5C),
-                                      fontSize: 26 * widthRatio,
+                                      fontSize: 30 * widthRatio,
                                       fontFamily: 'Pretendard',
-                                      fontWeight: FontWeight.w400,
-                                      height: 1.5,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.8,
                                     ),
                                   ),
                                   SizedBox(height: 12 * heightRatio),
@@ -233,10 +271,10 @@ class _ResultPageState extends State<ResultPage> {
                                     resultData['descriptionBody1'],
                                     style: TextStyle(
                                       color: const Color(0xFF5C5C5C),
-                                      fontSize: 26 * widthRatio,
+                                      fontSize: 30 * widthRatio,
                                       fontFamily: 'Pretendard',
-                                      fontWeight: FontWeight.w400,
-                                      height: 1.5,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.6,
                                     ),
                                   ),
                                   SizedBox(height: 12 * heightRatio),
@@ -244,10 +282,10 @@ class _ResultPageState extends State<ResultPage> {
                                     resultData['descriptionBody2'],
                                     style: TextStyle(
                                       color: const Color(0xFF5C5C5C),
-                                      fontSize: 26 * widthRatio,
+                                      fontSize: 30 * widthRatio,
                                       fontFamily: 'Pretendard',
-                                      fontWeight: FontWeight.w400,
-                                      height: 1.5,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.8,
                                     ),
                                   ),
                                 ],
@@ -283,8 +321,6 @@ class _ResultPageState extends State<ResultPage> {
                           ),
                         ),
                       ),
-
-                      SizedBox(height: 80 * heightRatio),
                     ],
                   ),
                 ),

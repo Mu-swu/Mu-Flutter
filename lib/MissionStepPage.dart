@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mu/ttsApi.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'data/database.dart';
 import 'widgets/tts_text_box.dart';
 import 'widgets/step_navigation.dart';
 import 'keepbox_start.dart';
@@ -22,10 +23,11 @@ class StepData {
 }
 
 class MissionStepPage extends StatefulWidget {
-  final List<String> missionOrder;
+  final List<Section> orderedMissions;
+  final int currentMissionIndex;
   final Duration missionTime;
 
-  const MissionStepPage({super.key, required this.missionOrder,required this.missionTime, });
+  const MissionStepPage({super.key, required this.orderedMissions,required this.currentMissionIndex,required this.missionTime, });
   @override
   _MissionStepPageState createState() => _MissionStepPageState();
 }
@@ -105,7 +107,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
   Future<void> _generateMissionSteps() async {
     final userTypeMap = {'gam': '감정형', 'mol': '몰라형', 'bas': '방치형'};
     final userType = userTypeMap[_currentUserType] ?? '방치형';
-    final missionName = widget.missionOrder.isNotEmpty ? widget.missionOrder[0] : '미션';
+    final missionName = widget.orderedMissions.isNotEmpty ? widget.orderedMissions[0] : '미션';
 
     final room = "부엌";
     final furniture = "냉장고";

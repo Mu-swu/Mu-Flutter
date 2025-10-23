@@ -22,7 +22,7 @@ dependencies:
   video_player: ^2.8.1
   http: ^1.1.0
   just_audio: ^0.9.36
-  path_provider: 2.0.15
+  path_provider: ^2.1.5
   lottie: ^2.2.0
   image_picker: ^0.8.9
   image: ^3.0.1
@@ -30,12 +30,18 @@ dependencies:
   camera: ^0.11.0+2
   audioplayers: ^6.0.0
   permission_handler: ^12.0.1
+  drift: ^2.29.0
+  sqlite3_flutter_libs: ^0.5.40
+  path: ^1.9.1
+  flutter_slidable: ^4.0.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^5.0.0
+  drift_dev: ^2.29.0
+  build_runner: ^2.9.0
 
 flutter:
   uses-material-design: true
@@ -77,6 +83,7 @@ flutter:
     - assets/test/test_ba.png
     - assets/test/test_mo.png
     - assets/test/test_ga.png
+    - assets/test/card_background.png
     - assets/home/mom_bang.png
     - assets/home/mom_gam.png
     - assets/home/mom_mol.png

@@ -19,9 +19,9 @@ class longbutton extends StatelessWidget {
         backgroundColor:
         isEnabled ? const Color(0xFF463EC6) : const Color(0xFFDBDEE7), // 색상
         padding: const EdgeInsets.symmetric(vertical: 20),
-        minimumSize: const Size(double.infinity, 70),
+        minimumSize: const Size(double.infinity, 64),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
         ),
         elevation: isEnabled ? 6 : 0,
         shadowColor: const Color(0x26463EC6),
@@ -29,9 +29,9 @@ class longbutton extends StatelessWidget {
       onPressed: isEnabled ? onPressed : null,
       child: Text(
         text,
-        style: const TextStyle(
-          fontSize: 22,
-          color: Colors.white,
+        style: TextStyle(
+          fontSize: 18,
+          color: isEnabled? Colors.white: Color(0xFFB0B8C1) ,
         ),
       ),
     );

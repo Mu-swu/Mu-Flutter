@@ -48,7 +48,7 @@ class CustomTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
       decoration: ShapeDecoration(
         color: background,
         shape: RoundedRectangleBorder(
@@ -60,7 +60,7 @@ class CustomTag extends StatelessWidget {
         textAlign: TextAlign.center,
         style: TextStyle(
           color: textColor,
-          fontSize: 16,
+          fontSize: 12,
           fontFamily: 'Pretendard',
           fontWeight: FontWeight.w500,
         ),
