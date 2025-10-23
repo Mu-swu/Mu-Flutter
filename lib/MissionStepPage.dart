@@ -26,8 +26,15 @@ class MissionStepPage extends StatefulWidget {
   final List<Section> orderedMissions;
   final int currentMissionIndex;
   final Duration missionTime;
+  final UserType userType;
 
-  const MissionStepPage({super.key, required this.orderedMissions,required this.currentMissionIndex,required this.missionTime, });
+  const MissionStepPage({
+    super.key,
+    required this.orderedMissions,
+    required this.currentMissionIndex,
+    required this.missionTime,
+    required this.userType,
+  });
   @override
   _MissionStepPageState createState() => _MissionStepPageState();
 }
@@ -56,16 +63,13 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   late final GenerativeModel _model;
 
-  bool _continueAfterExtraMessage = false;
-
   final ScrollController _scrollController = ScrollController();
-
 
 
   @override
   void initState() {
     super.initState();
-    _currentUserType = UserThemeManager.currentUserType;
+    _currentUserType = widget.userType;
 
     _ttsEngine = ElevenLabsTTS(apiKey: dotenv.env['ELEVENLABS_API_KEY']!);
     _remainingTime = widget.missionTime;
@@ -124,8 +128,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
     final userType = userTypeMap[_currentUserType] ?? '방치형';
     final missionName = widget.orderedMissions.isNotEmpty ? widget.orderedMissions[0] : '미션';
 
-    final room = "부엌";
-    final furniture = "냉장고";
     final density = "혼잡";
 
     final prompt = """
@@ -257,8 +259,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
     사용자 정보:
     -사용자 유형:$userType
      -비움 미션:$missionName
-    -비울 공간:$room
-    -비울 가구:$furniture
     -공간 밀집도:$density
     
     위 정보를 바탕으로, 다음 JSON 형식에 맞춰 5단계 미션 가이드를 생성해줘.
@@ -523,7 +523,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final Color baseColor;
-    switch (UserThemeManager.currentUserType) {
+
+    switch (_currentUserType) {
       case UserType.bang:
         baseColor = const Color(0xFFF9F1FD);
         break;
@@ -536,7 +537,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
     }
 
     String loadingVideoPath;
-    switch (UserThemeManager.currentUserType) {
+    switch (_currentUserType) {
       case UserType.bang:
         loadingVideoPath = 'assets/mission/loading_re.mp4';
         break;

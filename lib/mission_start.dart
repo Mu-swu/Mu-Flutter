@@ -3,6 +3,7 @@ import 'MissionStepPage.dart';
 import 'widgets/custom_tag.dart';
 import 'widgets/longbutton.dart';
 import 'package:mu/data/database.dart';
+import 'user_theme_manager.dart';
 
 class MissionStartPage extends StatelessWidget {
   const MissionStartPage({super.key});
@@ -124,23 +125,27 @@ class MissionStartPage extends StatelessWidget {
         String tagLabel;
         TagType tagType;
         String missionImage;
+        UserType userType;
 
         switch (userTypeString) {
           case '방치형':
             tagLabel = '방치형';
             tagType = TagType.bang;
             missionImage = 'assets/mission/still_re.png';
+            userType=UserType.bang;
             break;
           case '감정형':
             tagLabel = '감정형';
             tagType = TagType.gam;
             missionImage = 'assets/mission/still_cl.png';
+            userType=UserType.gam;
             break;
           case '몰라형':
           default:
             tagLabel = '몰라형';
             tagType = TagType.mol;
             missionImage = 'assets/mission/still_dr.png';
+            userType=UserType.mol;
             break;
         }
 
@@ -212,7 +217,7 @@ class MissionStartPage extends StatelessWidget {
                                           builder: (context) => MissionStepPage(
                                             orderedMissions: orderedMissions,
                                             currentMissionIndex: currentMissionIndex,
-                                            missionTime: missionDuration,
+                                            missionTime: missionDuration, userType: userType,
                                           ),
                                         ),
                                       );
