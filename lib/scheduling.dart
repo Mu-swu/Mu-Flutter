@@ -88,7 +88,7 @@ class ScheduleCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              SizedBox(height: 10 * fontScale),
+              SizedBox(height: 8 * fontScale),
               Text(
                 time,
                 style: TextStyle(
@@ -261,7 +261,7 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
 
               // 카드 크기
               final cardWidth = 310 * widthRatio;
-              final cardHeight = 160 * heightRatio;
+              final cardHeight = 170 * heightRatio;
 
               return SafeArea(
                 child: Column(

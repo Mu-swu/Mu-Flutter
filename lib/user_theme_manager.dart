@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 enum UserType { bang, gam, mol }
 
 class UserThemeManager {
-  static UserType currentUserType = UserType.bang; // 기본값은 '방치형'으로 설정
+  static UserType currentUserType = UserType.mol; // 기본값은 '방치형'으로 설정
 
   static void setUserType(UserType type) {
     currentUserType = type;

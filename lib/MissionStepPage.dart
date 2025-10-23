@@ -93,16 +93,31 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
 
   void _showChoicePopup(String imagePath) {
+    // 단계별 메시지 리스트
+    final List<String> stepMessages = [
+      "와, 좋은 생각이야!\n첫 단계부터 아주 멋진 선택인데?",
+      "점점 더 잘하네! 역시 생각보다 어렵지 않지?\n그럼 이 기준으로 한 번 해볼까?",
+      "정말 좋은 생각이야! 이렇게 하면 나중에도 훨씬 쉬울 거야.",
+      "마지막까지 훌륭해! 이 기준이라면 어떤 것이든\n잘 해결할 수 있을 거야.",
+    ];
+
+    // 현재 단계 인덱스가 메시지 길이보다 크면 마지막 문장으로 고정
+    final String message = stepMessages[
+    _currentStepIndex < stepMessages.length
+        ? _currentStepIndex
+        : stepMessages.length - 1
+    ];
+
     showDialog(
       context: context,
-
       builder: (context) => ChoicePopup(
-        message: "와, 좋은 생각이야!\n첫 단계부터 아주 멋진 선택인데?",
-        imagePath: 'assets/popup.png',
+        message: message,
+        imagePath: imagePath,
         onConfirm: () => Navigator.pop(context),
       ),
     );
   }
+
 
   Future<void> _generateMissionSteps() async {
     final userTypeMap = {'gam': '감정형', 'mol': '몰라형', 'bas': '방치형'};
@@ -1105,6 +1120,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
         }
       },
       child: Container(
+        height: 260,
         padding: const EdgeInsets.symmetric(vertical: 70),
         decoration: BoxDecoration(
           color: const Color(0xFFF3F5FF),
@@ -1113,6 +1129,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
         alignment: Alignment.center,
         child: Text(
           text,
+          textAlign: TextAlign.center,
+          maxLines: 2, // ✅ ② 두 줄까지만 표시
+          overflow: TextOverflow.ellipsis, // ✅ ③ 너무 길면 ... 처리
           style: const TextStyle(
             fontSize: 25,
             fontWeight: FontWeight.w500,

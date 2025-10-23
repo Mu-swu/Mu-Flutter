@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'MissionStepPage.dart';
 import 'widgets/custom_tag.dart';
-import 'widgets/shortbutton.dart';
+import 'widgets/longbutton.dart';
 import 'package:mu/data/database.dart';
 
 class MissionStartPage extends StatelessWidget {
@@ -201,46 +201,28 @@ class MissionStartPage extends StatelessWidget {
                               padding: EdgeInsets.symmetric(
                                 horizontal: screenWidth * 0.1,
                               ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                              child: Column(
                                 children: [
-                                  Flexible(
-                                    flex: 1,
-                                    child: ShortButton(
-                                      text: '건너뛰기',
-                                      isYes: false,
-                                      onPressed: () {
-                                        // Skip logic
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 24),
-                                  Flexible(
-                                    flex: 1,
-                                    child: ShortButton(
-                                      text: '시작하기',
-                                      isYes: true,
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (context) => MissionStepPage(
-                                                  orderedMissions:
-                                                      orderedMissions,
-                                                  currentMissionIndex:
-                                                      currentMissionIndex,
-                                                  missionTime: missionDuration,
-                                                ),
+                                  longbutton(
+                                    text: '시작하기',
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => MissionStepPage(
+                                            orderedMissions: orderedMissions,
+                                            currentMissionIndex: currentMissionIndex,
+                                            missionTime: missionDuration,
                                           ),
-                                        );
-                                      },
-                                    ),
+                                        ),
+                                      );
+                                    },
+                                    isEnabled: true, // 필요 시 false로 비활성화 가능
                                   ),
+                                  const SizedBox(height: 24),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 24),
                           ],
                         ),
                       ),
