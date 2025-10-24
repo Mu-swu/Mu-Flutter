@@ -146,6 +146,21 @@ class AppDatabase extends _$AppDatabase {
       (s) => s.id.equals(sectionId),
     )).write(SectionsCompanion(progress: Value(progress)));
   }
+
+  Future<List<KeepBox>> getAllKeepBoxes() {
+    return (select(keepBoxes)..orderBy([
+      (k) => OrderingTerm(expression: k.type, mode: OrderingMode.asc),
+    ])).get();
+  }
+
+  Future<void> replaceAllKeepBoxes(List<KeepBoxesCompanion> items) async {
+    await transaction(() async {
+      await delete(keepBoxes).go();
+      await batch((batch) {
+        batch.insertAll(keepBoxes, items);
+      });
+    });
+  }
 }
 
 LazyDatabase _openConnection() {

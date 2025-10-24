@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'ItemListSection.dart';
 
 class ItemSaveSection extends StatefulWidget {
@@ -9,6 +10,8 @@ class ItemSaveSection extends StatefulWidget {
   final String itemName;
   final String? itemCategory;
 
+  final Function(String itemName, String newEndDate) onDateChanged;
+
   const ItemSaveSection({
     required this.categories,
     required this.widthRatio,
@@ -16,6 +19,7 @@ class ItemSaveSection extends StatefulWidget {
     required this.onExit,
     required this.itemName,
     required this.itemCategory,
+    required this.onDateChanged,
     super.key,
   });
 
@@ -50,8 +54,13 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
 
     if (picked != null && picked != initialDate) {
       onSelected(picked);
+
+      final DateFormat formatter = DateFormat("yyyy.MM.dd");
+      final String newEndDateString = formatter.format(picked);
+      widget.onDateChanged(widget.itemName, newEndDateString);
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final w = widget.widthRatio;
@@ -59,9 +68,7 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
 
     return Center(
       child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 960 * w,
-        ),
+        constraints: BoxConstraints(maxWidth: 960 * w),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -110,10 +117,13 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
                     SizedBox(height: 8 * h),
 
                     GestureDetector(
-                      onTap: () => _pickDate(
-                        initialDate: oneWeekLaterDate,
-                        onSelected: (picked) => setState(() => oneWeekLaterDate = picked),
-                      ),
+                      onTap:
+                          () => _pickDate(
+                            initialDate: oneWeekLaterDate,
+                            onSelected:
+                                (picked) =>
+                                    setState(() => oneWeekLaterDate = picked),
+                          ),
                       child: Container(
                         height: 48 * h,
                         padding: EdgeInsets.symmetric(horizontal: 16 * w),
@@ -134,7 +144,11 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
                             ),
                             Padding(
                               padding: EdgeInsets.only(right: 8.0),
-                              child: Icon(Icons.calendar_today, size: 20 * w, color: Colors.grey),
+                              child: Icon(
+                                Icons.calendar_today,
+                                size: 20 * w,
+                                color: Colors.grey,
+                              ),
                             ),
                           ],
                         ),
@@ -211,10 +225,7 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
           alignment: Alignment.centerLeft,
           child: Text(
             value,
-            style: TextStyle(
-              fontSize: 16 * w,
-              color: Colors.black,
-            ),
+            style: TextStyle(fontSize: 16 * w, color: Colors.black),
           ),
         ),
       ],
@@ -235,10 +246,7 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
       alignment: Alignment.centerLeft,
       child: Text(
         text,
-        style: TextStyle(
-          fontSize: 16 * w,
-          color: Colors.black,
-        ),
+        style: TextStyle(fontSize: 16 * w, color: Colors.black),
       ),
     );
   }

@@ -8,6 +8,8 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'widgets/ItemSaveSection.dart';
 import 'package:mu/data/sampledata.dart';
 import 'user_theme_manager.dart'; // Import the user theme manager
+import 'package:mu/data/database.dart';
+import 'package:drift/drift.dart' show Value;
 
 class keepbox extends StatefulWidget {
   const keepbox({super.key});
@@ -23,23 +25,107 @@ class _keepboxState extends State<keepbox> {
   String _lastWords = '';
 
   List<Map<String, dynamic>> items = [];
-  List<Map<String, dynamic>> categories = [
-    {'name': '식품', 'items': <Map<String, String>>[]},
-    {'name': '의류', 'items': <Map<String, String>>[]},
-    {'name': '기타', 'items': <Map<String, String>>[]},
-  ];
+  List<Map<String, dynamic>> categories = [];
   int? selectedIndex;
   String _currentItemName = "새 항목";
 
   GenerativeModel? _model;
   bool _isGeminiInitialized = false;
 
+  final AppDatabase _database = AppDatabase.instance;
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
     _initGemini();
     _initSpeech();
-    categories = List<Map<String, dynamic>>.from(sampleCategories);
+    _loadData();
+  }
+
+  @override
+  void dispose(){
+    _saveData();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final itemsFromDb = await _database.getAllKeepBoxes();
+    final Map<String, List<Map<String, String>>> groupedItems = {};
+    final DateFormat formatter = DateFormat("yyyy.MM.dd");
+
+    for (final item in itemsFromDb) {
+      final category = item.type;
+      final formattedItem = {
+        'name': item.name,
+        'startDate': formatter.format(item.addedAt),
+        'endDate': formatter.format(item.expirationAt),
+        'category': category,
+      };
+
+      if (!groupedItems.containsKey(category)) {
+        groupedItems[category] = [];
+      }
+      groupedItems[category]!.add(formattedItem);
+    }
+
+    final newCategories =
+        groupedItems.entries.map((entry) {
+          return {'name': entry.key, 'items': entry.value};
+        }).toList();
+
+    for (final defaultCat in []) {
+      if (!newCategories.any((c) => c['name'] == defaultCat)) {
+        newCategories.add({
+          'name': defaultCat,
+          'items': <Map<String, String>>[],
+        });
+      }
+    }
+    setState(() {
+      categories = newCategories;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveData() async {
+    if(_isLoading)return;
+    final List<KeepBoxesCompanion> itemsToSave = [];
+    final DateFormat formatter = DateFormat("yyyy.MM.dd");
+
+    for (final categoryMap in categories) {
+      final categoryName = categoryMap['name'] as String;
+      final itemList = categoryMap['items'] as List<Map<String, String>>;
+
+      for (final itemMap in itemList) {
+        try {
+          final addedAt = formatter.parse(itemMap['startDate']!);
+          final expirationAt = formatter.parse(itemMap['endDate']!);
+
+          itemsToSave.add(
+            KeepBoxesCompanion.insert(
+              name: itemMap['name']!,
+              type: categoryName,
+              addedAt: addedAt,
+              expirationAt: expirationAt,
+            ),
+          );
+        } catch (e) {
+          print("날짜 파싱 오류 : $e, 항목 : ${itemMap['name']}");
+        }
+      }
+    }
+    await _database.replaceAllKeepBoxes(itemsToSave);
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('저장되었습니다!')));
+    }
   }
 
   Future<void> _initGemini() async {
@@ -54,10 +140,7 @@ class _keepboxState extends State<keepbox> {
     }
 
     try {
-      _model = GenerativeModel(
-        model: 'gemini-2.5-flash',
-        apiKey: apiKey,
-      );
+      _model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
       setState(() {
         _isGeminiInitialized = true;
       });
@@ -112,7 +195,8 @@ class _keepboxState extends State<keepbox> {
       return "분류 오류(모델 준비 안됨)";
     }
     try {
-      final prompt = '다음 품목을 한 단어의 카테고리(예:식품,의류, 기타)로 분류해주세요: $itemName. 답변은 카테고리 단어 하나만 주세요.';
+      final prompt =
+          '다음 품목을 한 단어의 카테고리(예:식품,의류, 기타)로 분류해주세요: $itemName. 답변은 카테고리 단어 하나만 주세요.';
       final content = [Content.text(prompt)];
       final response = await _model!.generateContent(content);
 
@@ -135,27 +219,19 @@ class _keepboxState extends State<keepbox> {
     if (itemName.isNotEmpty) {
       final now = DateTime.now();
       final formattedDate = DateFormat("yyyy.MM.dd").format(now);
-      final formattedendDate = DateFormat("yyyy.MM.dd").format(now.add(Duration(days: 7)));
+      final formattedendDate = DateFormat(
+        "yyyy.MM.dd",
+      ).format(now.add(Duration(days: 7)));
       final newItem = {
         'name': itemName,
         'startDate': formattedDate,
         'endDate': formattedendDate,
       };
-      setState(() {
-        _pushItemToCategory(
-          categoryName: '기타',
-          item: {...newItem, 'category': '분류 중...'},
-        );
-      });
 
       if (_isGeminiInitialized) {
         final geminiCat = await _getCategoryFromGemini(itemName) ?? '기타';
 
         setState(() {
-          for (final cat in categories) {
-            (cat['items'] as List).removeWhere((it) =>
-            it['name'] == itemName);
-          }
           _pushItemToCategory(
             categoryName: geminiCat,
             item: {...newItem, 'category': geminiCat},
@@ -171,8 +247,9 @@ class _keepboxState extends State<keepbox> {
             onConfirm: (chosenCat) {
               setState(() {
                 for (final cat in categories) {
-                  (cat['items'] as List)
-                      .removeWhere((it) => it['name'] == itemName);
+                  (cat['items'] as List).removeWhere(
+                        (it) => it['name'] == itemName,
+                  );
                 }
                 _pushItemToCategory(
                   categoryName: chosenCat,
@@ -184,19 +261,30 @@ class _keepboxState extends State<keepbox> {
             onAddCategory: (newCat) {
               setState(() {
                 for (final cat in categories) {
-                  (cat['items'] as List).removeWhere((it) => it['name'] == itemName);
+                  (cat['items'] as List).removeWhere(
+                        (it) => it['name'] == itemName,
+                  );
                 }
 
                 categories.add({
                   'name': newCat,
-                  'items': [ {...newItem, 'category': newCat} ],
+                  'items': [
+                    {...newItem, 'category': newCat},
+                  ],
                 });
               });
             },
           );
         }
+      } else {
+        setState(() {
+          _pushItemToCategory(
+            categoryName: '기타',
+            item: {...newItem, 'category': '기타'},
+          );
+        });
       }
-    } else {
+    } else{
       print('인식된 텍스트가 없습니다.');
     }
   }
@@ -212,12 +300,26 @@ class _keepboxState extends State<keepbox> {
         items.add(item);
       }
     } else {
-      final etcIdx = categories.indexWhere((c) => c['name'] == '기타');
-      final items = categories[etcIdx]['items'] as List;
-      if (!items.any((it) => it['name'] == item['name'])) {
-        items.add(item);
-      }
+      final newCategory = {
+        'name': categoryName,
+        'items': [item],
+      };
+      categories.add(newCategory);
     }
+  }
+
+  void _handleDateChange(String itemName,String newEndDate){
+    setState(() {
+      for(final category in categories){
+        final itemList=category['items'] as List;
+        for(final item in itemList){
+          if(item['name']==itemName){
+            item['endDate']=newEndDate;
+            break;
+          }
+        }
+      }
+    });
   }
 
   @override
@@ -231,7 +333,9 @@ class _keepboxState extends State<keepbox> {
     String currentItemName = "새 항목";
     String? currentItemCategory = _isGeminiInitialized ? '카테고리' : '분류 기능 사용 불가';
 
-    if (items.isNotEmpty && selectedIndex != null && selectedIndex! < items.length) {
+    if (items.isNotEmpty &&
+        selectedIndex != null &&
+        selectedIndex! < items.length) {
       currentItemName = items[selectedIndex!]['name']!;
       currentItemCategory = items[selectedIndex!]['category'];
     }
@@ -245,13 +349,17 @@ class _keepboxState extends State<keepbox> {
             width: screenWidth * 0.15,
             decoration: BoxDecoration(
               // Dynamically set the gradient based on user type
-              gradient: _speechToText.isListening
-                  ? LinearGradient(
-                colors: [UserThemeManager.keepboxGradientStartColor, const Color(0xFFD7DCFA)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              )
-                  : null,
+              gradient:
+                  _speechToText.isListening
+                      ? LinearGradient(
+                        colors: [
+                          UserThemeManager.keepboxGradientStartColor,
+                          const Color(0xFFD7DCFA),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      )
+                      : null,
               color: _speechToText.isListening ? null : const Color(0xFFF3F5FF),
             ),
             child: Column(
@@ -284,12 +392,18 @@ class _keepboxState extends State<keepbox> {
                     height: 80 * widthRatio,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _speechToText.isListening ? Colors.white : const Color(0xFF7F91FF),
+                      color:
+                          _speechToText.isListening
+                              ? Colors.white
+                              : const Color(0xFF7F91FF),
                     ),
                     child: Icon(
                       _speechToText.isListening ? Icons.stop : Icons.mic,
                       size: 36 * widthRatio,
-                      color: _speechToText.isListening ? const Color(0xFF7F91FF) : Colors.white,
+                      color:
+                          _speechToText.isListening
+                              ? const Color(0xFF7F91FF)
+                              : Colors.white,
                     ),
                   ),
                 ),
@@ -315,7 +429,10 @@ class _keepboxState extends State<keepbox> {
                     _lastWords.isNotEmpty ? _lastWords : '',
                     style: TextStyle(
                       fontSize: 12 * widthRatio,
-                      color: _lastWords.isNotEmpty ? Colors.blue : Colors.transparent,
+                      color:
+                          _lastWords.isNotEmpty
+                              ? Colors.blue
+                              : Colors.transparent,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -353,33 +470,32 @@ class _keepboxState extends State<keepbox> {
                 ),
                 SizedBox(height: 20 * heightRatio),
                 Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 아이템 리스트 영역
-                      Expanded(
-                        child: ItemSaveSection(
-                          categories: categories,
-                          widthRatio: widthRatio,
-                          heightRatio: heightRatio,
-                          itemName: _currentItemName,
-                          itemCategory: currentItemCategory,
-                          onExit: () {
-                            _lastWords = '';
-                            selectedIndex = null;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+                  child:
+                      _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 아이템 리스트 영역
+                              Expanded(
+                                child: ItemSaveSection(
+                                  categories: categories,
+                                  widthRatio: widthRatio,
+                                  heightRatio: heightRatio,
+                                  itemName: _currentItemName,
+                                  itemCategory: currentItemCategory,
+                                  onExit: () {
+                                    _lastWords = '';
+                                    selectedIndex = null;
+                                  },
+                                  onDateChanged:_handleDateChange,
+                                ),
+                              ),
+                            ],
+                          ),
                 ),
                 SizedBox(height: 10 * heightRatio),
-                longbutton(
-                  text: '저장',
-                  onPressed: () {
-                    // 저장 로직
-                  },
-                ),
+                longbutton(text: '저장', onPressed: _saveData),
                 SizedBox(height: 24 * heightRatio),
               ],
             ),
