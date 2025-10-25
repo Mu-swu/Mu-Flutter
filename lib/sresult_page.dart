@@ -311,7 +311,7 @@ class _ResultPageState extends State<ResultPage> {
                           shadowColor: const Color(0x26463EC6),
                         ),
                         onPressed: () {
-                          Navigator.pop(context);
+                          Navigator.pop(context, widget.resultType);
                         },
                         child: Text(
                           "다음",

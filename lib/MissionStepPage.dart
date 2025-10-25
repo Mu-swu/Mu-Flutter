@@ -71,7 +71,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
     super.initState();
     _currentUserType = widget.userType;
 
-    _ttsEngine = ElevenLabsTTS(apiKey: dotenv.env['ELEVENLABS_API_KEY']!);
+    //_ttsEngine = ElevenLabsTTS(apiKey: dotenv.env['ELEVENLABS_API_KEY']!);
+    _ttsEngine=ElevenLabsTTS();
     _remainingTime = widget.missionTime;
     //API 키 사용해 gemini 모델 초기화
     final apiKey = dotenv.env['GEMINI_API_KEY'];
@@ -542,10 +543,10 @@ class _MissionStepPageState extends State<MissionStepPage> {
         loadingVideoPath = 'assets/mission/loading_re.mp4';
         break;
       case UserType.gam:
-        loadingVideoPath = 'assets/mission/loading_cl.mp4';
+        loadingVideoPath = 'assets/mission/loading_dr.mp4';
         break;
       case UserType.mol:
-        loadingVideoPath = 'assets/mission/loading_dr.mp4';
+        loadingVideoPath = 'assets/mission/loading_cl.mp4';
         break;
     }
 

@@ -117,20 +117,24 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
     _animateCardOffScreen(answer ? 1 : -1);
   }
 
-  void _showResult() {
+  void _showResult() async {
     final resultType = _calculateResult();
+
     if (mounted) {
-      Navigator.pushReplacement(
+      final String? returnedType = await Navigator.push(
         context,
         PageRouteBuilder(
-          pageBuilder:
-              (context, animation, secondaryAnimation) =>
-                  ResultPage(resultType: resultType),
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              ResultPage(resultType: resultType),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
         ),
       );
+
+      if (returnedType != null && mounted) {
+        Navigator.pop(context, returnedType);
+      }
     }
   }
 
