@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mu/widgets/navigationbar.dart';
 import 'package:fl_chart/fl_chart.dart';
-
-enum TagType { bang, gam, mol }
+import 'user_theme_manager.dart';
 
 class MyPage extends StatefulWidget {
   const MyPage({super.key});
@@ -12,7 +11,6 @@ class MyPage extends StatefulWidget {
 }
 
 class _MyPageState extends State<MyPage> {
-  TagType _currentUserType = TagType.bang;
   int _currentMissionLevel = 4;
 
   @override
@@ -53,46 +51,41 @@ class _MyPageState extends State<MyPage> {
                               children: [
                                 Text(
                                   '나의 비움 여정',
-                              style: TextStyle(
-                                fontSize: 20*widthRatio,
-                                fontWeight: FontWeight.bold,
-                              ),
-                      ),
-                              SizedBox(height: 10*heightRatio),
-                              _buildMissionSection(
-                              widthRatio,
-                              heightRatio,
+                                  style: TextStyle(
+                                    fontSize: 20 * widthRatio,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 10 * heightRatio),
+                                _buildMissionSection(widthRatio, heightRatio),
+                              ],
                             ),
-                            ],
-                          ),
                           ),
                           SizedBox(width: 20 * widthRatio),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                (_currentUserType==TagType.mol)
-                            ?Text(
-                              '오늘의 비움 꿀팁',
-                              style: TextStyle(
-                                fontSize: 20*widthRatio,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                            :Text(
-                                  '',
-                                  style: TextStyle(
-                                    fontSize: 20*widthRatio,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              SizedBox(height: 10*heightRatio),
-                              _buildSectionForType(
-                              widthRatio,
-                              heightRatio,
+                                (UserThemeManager.currentUserType ==
+                                        UserType.mol)
+                                    ? Text(
+                                      '오늘의 비움 꿀팁',
+                                      style: TextStyle(
+                                        fontSize: 20 * widthRatio,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                    : Text(
+                                      '',
+                                      style: TextStyle(
+                                        fontSize: 20 * widthRatio,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                SizedBox(height: 10 * heightRatio),
+                                _buildSectionForType(widthRatio, heightRatio),
+                              ],
                             ),
-                            ],
-                          ),
                           ),
                         ],
                       ),
@@ -124,12 +117,12 @@ class _MyPageState extends State<MyPage> {
   }
 
   Widget _buildSectionForType(double widthRatio, double heightRatio) {
-    switch (_currentUserType) {
-      case TagType.bang:
+    switch (UserThemeManager.currentUserType) {
+      case UserType.bang:
         return _buildProgressSection(widthRatio);
-      case TagType.gam:
+      case UserType.gam:
         return _buildMessageSection(widthRatio, heightRatio);
-      case TagType.mol:
+      case UserType.mol:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [_buildTipsSection(widthRatio, heightRatio)],
@@ -145,21 +138,21 @@ class _MyPageState extends State<MyPage> {
     String imagePath;
     Color backgroundColor;
 
-    switch (_currentUserType) {
-      case TagType.bang:
+    switch (UserThemeManager.currentUserType) {
+      case UserType.bang:
         title = '방치형';
         description =
             '쌓이는 물건들로 언젠가 하겠지 하며 미루게 되죠.\n시간을 정해두고 짧게라도 시간을 내서 하나씩 실천해봐요.';
         imagePath = 'assets/my/mymom_bang.png';
         backgroundColor = const Color(0xFFFBF4FF);
         break;
-      case TagType.gam:
+      case UserType.gam:
         title = '감정형';
         description = '마음이 가라앉을 땐, 뭐든 손에 잘 안 잡혀요.\n그럴땐 욕심내지 말고, 하나만 비워봐요.';
         imagePath = 'assets/my/mymom_gam.png';
         backgroundColor = const Color(0xFFFFF6EF);
         break;
-      case TagType.mol:
+      case UserType.mol:
         title = '몰라형';
         description = "어디서부터 시작해야 할지 몰라 막막하다면,\n'무엇을 비울지'보다는 '어떻게 비울지'를 생각해봐요.";
         imagePath = 'assets/my/mymom_mol.png';
@@ -167,53 +160,73 @@ class _MyPageState extends State<MyPage> {
         break;
     }
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: 30 * widthRatio,
-        vertical: 30 * widthRatio,
-      ),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12 * widthRatio),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 20 * widthRatio,
-                        fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onTap: () async {
+        final returnedType = await Navigator.pushNamed(context, '/surveyq');
+        if (returnedType != null && returnedType is String) {
+          switch (returnedType) {
+            case '감정형':
+              UserThemeManager.currentUserType = UserType.gam;
+              break;
+            case '몰라형':
+              UserThemeManager.currentUserType = UserType.mol;
+              break;
+            case '방치형':
+              UserThemeManager.currentUserType = UserType.bang;
+              break;
+          }
+
+          setState(() {});
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: 30 * widthRatio,
+          vertical: 30 * widthRatio,
+        ),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(12 * widthRatio),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 20 * widthRatio,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 8 * widthRatio),
-                    Image.asset(
-                      'assets/my/right_arrow.png',
-                      width: 30 * widthRatio,
-                    ),
-                  ],
-                ),
-                SizedBox(height: 30 * widthRatio),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 16 * widthRatio,
-                    color: const Color(0xFF5D5D5D),
-                    height: 1.5,
+                      SizedBox(width: 8 * widthRatio),
+                      Image.asset(
+                        'assets/my/right_arrow.png',
+                        width: 30 * widthRatio,
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  SizedBox(height: 30 * widthRatio),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 16 * widthRatio,
+                      color: const Color(0xFF5D5D5D),
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          SizedBox(width: 16 * widthRatio),
-          Image.asset(imagePath, width: 260 * widthRatio),
-        ],
+            SizedBox(width: 16 * widthRatio),
+            Image.asset(imagePath, width: 260 * widthRatio),
+          ],
+        ),
       ),
     );
   }
@@ -223,18 +236,18 @@ class _MyPageState extends State<MyPage> {
     int maxLevel;
     double imageWidth;
 
-    switch (_currentUserType) {
-      case TagType.bang:
+    switch (UserThemeManager.currentUserType) {
+      case UserType.bang:
         imagePrefix = 're';
         maxLevel = 3;
         imageWidth = 305;
         break;
-      case TagType.gam:
+      case UserType.gam:
         imagePrefix = 'cl';
         maxLevel = 4;
         imageWidth = 450;
         break;
-      case TagType.mol:
+      case UserType.mol:
         imagePrefix = 'dr';
         maxLevel = 3;
         imageWidth = 305;
