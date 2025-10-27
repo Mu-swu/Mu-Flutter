@@ -44,7 +44,7 @@ class _keepboxState extends State<keepbox> {
   }
 
   @override
-  void dispose(){
+  void dispose() {
     _saveData();
     super.dispose();
   }
@@ -93,7 +93,7 @@ class _keepboxState extends State<keepbox> {
   }
 
   Future<void> _saveData() async {
-    if(_isLoading)return;
+    if (_isLoading) return;
     final List<KeepBoxesCompanion> itemsToSave = [];
     final DateFormat formatter = DateFormat("yyyy.MM.dd");
 
@@ -248,7 +248,7 @@ class _keepboxState extends State<keepbox> {
               setState(() {
                 for (final cat in categories) {
                   (cat['items'] as List).removeWhere(
-                        (it) => it['name'] == itemName,
+                    (it) => it['name'] == itemName,
                   );
                 }
                 _pushItemToCategory(
@@ -262,7 +262,7 @@ class _keepboxState extends State<keepbox> {
               setState(() {
                 for (final cat in categories) {
                   (cat['items'] as List).removeWhere(
-                        (it) => it['name'] == itemName,
+                    (it) => it['name'] == itemName,
                   );
                 }
 
@@ -284,7 +284,7 @@ class _keepboxState extends State<keepbox> {
           );
         });
       }
-    } else{
+    } else {
       print('인식된 텍스트가 없습니다.');
     }
   }
@@ -308,13 +308,13 @@ class _keepboxState extends State<keepbox> {
     }
   }
 
-  void _handleDateChange(String itemName,String newEndDate){
+  void _handleDateChange(String itemName, String newEndDate) {
     setState(() {
-      for(final category in categories){
-        final itemList=category['items'] as List;
-        for(final item in itemList){
-          if(item['name']==itemName){
-            item['endDate']=newEndDate;
+      for (final category in categories) {
+        final itemList = category['items'] as List;
+        for (final item in itemList) {
+          if (item['name'] == itemName) {
+            item['endDate'] = newEndDate;
             break;
           }
         }
@@ -366,6 +366,7 @@ class _keepboxState extends State<keepbox> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                SizedBox(height: 30),
                 // 🔙 뒤로가기 버튼
                 Align(
                   alignment: Alignment.topLeft,
@@ -449,16 +450,17 @@ class _keepboxState extends State<keepbox> {
             color: Colors.white,
             child: Column(
               children: [
+                SizedBox(height: 30),
                 Align(
                   alignment: Alignment.topRight,
                   child: IconButton(
                     onPressed: () {
-                      // TODO: 홈으로 이동 기능은 나중에 구현
+                      Navigator.pushNamed(context, '/');
                     },
                     icon: const Icon(Icons.home, size: 28),
                   ),
                 ),
-                SizedBox(height: 80 * heightRatio),
+                SizedBox(height: 60 * heightRatio),
                 Center(
                   child: Text(
                     '버릴까말까 상자',
@@ -488,7 +490,7 @@ class _keepboxState extends State<keepbox> {
                                     _lastWords = '';
                                     selectedIndex = null;
                                   },
-                                  onDateChanged:_handleDateChange,
+                                  onDateChanged: _handleDateChange,
                                 ),
                               ),
                             ],
