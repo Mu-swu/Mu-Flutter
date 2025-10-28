@@ -178,16 +178,13 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
       img.Image? originalImage = img.decodeImage(imageBytes);
       if (originalImage == null) return "이미지 오류";
 
-      img.Image resizedImage = img.copyResizeCropSquare(
-        originalImage,
-        _inputSize,
-      );
+      img.Image resizedImage = img.copyResizeCropSquare(originalImage, _inputSize);
 
       var input = List.generate(
         1,
-        (_) => List.generate(
+            (_) => List.generate(
           _inputSize,
-          (y) => List.generate(_inputSize, (x) {
+              (y) => List.generate(_inputSize, (x) {
             final pixel = resizedImage.getPixel(x, y);
             return [
               img.getRed(pixel).toInt(),
@@ -210,40 +207,31 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
 
       _interpreter!.runForMultipleInputs([input], outputs);
 
-      final int locationsIndex = outputTensors.indexWhere(
-        (t) => t.name.contains('PostProcess') && t.shape.length == 3,
-      );
-      final int classesIndex = outputTensors.indexWhere(
-        (t) => t.name.contains('PostProcess') && t.name.contains(':1'),
-      );
-      final int scoresIndex = outputTensors.indexWhere(
-        (t) => t.name.contains('PostProcess') && t.name.contains(':2'),
-      );
-      final int detectionsIndex = outputTensors.indexWhere(
-        (t) => t.name.contains('PostProcess') && t.name.contains(':3'),
-      );
+      final int locationsIndex =
+      outputTensors.indexWhere((t) => t.name.contains('PostProcess') && t.shape.length == 3);
+      final int classesIndex =
+      outputTensors.indexWhere((t) => t.name.contains('PostProcess') && t.name.contains(':1'));
+      final int scoresIndex =
+      outputTensors.indexWhere((t) => t.name.contains('PostProcess') && t.name.contains(':2'));
+      final int detectionsIndex =
+      outputTensors.indexWhere((t) => t.name.contains('PostProcess') && t.name.contains(':3'));
 
-      if (locationsIndex == -1 ||
-          classesIndex == -1 ||
-          scoresIndex == -1 ||
-          detectionsIndex == -1) {
+      if (locationsIndex == -1 || classesIndex == -1 || scoresIndex == -1 || detectionsIndex == -1) {
         return "모델 출력 텐서를 찾을 수 없습니다.";
       }
 
       final outputLocations = outputs[locationsIndex] as List;
-      final outputClasses = outputs[classesIndex] as List;
       final outputScores = outputs[scoresIndex] as List;
       final numDetections = outputs[detectionsIndex] as List;
 
-      final imageWidth = originalImage.width;
-      final imageHeight = originalImage.height;
+      final imageWidth = originalImage.width.toDouble();
+      final imageHeight = originalImage.height.toDouble();
       final imageArea = imageWidth * imageHeight;
 
       List<Rect> boxes = [];
       double totalBoxArea = 0;
-
       int detectedCount = 0;
-      final threshold = 0.3;
+      const threshold = 0.3;
 
       for (int i = 0; i < numDetections[0].toInt(); i++) {
         if (outputScores[0][i] < threshold) continue;
@@ -259,11 +247,25 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
         detectedCount++;
       }
 
-      final areaRatio = totalBoxArea / imageArea;
+      // ✅ 겹침 비율(overlap ratio) 계산
+      double overlapArea = 0;
+      for (int i = 0; i < boxes.length; i++) {
+        for (int j = i + 1; j < boxes.length; j++) {
+          final Rect intersect = boxes[i].intersect(boxes[j]);
+          if (intersect.width > 0 && intersect.height > 0) {
+            overlapArea += intersect.width * intersect.height;
+          }
+        }
+      }
+      double overlapRatio = totalBoxArea > 0 ? overlapArea / totalBoxArea : 0;
 
-      if (detectedCount > 10 && areaRatio > 0.4) {
+      // ✅ 이미지 전체 대비 박스 비율
+      double areaRatio = totalBoxArea / imageArea;
+
+      // ✅ 혼잡도 판정 (겹침 비율 포함)
+      if (detectedCount > 9 && areaRatio > 0.5 && overlapRatio > 0.05) {
         return "혼잡";
-      } else if (detectedCount > 6 && areaRatio > 0.3) {
+      } else if (detectedCount > 6 && areaRatio > 0.3 && overlapRatio > 0.05) {
         return "보통";
       } else {
         return "여유";

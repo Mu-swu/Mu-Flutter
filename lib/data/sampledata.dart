@@ -5,13 +5,13 @@ final List<Map<String, dynamic>> sampleCategories = [
       {
         'name': '우유',
         'startDate': '2025.06.10',
-        'endDate': '2025.10.15',
+        'endDate': '2025.11.05',
         'category': '식품',
       },
       {
         'name': '치즈',
         'startDate': '2025.06.09',
-        'endDate': '2025.10.20',
+        'endDate': '2025.11.20',
         'category': '식품',
       },
     ],
