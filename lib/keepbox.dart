@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
+import 'package:mu/widgets/category_edit_popup.dart';
 import 'package:mu/widgets/keepdialogs.dart';
 import 'package:mu/widgets/longbutton.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -341,6 +342,7 @@ class _keepboxState extends State<keepbox> {
     }
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: Colors.white,
       body: Row(
         children: [
@@ -450,7 +452,7 @@ class _keepboxState extends State<keepbox> {
             color: Colors.white,
             child: Column(
               children: [
-                SizedBox(height: 30),
+                SizedBox(height: 37),
                 Align(
                   alignment: Alignment.topRight,
                   child: IconButton(
@@ -460,7 +462,7 @@ class _keepboxState extends State<keepbox> {
                     icon: const Icon(Icons.home, size: 28),
                   ),
                 ),
-                SizedBox(height: 60 * heightRatio),
+                SizedBox(height: 50 * heightRatio),
                 Center(
                   child: Text(
                     '버릴까말까 상자',
@@ -491,6 +493,8 @@ class _keepboxState extends State<keepbox> {
                                     selectedIndex = null;
                                   },
                                   onDateChanged: _handleDateChange,
+                                  onCategoryUpdated: _updateCategoryName,
+                                  onCategoryDeleted: _deleteCategory,
                                 ),
                               ),
                             ],
@@ -505,5 +509,27 @@ class _keepboxState extends State<keepbox> {
         ],
       ),
     );
+  }
+  // _keepboxState 클래스 내부에 추가
+
+  Future<void> _updateCategoryName(String oldName, String newName) async {
+    setState(() {
+      final index = categories.indexWhere((cat) => cat['name'] == oldName);
+      if (index != -1) {
+        categories[index]['name'] = newName;
+        final items = categories[index]['items'] as List;
+        for (var item in items) {
+          item['category'] = newName;
+        }
+      }
+    });
+    print("카테고리 이름 변경: $oldName -> $newName");
+  }
+
+  Future<void> _deleteCategory(String categoryName) async {
+    setState(() {
+      categories.removeWhere((cat) => cat['name'] == categoryName);
+    });
+    print("카테고리 삭제: $categoryName");
   }
 }

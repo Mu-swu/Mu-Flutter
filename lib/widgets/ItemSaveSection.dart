@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'ItemListSection.dart';
+import 'category_edit_popup.dart';
 
 class ItemSaveSection extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
@@ -11,6 +12,8 @@ class ItemSaveSection extends StatefulWidget {
   final String? itemCategory;
 
   final Function(String itemName, String newEndDate) onDateChanged;
+  final Function(String oldName, String newName) onCategoryUpdated;
+  final Function(String categoryName) onCategoryDeleted;
 
   const ItemSaveSection({
     required this.categories,
@@ -20,6 +23,8 @@ class ItemSaveSection extends StatefulWidget {
     required this.itemName,
     required this.itemCategory,
     required this.onDateChanged,
+    required this.onCategoryUpdated,
+    required this.onCategoryDeleted,
     super.key,
   });
 
@@ -184,8 +189,20 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
                         onAddPressed: (category) {
                           print('$category 추가');
                         },
-                        onItemTapped: (category) {
-                          print('$category 이미지 탭됨');
+                        onItemTapped: (String categoryName) {
+                          CategoryEditPopup(
+                            context: context,
+                            initialCategoryName: categoryName,
+                            onSave: (String newCategoryName) {
+                              widget.onCategoryUpdated(
+                                categoryName,
+                                newCategoryName,
+                              );
+                            },
+                            onDelete: () {
+                              widget.onCategoryDeleted(categoryName);
+                            },
+                          );
                         },
                       ),
                     ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class ItemListSection extends StatelessWidget {
   final List<Map<String, dynamic>> categories;
@@ -44,11 +45,7 @@ class ItemListSection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '카테고리 추가',
-                      style: TextStyle(fontSize: 16.0),
-                    ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 50),
                     GestureDetector(
                       onTap: () => onAddPressed(''),
                       child: Container(
@@ -115,7 +112,7 @@ class ItemListSection extends StatelessWidget {
           );
 
           return Padding(
-            padding: EdgeInsets.only(right: 12 * scale),
+            padding: EdgeInsets.only(right: 0 * scale),
             child: SizedBox(
               width: maxWidth / 2,
               child: Column(
@@ -127,21 +124,23 @@ class ItemListSection extends StatelessWidget {
                       Flexible(
                         child: Text(
                           name,
-                          style: const TextStyle(fontSize: 16.0),
+                          style: const TextStyle(fontSize: 18.0),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.add),
-                        onPressed: () => onAddPressed(name),
-                        iconSize: 24.0, // 고정된 아이콘 크기
+                        icon: SvgPicture.asset(
+                          'assets/mission/edit.svg',
+                        ),
+                        iconSize: 20,
+                        onPressed: () => onItemTapped(name),
                         padding: EdgeInsets.zero,
                         constraints: BoxConstraints(),
                       ),
                     ],
                   ),
                   GestureDetector(
-                    onTap: () => onItemTapped(name),
+                    onTap: () => onAddPressed(name),
                     child: contentBox,
                   ),
                 ],

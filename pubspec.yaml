@@ -34,6 +34,7 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.40
   path: ^1.9.1
   flutter_slidable: ^4.0.3
+  flutter_svg: 2.2.1
 
 dev_dependencies:
   flutter_test:
@@ -114,3 +115,4 @@ flutter:
     - assets/my/cl3.png
     - assets/my/cl4.png
     - assets/my/idea.png
+    - assets/mission/edit.svg
