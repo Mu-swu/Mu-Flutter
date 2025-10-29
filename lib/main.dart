@@ -671,7 +671,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                                 overallRatio,
                                                           ),
                                                           Text(
-                                                            'D${item1['remainingDays']}',
+                                                            'D-${item1['remainingDays']}',
                                                             style: TextStyle(
                                                               fontSize:
                                                                   30 *
