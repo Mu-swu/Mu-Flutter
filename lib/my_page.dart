@@ -292,7 +292,7 @@ class _MyPageState extends State<MyPage> {
                       ),
                       SizedBox(height: 20 * heightRatio),
                       Text(
-                        '1/3',
+                        '3/3',
                         style: TextStyle(
                           fontSize: 32 * widthRatio,
                           fontWeight: FontWeight.w500,
@@ -322,7 +322,7 @@ class _MyPageState extends State<MyPage> {
                       ),
                       SizedBox(height: 20 * heightRatio),
                       Text(
-                        '30%',
+                        '100%',
                         style: TextStyle(
                           fontSize: 32 * widthRatio,
                           fontWeight: FontWeight.w500,
