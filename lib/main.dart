@@ -352,7 +352,11 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                   ),
                                                 ),
                                                 Text(
-                                                  '냉장실 상단 비우기',
+                                                    UserThemeManager.currentUserType == UserType.gam
+                                                        ? '냉장실 상단 비우기'
+                                                        : (UserThemeManager.currentUserType == UserType.mol
+                                                        ? '서랍장 2단 비우기'
+                                                        : '옷장 서랍 비우기'),
                                                   style: TextStyle(
                                                     fontSize: 16 * overallRatio,
                                                   ),
@@ -407,24 +411,40 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                       ),
                                       child: ListView(
                                         padding: EdgeInsets.zero,
-                                        children: const [
+                                        children: [
                                           ScheduleItem(
-                                            title: '냉장실 한 칸',
+                                            title: UserThemeManager.currentUserType == UserType.mol
+                                                ? '2단'
+                                                : (UserThemeManager.currentUserType == UserType.gam
+                                                ? '서랍'
+                                                : '냉장실 한 칸'),
                                             time: '45분',
                                             isCompleted: false,
                                           ),
                                           ScheduleItem(
-                                            title: '얼음/얼린 식재료 칸',
+                                            title: UserThemeManager.currentUserType == UserType.mol
+                                                ? '3단'
+                                                : (UserThemeManager.currentUserType == UserType.gam
+                                                ? '행거 구역'
+                                                : '얼음/얼린 식재료 칸'),
                                             time: '1시간',
                                             isCompleted: false,
                                           ),
                                           ScheduleItem(
-                                            title: '냉동식품 칸',
+                                            title: UserThemeManager.currentUserType == UserType.mol
+                                                ? '1단'
+                                                : (UserThemeManager.currentUserType == UserType.gam
+                                                ? '옷장 바닥 공간'
+                                                : '냉동식품 칸'),
                                             time: '30분',
                                             isCompleted: true,
                                           ),
                                           ScheduleItem(
-                                            title: '냉장실 포켓',
+                                            title: UserThemeManager.currentUserType == UserType.mol
+                                                ? '보조 포켓'
+                                                : (UserThemeManager.currentUserType == UserType.gam
+                                                ? '보조 포켓'
+                                                : '냉장실 포켓'),
                                             time: '30분',
                                             isCompleted: true,
                                           ),
@@ -515,12 +535,16 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
+                                              CrossAxisAlignment.start,
                                               mainAxisAlignment:
-                                                  MainAxisAlignment.center,
+                                              MainAxisAlignment.center,
                                               children: [
                                                 Text(
-                                                  '냉장고',
+                                                  UserThemeManager.currentUserType == UserType.mol
+                                                      ? '서랍'
+                                                      : (UserThemeManager.currentUserType == UserType.gam
+                                                      ? '옷장'
+                                                      : '냉장고'),
                                                   style: TextStyle(
                                                     fontSize: 20 * overallRatio,
                                                     color: Colors.black,
@@ -529,16 +553,17 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                 SizedBox(
                                                   height: 40 * overallRatio,
                                                 ),
+                                                // 👇 요청하신 'LinearProgressIndicator'와 '30%' 텍스트를 포함하는 Row가 이 자리에 들어갑니다.
                                                 Row(
                                                   mainAxisAlignment:
-                                                      MainAxisAlignment.start,
+                                                  MainAxisAlignment.start,
                                                   children: [
                                                     Expanded(
                                                       child: ClipRRect(
                                                         borderRadius:
-                                                            BorderRadius.circular(
-                                                              20,
-                                                            ),
+                                                        BorderRadius.circular(
+                                                          20,
+                                                        ),
                                                         // Adjust to match desired corner radius
                                                         child: SizedBox(
                                                           height: 20,
@@ -547,19 +572,28 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                             value: 0.3,
                                                             // 30% progress
                                                             backgroundColor:
-                                                                Colors
-                                                                    .grey[300],
+                                                            Colors
+                                                                .grey[300],
                                                             // Gray background
                                                             valueColor:
-                                                                const AlwaysStoppedAnimation<
-                                                                  Color
-                                                                >(
-                                                                  Color(
-                                                                    0xFF6AC992,
-                                                                  ), // Green fill color
-                                                                ),
+                                                            const AlwaysStoppedAnimation<
+                                                                Color
+                                                            >(
+                                                              Color(
+                                                                0xFF6AC992,
+                                                              ), // Green fill color
+                                                            ),
                                                           ),
                                                         ),
+                                                      ),
+                                                    ),
+                                                    SizedBox(width: 10), // 진행바와 텍스트 사이 간격
+                                                    const Text(
+                                                      '30%',
+                                                      style: TextStyle(
+                                                        fontSize: 16, // 적절한 크기로 설정
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Color(0xFF8D93A1), 
                                                       ),
                                                     ),
                                                   ],
