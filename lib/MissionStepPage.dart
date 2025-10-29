@@ -812,6 +812,11 @@ class _MissionStepPageState extends State<MissionStepPage> {
   /// 감정형 (gam)
   ///
   Widget _buildGamLayout(BuildContext context) {
+    double progressValue = 0.0;
+    if (widget.missionTime.inSeconds > 0) {
+      progressValue = _remainingTime.inSeconds.toDouble() /
+          widget.missionTime.inSeconds.toDouble();
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
@@ -864,8 +869,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                                 width: 200,
                                 height: 200,
                                 child: CircularProgressIndicator(
-                                  value: _remainingTime.inSeconds.toDouble() /
-                                      widget.missionTime.inSeconds.toDouble(),
+                                  value: progressValue,
                                   strokeWidth: 16,
                                   backgroundColor: Colors.grey.shade200,
                                   color: const Color(0xFF7F91FF),
