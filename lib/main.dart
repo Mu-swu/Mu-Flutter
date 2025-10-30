@@ -11,23 +11,9 @@ import 'widgets/shortbutton.dart';
 import 'widgets/schedule_item.dart';
 import 'mission_start.dart';
 import 'keepbox.dart';
-import 'package:mu/data/sampledata.dart';
 import 'user_theme_manager.dart'; // Import the new file
 import 'package:mu/data/database.dart';
-
-// You should create this file separately: user_theme_manager.dart
-// I've included the content of this new file in the response for your convenience.
-
-int calculateRemainingDays(String endDateString) {
-  final now = DateTime.now();
-  final endDateParts = endDateString.split('.');
-  final endDate = DateTime(
-    int.parse(endDateParts[0]),
-    int.parse(endDateParts[1]),
-    int.parse(endDateParts[2]),
-  );
-  return endDate.difference(now).inDays;
-}
+import 'package:mu/data/tables.dart';
 
 // CustomTag 위젯 (요청에 따라 색상과 크기 수정)
 // 기존 TagType enum은 UserThemeManager.currentUserType에 맞게 사용합니다.
@@ -121,6 +107,7 @@ class FigmaHomePage extends StatefulWidget {
 class _FigmaHomePageState extends State<FigmaHomePage> {
   final AppDatabase _database = AppDatabase.instance;
   bool _isLoading = true;
+  List<KeepBox> _urgentItems = [];
 
   @override
   void initState() {
@@ -152,14 +139,14 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
         default:
           loadedType = UserType.bang;
       }
-      UserThemeManager.currentUserType = loadedType; // 👈 3. 새 타입 적용
+      UserThemeManager.currentUserType = loadedType;
+      _urgentItems = await _database.getTopTowUrgentItems();
     } catch (e) {
       print("사용자 데이터 로드 실패 : $e");
       UserThemeManager.currentUserType = UserType.bang;
+      _urgentItems = [];
     }
 
-    // 4. 데이터 로드가 끝나면,
-    //    로딩 중이었으면 false로 바꾸고, 아니었어도 setState로 화면을 갱신!
     setState(() {
       _isLoading = false;
     });
@@ -186,25 +173,22 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
     final verticalPadding = 20.0 * overallRatio;
     final spacing = 20.0 * overallRatio;
 
-    final allItemsWithRemainingDays =
-        sampleCategories
-            .expand((category) => (category['items'] as List<dynamic>))
-            .where((item) => item['endDate'] != null)
-            .map((item) {
-              final remainingDays = calculateRemainingDays(
-                item['endDate'] as String,
-              );
-              return {...item, 'remainingDays': remainingDays};
-            })
-            .toList();
+    final item1 = _urgentItems.isNotEmpty ? _urgentItems[0] : null;
+    final item2 = _urgentItems.length > 1 ? _urgentItems[1] : null;
+    final now = DateTime.now();
+    final today=DateTime(now.year,now.month,now.day);
+    final item1ExpirationDate = item1 != null
+        ? DateTime(item1.expirationAt.year, item1.expirationAt.month,
+        item1.expirationAt.day)
+        : null;
 
-    allItemsWithRemainingDays.sort(
-      (a, b) => a['remainingDays'].compareTo(b['remainingDays']),
-    );
+    final item2ExpirationDate = item2 != null
+        ? DateTime(item2.expirationAt.year, item2.expirationAt.month,
+        item2.expirationAt.day)
+        : null;
 
-    final topTwoItems = allItemsWithRemainingDays.take(2).toList();
-    final item1 = topTwoItems.isNotEmpty ? topTwoItems[0] : null;
-    final item2 = topTwoItems.length > 1 ? topTwoItems[1] : null;
+    final item1RemainingDays = item1ExpirationDate?.difference(today).inDays;
+    final item2RemainingDays = item2ExpirationDate?.difference(today).inDays;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -352,11 +336,15 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                   ),
                                                 ),
                                                 Text(
-                                                    UserThemeManager.currentUserType == UserType.gam
-                                                        ? '냉장실 상단 비우기'
-                                                        : (UserThemeManager.currentUserType == UserType.mol
-                                                        ? '서랍장 2단 비우기'
-                                                        : '옷장 서랍 비우기'),
+                                                  UserThemeManager
+                                                              .currentUserType ==
+                                                          UserType.gam
+                                                      ? '냉장실 상단 비우기'
+                                                      : (UserThemeManager
+                                                                  .currentUserType ==
+                                                              UserType.mol
+                                                          ? '서랍장 2단 비우기'
+                                                          : '옷장 서랍 비우기'),
                                                   style: TextStyle(
                                                     fontSize: 16 * overallRatio,
                                                   ),
@@ -413,38 +401,58 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                         padding: EdgeInsets.zero,
                                         children: [
                                           ScheduleItem(
-                                            title: UserThemeManager.currentUserType == UserType.mol
-                                                ? '2단'
-                                                : (UserThemeManager.currentUserType == UserType.gam
-                                                ? '서랍'
-                                                : '냉장실 한 칸'),
+                                            title:
+                                                UserThemeManager
+                                                            .currentUserType ==
+                                                        UserType.mol
+                                                    ? '2단'
+                                                    : (UserThemeManager
+                                                                .currentUserType ==
+                                                            UserType.gam
+                                                        ? '서랍'
+                                                        : '냉장실 한 칸'),
                                             time: '45분',
                                             isCompleted: false,
                                           ),
                                           ScheduleItem(
-                                            title: UserThemeManager.currentUserType == UserType.mol
-                                                ? '3단'
-                                                : (UserThemeManager.currentUserType == UserType.gam
-                                                ? '행거 구역'
-                                                : '얼음/얼린 식재료 칸'),
+                                            title:
+                                                UserThemeManager
+                                                            .currentUserType ==
+                                                        UserType.mol
+                                                    ? '3단'
+                                                    : (UserThemeManager
+                                                                .currentUserType ==
+                                                            UserType.gam
+                                                        ? '행거 구역'
+                                                        : '얼음/얼린 식재료 칸'),
                                             time: '1시간',
                                             isCompleted: false,
                                           ),
                                           ScheduleItem(
-                                            title: UserThemeManager.currentUserType == UserType.mol
-                                                ? '1단'
-                                                : (UserThemeManager.currentUserType == UserType.gam
-                                                ? '옷장 바닥 공간'
-                                                : '냉동식품 칸'),
+                                            title:
+                                                UserThemeManager
+                                                            .currentUserType ==
+                                                        UserType.mol
+                                                    ? '1단'
+                                                    : (UserThemeManager
+                                                                .currentUserType ==
+                                                            UserType.gam
+                                                        ? '옷장 바닥 공간'
+                                                        : '냉동식품 칸'),
                                             time: '30분',
                                             isCompleted: true,
                                           ),
                                           ScheduleItem(
-                                            title: UserThemeManager.currentUserType == UserType.mol
-                                                ? '보조 포켓'
-                                                : (UserThemeManager.currentUserType == UserType.gam
-                                                ? '보조 포켓'
-                                                : '냉장실 포켓'),
+                                            title:
+                                                UserThemeManager
+                                                            .currentUserType ==
+                                                        UserType.mol
+                                                    ? '보조 포켓'
+                                                    : (UserThemeManager
+                                                                .currentUserType ==
+                                                            UserType.gam
+                                                        ? '보조 포켓'
+                                                        : '냉장실 포켓'),
                                             time: '30분',
                                             isCompleted: true,
                                           ),
@@ -535,16 +543,20 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                                  CrossAxisAlignment.start,
                                               mainAxisAlignment:
-                                              MainAxisAlignment.center,
+                                                  MainAxisAlignment.center,
                                               children: [
                                                 Text(
-                                                  UserThemeManager.currentUserType == UserType.mol
+                                                  UserThemeManager
+                                                              .currentUserType ==
+                                                          UserType.mol
                                                       ? '서랍'
-                                                      : (UserThemeManager.currentUserType == UserType.gam
-                                                      ? '옷장'
-                                                      : '냉장고'),
+                                                      : (UserThemeManager
+                                                                  .currentUserType ==
+                                                              UserType.gam
+                                                          ? '옷장'
+                                                          : '냉장고'),
                                                   style: TextStyle(
                                                     fontSize: 20 * overallRatio,
                                                     color: Colors.black,
@@ -556,14 +568,14 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                 // 👇 요청하신 'LinearProgressIndicator'와 '30%' 텍스트를 포함하는 Row가 이 자리에 들어갑니다.
                                                 Row(
                                                   mainAxisAlignment:
-                                                  MainAxisAlignment.start,
+                                                      MainAxisAlignment.start,
                                                   children: [
                                                     Expanded(
                                                       child: ClipRRect(
                                                         borderRadius:
-                                                        BorderRadius.circular(
-                                                          20,
-                                                        ),
+                                                            BorderRadius.circular(
+                                                              20,
+                                                            ),
                                                         // Adjust to match desired corner radius
                                                         child: SizedBox(
                                                           height: 20,
@@ -572,28 +584,33 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                             value: 0.3,
                                                             // 30% progress
                                                             backgroundColor:
-                                                            Colors
-                                                                .grey[300],
+                                                                Colors
+                                                                    .grey[300],
                                                             // Gray background
                                                             valueColor:
-                                                            const AlwaysStoppedAnimation<
-                                                                Color
-                                                            >(
-                                                              Color(
-                                                                0xFF6AC992,
-                                                              ), // Green fill color
-                                                            ),
+                                                                const AlwaysStoppedAnimation<
+                                                                  Color
+                                                                >(
+                                                                  Color(
+                                                                    0xFF6AC992,
+                                                                  ), // Green fill color
+                                                                ),
                                                           ),
                                                         ),
                                                       ),
                                                     ),
-                                                    SizedBox(width: 10), // 진행바와 텍스트 사이 간격
+                                                    SizedBox(width: 10),
+                                                    // 진행바와 텍스트 사이 간격
                                                     const Text(
                                                       '30%',
                                                       style: TextStyle(
-                                                        fontSize: 16, // 적절한 크기로 설정
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Color(0xFF8D93A1), 
+                                                        fontSize: 16,
+                                                        // 적절한 크기로 설정
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Color(
+                                                          0xFF8D93A1,
+                                                        ),
                                                       ),
                                                     ),
                                                   ],
@@ -640,7 +657,9 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                     ),
                                               ),
                                               child:
-                                                  item1 != null
+                                                  item1 != null &&
+                                                          item1RemainingDays !=
+                                                              null
                                                       ? Column(
                                                         crossAxisAlignment:
                                                             CrossAxisAlignment
@@ -684,8 +703,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                                 overallRatio,
                                                           ),
                                                           Text(
-                                                            item1['name']
-                                                                as String,
+                                                            item1.name,
                                                             style: TextStyle(
                                                               fontSize:
                                                                   20 *
@@ -705,7 +723,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                                 overallRatio,
                                                           ),
                                                           Text(
-                                                            'D-${item1['remainingDays']}',
+                                                            'D-${item1RemainingDays}',
                                                             style: TextStyle(
                                                               fontSize:
                                                                   30 *
@@ -740,7 +758,9 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                     ),
                                               ),
                                               child:
-                                                  item2 != null
+                                                  item2 != null &&
+                                                          item2RemainingDays !=
+                                                              null
                                                       ? Padding(
                                                         padding:
                                                             EdgeInsets.only(
@@ -757,8 +777,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                                   .start,
                                                           children: [
                                                             Text(
-                                                              item2['name']
-                                                                  as String,
+                                                              item2.name,
                                                               style: TextStyle(
                                                                 fontSize:
                                                                     20 *
@@ -778,7 +797,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                                   overallRatio,
                                                             ),
                                                             Text(
-                                                              'D-${item2['remainingDays']}',
+                                                              'D-${item2RemainingDays}',
                                                               style: TextStyle(
                                                                 fontSize:
                                                                     30 *

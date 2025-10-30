@@ -153,6 +153,20 @@ class AppDatabase extends _$AppDatabase {
     ])).get();
   }
 
+  Future<List<KeepBox>> getTopTowUrgentItems() {
+    final now = DateTime.now();
+    return (select(keepBoxes)
+          ..where((k) => k.expirationAt.isBiggerThanValue(now))
+          ..orderBy([
+            (k) => OrderingTerm(
+              expression: k.expirationAt,
+              mode: OrderingMode.asc,
+            ),
+          ])
+          ..limit(2))
+        .get();
+  }
+
   Future<void> replaceAllKeepBoxes(List<KeepBoxesCompanion> items) async {
     await transaction(() async {
       await delete(keepBoxes).go();
