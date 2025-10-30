@@ -817,130 +817,148 @@ class _MissionStepPageState extends State<MissionStepPage> {
       progressValue = _remainingTime.inSeconds.toDouble() /
           widget.missionTime.inSeconds.toDouble();
     }
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final basePadding = screenWidth < 900 ? 16.0 : 24.0;
+
+    // 박스 높이 (화면 크기에 따라 비율 조정)
+    final double boxHeight = screenHeight * 0.6;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Column(
         children: [
+          // 🔹 위쪽 메인 레이아웃
           SizedBox(
-            height: 480, // 🚀 전체 높이를 500으로 고정하여 위아래 공간을 줄입니다.
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ◀︎ 왼쪽 박스 (Circular Progress Bar, Lottie, Buttons)
-                Expanded(
-                  flex: 1, // 🚀 왼쪽 박스 너비 비율을 1로 설정합니다.
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 14),
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // 위 버튼
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(0xFF7F91FF),
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              _isPaused ? Icons.play_arrow : Icons.pause,
-                              size: 40,
-                              color: Colors.white,
-                            ),
-                            onPressed: _togglePause,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
+            height: boxHeight,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // 왼쪽 (1:1.5), 오른쪽 (1.55:1.5)
+                final double leftBoxHeight = boxHeight;
+                final double leftBoxWidth = leftBoxHeight / 1.5; // 1:1.5 → W/H
+                final double rightBoxHeight = boxHeight;
+                final double rightBoxWidth = rightBoxHeight * (1.55 / 1.5); // ✅ 1.55:1.5 → W/H
 
-                        // 원형 타이머 + Lottie
-                        SizedBox(
-                          width: 250,
-                          height: 250,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              SizedBox(
-                                width: 200,
-                                height: 200,
-                                child: CircularProgressIndicator(
-                                  value: progressValue,
-                                  strokeWidth: 16,
-                                  backgroundColor: Colors.grey.shade200,
-                                  color: const Color(0xFF7F91FF),
-                                ),
-                              ),
-                              Lottie.asset(
-                                'assets/HourGlass.json',
-                                width: 500,
-                                height: 500,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // + 버튼
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _remainingTime += const Duration(seconds: 30);
-                            });
-                          },
-                          child: Container(
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // ◀︎ 왼쪽 박스
+                    Container(
+                      width: leftBoxWidth,
+                      height: leftBoxHeight,
+                      margin: EdgeInsets.only(right: basePadding),
+                      padding: EdgeInsets.all(basePadding),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // ▶ 재생/일시정지 버튼
+                          Container(
                             width: 60,
                             height: 60,
                             decoration: const BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Color(0xFFD7DCFA),
+                              color: Color(0xFF7F91FF),
                             ),
-                            child: const Center(
-                              child: Text(
-                                '+',
-                                style: TextStyle(
-                                  fontSize: 40,
-                                  color: Color(0xFF7F91FF),
-                                  fontWeight: FontWeight.bold,
-                                  height: 1.0,
+                            child: IconButton(
+                              icon: Icon(
+                                _isPaused ? Icons.play_arrow : Icons.pause,
+                                size: 40,
+                                color: Colors.white,
+                              ),
+                              onPressed: _togglePause,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+
+                          SizedBox(
+                            width: 250,
+                            height: 250,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 200,
+                                  height: 200,
+                                  child: CircularProgressIndicator(
+                                    value: progressValue,
+                                    strokeWidth: 16,
+                                    backgroundColor: Colors.grey.shade200,
+                                    color: const Color(0xFF7F91FF),
+                                  ),
+                                ),
+                                Lottie.asset(
+                                  'assets/HourGlass.json',
+                                  width: 200, // Lottie 원본 크기 유지
+                                  height: 200, // Lottie 원본 크기 유지
+                                  fit: BoxFit.contain, // 작은 250x250 공간에 맞춤
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // ▶ +30초 버튼
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _remainingTime += const Duration(seconds: 30);
+                              });
+                            },
+                            child: Container(
+                              width: 60,
+                              height: 60,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFFD7DCFA),
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  '+',
+                                  style: TextStyle(
+                                    fontSize: 40,
+                                    color: Color(0xFF7F91FF),
+                                    fontWeight: FontWeight.bold,
+                                    height: 1.0,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ),
 
-                // ▶︎ 오른쪽 TTS 박스
-                Expanded(
-                  flex: 2, // 🚀 오른쪽 박스 너비 비율을 2로 설정합니다.
-                  child: Container(
-                    margin: const EdgeInsets.only(left: 14),
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                    // ▶︎ 오른쪽 박스
+                    Container(
+                      width: rightBoxWidth,
+                      height: rightBoxHeight,
+                      margin: EdgeInsets.only(left: basePadding),
+                      padding: EdgeInsets.all(basePadding),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: tts_text_box(
+                        lines: _currentLines,
+                        currentLineIndex: _currentLineIndex,
+                        controller: _scrollController,
+                      ),
                     ),
-                    child: tts_text_box(
-                      lines: _currentLines,
-                      currentLineIndex: _currentLineIndex,
-                      controller: _scrollController,
-                    ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ),
 
           const SizedBox(height: 30),
 
-          // 하단 버튼
+          // 🔹 하단 버튼
           longbutton(
             text: "끝났어요",
             onPressed: _onStepFinished,

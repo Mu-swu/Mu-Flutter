@@ -14,7 +14,7 @@ import 'keepbox.dart';
 import 'user_theme_manager.dart'; // Import the new file
 import 'package:mu/data/database.dart';
 import 'package:mu/data/tables.dart';
-
+import 'package:mu/data/sampledata.dart';
 // CustomTag 위젯 (요청에 따라 색상과 크기 수정)
 // 기존 TagType enum은 UserThemeManager.currentUserType에 맞게 사용합니다.
 enum TagType { bang, gam, mol }
@@ -152,6 +152,250 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
     });
   }
 
+  // 이 함수는 State 클래스 내부에 정의되어야 합니다.
+  void _showKeepBoxDialog(BuildContext context) {
+
+    Map<String, int>? _editingItem;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              insetPadding: EdgeInsets.zero,
+              // 🚀 Dialog 모서리를 둥글게 만듭니다.
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20), // 👈 모서리 둥글게
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20), // 👈 Container 모서리도 둥글게 (Dialog shape와 일치)
+                ),
+                // 🚀 내부 콘텐츠 좌우 여백을 80px로 증가
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 200),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // --- 헤더 (제목 및 닫기 버튼) ---
+                      Padding(
+                        padding: const EdgeInsets.only(top: 30, bottom: 10), // 상단 여백 증가
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const SizedBox(width: 40), // 좌측 여백 증가
+                            const Text(
+                              '버릴까말까 상자 목록',
+                              style: TextStyle(
+                                fontSize: 22, // 👈 글자 크기 키움
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF333333),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 28), // 닫기 버튼 아이콘 크기 키움
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // --- 카테고리별 목록 (스크롤 가능) ---
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 20), // 상하 여백 증가
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                double availableWidth = constraints.maxWidth;
+                                double itemWidth = (availableWidth - 20) / 2; // 카테고리 간격 20px 반영
+
+                                return Wrap(
+                                  spacing: 20, // 카테고리 간 가로 간격 증가
+                                  runSpacing: 20, // 카테고리 간 세로 간격 증가
+                                  children: sampleCategories.map((category) {
+                                    int categoryIndex = sampleCategories.indexOf(category);
+
+                                    return SizedBox(
+                                      width: itemWidth.clamp(120.0, double.infinity), // 최소 너비 증가
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // 카테고리 헤더
+                                          Row(
+                                            children: [
+                                              Text(
+                                                category['name'],
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 18, // 👈 글자 크기 키움
+                                                  color: Color(0xFF333333),
+                                                ),
+                                              ),
+                                              const Icon(Icons.add, size: 20, color: Color(0xFF8D93A1)), // 아이콘 크기 키움
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12), // 간격 증가
+
+                                          // 카테고리 항목 리스트
+                                          ...category['items'].asMap().entries.map((entry) {
+                                            int itemIndex = entry.key;
+                                            var item = entry.value;
+
+                                            String dateString = item['startDate'] ?? '';
+                                            String formattedDate = '';
+                                            try {
+                                              List<String> parts = dateString.split('.');
+                                              if (parts.length >= 3) {
+                                                formattedDate = '${parts[1].padLeft(2, '0')}월 ${parts[2].padLeft(2, '0')}일';
+                                              }
+                                            } catch (_) {
+                                              formattedDate = dateString;
+                                            }
+
+                                            bool isEditing = _editingItem?['categoryIndex'] == categoryIndex &&
+                                                _editingItem?['itemIndex'] == itemIndex;
+
+                                            return Padding(
+                                              padding: const EdgeInsets.only(bottom: 10.0), // 하단 여백 증가
+                                              child: Stack(
+                                                children: [
+                                                  // 실제 아이템 카드
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      if (isEditing) {
+                                                        setState(() => _editingItem = null);
+                                                      }
+                                                    },
+                                                    onLongPress: () {
+                                                      setState(() {
+                                                        _editingItem = isEditing
+                                                            ? null
+                                                            : {'categoryIndex': categoryIndex, 'itemIndex': itemIndex};
+                                                      });
+                                                    },
+                                                    child: Container(
+                                                      width: double.infinity,
+                                                      padding: const EdgeInsets.all(15), // 패딩 증가
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFFF3F5FF),
+                                                        borderRadius: BorderRadius.circular(10), // 아이템 모서리 둥글게
+                                                      ),
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Row(
+                                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                            children: [
+                                                              Text(item['name'], style: const TextStyle(fontSize: 17, color: Color(0xFF333333))), // 👈 글자 크기 키움
+                                                              IconButton(
+                                                                icon: const Icon(Icons.more_vert, size: 24, color: Color(0xFF8D93A1)), // 아이콘 크기 키움
+                                                                onPressed: () {
+                                                                  setState(() {
+                                                                    _editingItem = isEditing
+                                                                        ? null
+                                                                        : {'categoryIndex': categoryIndex, 'itemIndex': itemIndex};
+                                                                  });
+                                                                },
+                                                                padding: EdgeInsets.zero,
+                                                                constraints: const BoxConstraints(),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          const SizedBox(height: 4), // 간격 증가
+                                                          Text(
+                                                            formattedDate,
+                                                            style: TextStyle(
+                                                              fontSize: 14, // 👈 글자 크기 키움
+                                                              color: Colors.grey.shade600,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+
+                                                  // 편집/삭제 메뉴 (두 줄로, 아이콘 포함)
+                                                  if (isEditing)
+                                                    Positioned(
+                                                      top: 0,
+                                                      bottom: 0,
+                                                      right: 5,
+                                                      child: Container(
+                                                        width: 130, // 메뉴 너비 증가
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.white,
+                                                          borderRadius: BorderRadius.circular(8), // 메뉴 모서리 둥글게
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: Colors.black.withOpacity(0.1),
+                                                              blurRadius: 6,
+                                                              offset: const Offset(0, 3),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: Column(
+                                                          mainAxisAlignment: MainAxisAlignment.center,
+                                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                                          children: [
+                                                            _buildMenuButton('수정하기', Icons.edit, () { setState(() => _editingItem = null); }),
+                                                            const Divider(height: 1, thickness: 1, color: Color(0xFFF3F5FF)),
+                                                            _buildMenuButton('삭제하기', Icons.delete, () { setState(() => _editingItem = null); }),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+// 2. _buildMenuButton 함수 (State 클래스 내부에 별도로 정의)
+  Widget _buildMenuButton(String text, IconData icon, VoidCallback onPressed) {
+    const Color textColor = Color(0xFF333333); // ✅ 진한 회색
+
+    return InkWell(
+      onTap: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: textColor),
+            const SizedBox(width: 4),
+            Text(
+              text,
+              style: const TextStyle(fontSize: 14, color: textColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -254,7 +498,8 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                   const Spacer(),
                   GestureDetector(
                     onTap: () {
-                      Navigator.pushNamed(context, '/keepbox');
+                      // 🚀 버튼을 누르면 화면 전환 대신 다이얼로그를 띄웁니다.
+                      _showKeepBoxDialog(context);
                     },
                     child: Container(
                       padding: EdgeInsets.all(12 * overallRatio),
