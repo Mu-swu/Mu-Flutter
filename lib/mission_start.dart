@@ -178,9 +178,9 @@ class MissionStartPage extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Tag and Title section
+                            const SizedBox(height: 30),
                             CustomTag(label: tagLabel, type: tagType),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             Text(
                               missionTitle,
                               style: const TextStyle(
@@ -199,7 +199,7 @@ class MissionStartPage extends StatelessWidget {
                               width: screenWidth * 0.75,
                               fit: BoxFit.contain,
                             ),
-                            const SizedBox(height: 48),
+                            const SizedBox(height: 60),
 
                             // Buttons section
                             Padding(
@@ -224,7 +224,6 @@ class MissionStartPage extends StatelessWidget {
                                     },
                                     isEnabled: true, // 필요 시 false로 비활성화 가능
                                   ),
-                                  const SizedBox(height: 24),
                                 ],
                               ),
                             ),
