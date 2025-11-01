@@ -65,8 +65,8 @@ class StepNavigation extends StatelessWidget {
           Column(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 28,
+                height: 28,
                 decoration: ShapeDecoration(
                   color: isCurrent ? selectedColor : const Color(0xFFD6DDE5),
                   shape: const OvalBorder(),
@@ -76,7 +76,7 @@ class StepNavigation extends StatelessWidget {
                   '${index + 1}',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
+                    fontSize: 14,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w400,
                   ),
@@ -100,7 +100,7 @@ class StepNavigation extends StatelessWidget {
             child: Text(
               stepTitles[index],
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 16,
                 fontFamily: 'Pretendard',
                 fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
                 color: isCurrent ? const Color(0xFF5C5C5C) : const Color(0xFFB0B8C1),

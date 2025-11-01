@@ -35,6 +35,7 @@ class MissionStepPage extends StatefulWidget {
     required this.missionTime,
     required this.userType,
   });
+
   @override
   _MissionStepPageState createState() => _MissionStepPageState();
 }
@@ -65,14 +66,13 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   final ScrollController _scrollController = ScrollController();
 
-
   @override
   void initState() {
     super.initState();
     _currentUserType = widget.userType;
 
     _ttsEngine = ElevenLabsTTS(apiKey: dotenv.env['ELEVENLABS_API_KEY']!);
-   // _ttsEngine=ElevenLabsTTS();
+    // _ttsEngine=ElevenLabsTTS();
     _remainingTime = widget.missionTime;
     //API 키 사용해 gemini 모델 초기화
     final apiKey = dotenv.env['GEMINI_API_KEY'];
@@ -83,7 +83,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
     _model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
 
     _generateMissionSteps();
-
   }
 
   void _startTimer() {
@@ -96,7 +95,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
     });
   }
 
-
   void _showChoicePopup(String imagePath) {
     // 단계별 메시지 리스트
     final List<String> stepMessages = [
@@ -107,27 +105,27 @@ class _MissionStepPageState extends State<MissionStepPage> {
     ];
 
     // 현재 단계 인덱스가 메시지 길이보다 크면 마지막 문장으로 고정
-    final String message = stepMessages[
-    _currentStepIndex < stepMessages.length
-        ? _currentStepIndex
-        : stepMessages.length - 1
-    ];
+    final String message =
+        stepMessages[_currentStepIndex < stepMessages.length
+            ? _currentStepIndex
+            : stepMessages.length - 1];
 
     showDialog(
       context: context,
-      builder: (context) => ChoicePopup(
-        message: message,
-        imagePath: imagePath,
-        onConfirm: () => Navigator.pop(context),
-      ),
+      builder:
+          (context) => ChoicePopup(
+            message: message,
+            imagePath: imagePath,
+            onConfirm: () => Navigator.pop(context),
+          ),
     );
   }
-
 
   Future<void> _generateMissionSteps() async {
     final userTypeMap = {'gam': '감정형', 'mol': '몰라형', 'bas': '방치형'};
     final userType = userTypeMap[_currentUserType] ?? '방치형';
-    final missionName = widget.orderedMissions.isNotEmpty ? widget.orderedMissions[0] : '미션';
+    final missionName =
+        widget.orderedMissions.isNotEmpty ? widget.orderedMissions[0] : '미션';
 
     final density = "혼잡";
 
@@ -328,9 +326,18 @@ class _MissionStepPageState extends State<MissionStepPage> {
       setState(() {
         _missionSteps =
             stepsJson.map((step) {
+              List<String> rawLines = List<String>.from(step['lines']);
+              String fullTextBlock = rawLines.join(' ');
+              List<String> splitSentences =
+                  fullTextBlock
+                      .split(RegExp(r'(?<=[.!?])\s*'))
+                      .map((s) => s.trim())
+                      .where((s) => s.isNotEmpty)
+                      .toList();
+
               return StepData(
                 title: step['title'],
-                lines: List<String>.from(step['lines']),
+                lines: splitSentences,
               );
             }).toList();
 
@@ -443,7 +450,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
         await _ttsEngine!.speak(_currentLines[i]);
 
         if (_ttsSessionId != currentSessionId) break;
-
 
         await Future.delayed(Duration(milliseconds: 1000));
 
@@ -643,7 +649,13 @@ class _MissionStepPageState extends State<MissionStepPage> {
                                     children: [
                                       const SizedBox(height: 24),
                                       StepNavigation(
-                                        missionType: _currentUserType == UserType.gam ? 'gam' : (_currentUserType == UserType.mol ? 'mol' : 'bas'),
+                                        missionType:
+                                            _currentUserType == UserType.gam
+                                                ? 'gam'
+                                                : (_currentUserType ==
+                                                        UserType.mol
+                                                    ? 'mol'
+                                                    : 'bas'),
                                         currentIndex: _currentStepIndex,
                                       ),
                                     ],
@@ -655,10 +667,10 @@ class _MissionStepPageState extends State<MissionStepPage> {
                                   child: Container(
                                     color: baseColor,
                                     padding: const EdgeInsets.fromLTRB(
-                                      150,
+                                      90,
                                       70,
-                                      150,
-                                      50,
+                                      90,
+                                      70,
                                     ),
                                     child: _buildContentByType(context),
                                   ),
@@ -718,7 +730,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
               ? _missionSteps[_currentStepIndex].title
               : '',
           style: const TextStyle(
-            fontSize: 20,
+            fontSize: 16,
             color: Colors.grey,
             fontWeight: FontWeight.w500,
           ),
@@ -770,7 +782,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                       fontSize: 60,
                       color: Color(0xFF7F91FF),
                       fontWeight: FontWeight.bold,
-                      height: 1.0,
+                      height: -0.1,
                     ),
                   ),
                 ),
@@ -783,27 +795,25 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
         // 🔹 TTS 텍스트 박스
         Expanded(
-        child:Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: tts_text_box(
-            lines: _currentLines,
-            currentLineIndex: _currentLines.isNotEmpty ? _currentLineIndex : -1,
-            controller: _scrollController,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: tts_text_box(
+              lines: _currentLines,
+              currentLineIndex:
+                  _currentLines.isNotEmpty ? _currentLineIndex : -1,
+              controller: _scrollController,
+            ),
           ),
         ),
-        ),
-        const SizedBox(height: 25),
+        const SizedBox(height: 50),
 
         // 🔹 하단 버튼
-        longbutton(
-          text: "끝났어요",
-          onPressed: _onStepFinished,
-        ),
+        longbutton(text: "끝났어요", onPressed: _onStepFinished),
       ],
     );
   }
@@ -814,7 +824,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
   Widget _buildGamLayout(BuildContext context) {
     double progressValue = 0.0;
     if (widget.missionTime.inSeconds > 0) {
-      progressValue = _remainingTime.inSeconds.toDouble() /
+      progressValue =
+          _remainingTime.inSeconds.toDouble() /
           widget.missionTime.inSeconds.toDouble();
     }
 
@@ -836,9 +847,10 @@ class _MissionStepPageState extends State<MissionStepPage> {
               builder: (context, constraints) {
                 // 왼쪽 (1:1.5), 오른쪽 (1.55:1.5)
                 final double leftBoxHeight = boxHeight;
-                final double leftBoxWidth = leftBoxHeight / 1.5; // 1:1.5 → W/H
-                final double rightBoxHeight = boxHeight;
-                final double rightBoxWidth = rightBoxHeight * (1.55 / 1.5); // ✅ 1.55:1.5 → W/H
+                final double leftBoxWidth = leftBoxHeight / 1.8; // 1:1.5 → W/H
+                final double rightBoxHeight = boxHeight/1;
+                final double rightBoxWidth =
+                    rightBoxHeight * (1.55 / 1.68); // ✅ 1.55:1.5 → W/H
 
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -852,7 +864,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                       padding: EdgeInsets.all(basePadding),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -887,15 +899,15 @@ class _MissionStepPageState extends State<MissionStepPage> {
                                   height: 200,
                                   child: CircularProgressIndicator(
                                     value: progressValue,
-                                    strokeWidth: 16,
+                                    strokeWidth: 14,
                                     backgroundColor: Colors.grey.shade200,
                                     color: const Color(0xFF7F91FF),
                                   ),
                                 ),
                                 Lottie.asset(
                                   'assets/HourGlass.json',
-                                  width: 200, // Lottie 원본 크기 유지
-                                  height: 200, // Lottie 원본 크기 유지
+                                  width: 130, // Lottie 원본 크기 유지
+                                  height: 130, // Lottie 원본 크기 유지
                                   fit: BoxFit.contain, // 작은 250x250 공간에 맞춤
                                 ),
                               ],
@@ -938,11 +950,10 @@ class _MissionStepPageState extends State<MissionStepPage> {
                     Container(
                       width: rightBoxWidth,
                       height: rightBoxHeight,
-                      margin: EdgeInsets.only(left: basePadding),
                       padding: EdgeInsets.all(basePadding),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: tts_text_box(
                         lines: _currentLines,
@@ -959,10 +970,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
           const SizedBox(height: 30),
 
           // 🔹 하단 버튼
-          longbutton(
-            text: "끝났어요",
-            onPressed: _onStepFinished,
-          ),
+          longbutton(text: "끝났어요", onPressed: _onStepFinished),
         ],
       ),
     );
@@ -997,10 +1005,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
             const SizedBox(width: 16),
             Text(
               _formatDuration(_remainingTime),
-              style: const TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
             ),
             const SizedBox(width: 16),
             GestureDetector(
@@ -1042,13 +1047,14 @@ class _MissionStepPageState extends State<MissionStepPage> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: _showChoices
-                ? _buildMolChoices()
-                : tts_text_box(
-              lines: _currentLines,
-              currentLineIndex: _currentLineIndex,
-              controller: _scrollController,
-            ),
+            child:
+                _showChoices
+                    ? _buildMolChoices()
+                    : tts_text_box(
+                      lines: _currentLines,
+                      currentLineIndex: _currentLineIndex,
+                      controller: _scrollController,
+                    ),
           ),
         ),
         const SizedBox(height: 25),
@@ -1056,45 +1062,41 @@ class _MissionStepPageState extends State<MissionStepPage> {
         // 🔹 하단 버튼 영역
         _showChoices
             ? Align(
-          alignment: Alignment.center,
-          child: longbutton(
-            text: "알겠어요",
-            onPressed: () {
-              setState(() {
-                _showChoices = false;
-              });
-            },
-          ),
-
-        )
+              alignment: Alignment.center,
+              child: longbutton(
+                text: "알겠어요",
+                onPressed: () {
+                  setState(() {
+                    _showChoices = false;
+                  });
+                },
+              ),
+            )
             : Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _generateMolHelp,
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.black),
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _generateMolHelp,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.black),
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      "모르겠어요",
+                      style: TextStyle(color: Colors.black, fontSize: 18),
+                    ),
                   ),
                 ),
-                child: const Text(
-                  "모르겠어요",
-                  style: TextStyle(color: Colors.black, fontSize: 18),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: longbutton(text: "끝났어요", onPressed: _onStepFinished),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: longbutton(
-                text: "끝났어요",
-                onPressed: _onStepFinished,
-              ),
-            ),
-          ],
-        ),
       ],
     );
   }

@@ -25,7 +25,7 @@ Widget tts_text_box({
   }
   return Container(
     width: double.infinity,
-    margin: const EdgeInsets.symmetric(vertical: 24),
+    margin: const EdgeInsets.symmetric(vertical: 10),
     constraints: const BoxConstraints(minHeight: 180, maxHeight: 280),
     child: Stack(
       children: [
@@ -42,13 +42,12 @@ Widget tts_text_box({
                     bool isCurrent = index == safeCurrentLineIndex;
                     return Padding(
                       padding: EdgeInsets.only(
-                        bottom: 16.0,
-                        right: _getRightPadding(index, lines.length),
+                        bottom: 10.0,
                       ),
                       child: Text(
                         lines[index],
                         style: TextStyle(
-                          fontSize: isCurrent ? 24 : 20,
+                          fontSize: 20,
                           fontWeight:
                           isCurrent ? FontWeight.bold : FontWeight.w400,
                           color: isCurrent ? const Color(0xFF463EC6) : Colors.grey[600],
@@ -73,6 +72,7 @@ Widget tts_text_box({
             child: Image.asset(
               missionImage,
               fit: BoxFit.cover,
+              opacity: const AlwaysStoppedAnimation<double>(0.3),
             ),
           ),
         ),
@@ -80,12 +80,4 @@ Widget tts_text_box({
     ),
   );
 
-}
-//하단 텍스트만 우측 여백 확보
-double _getRightPadding(int index, int totalLines) {
-  const int linesToProtect = 2; // 맨 마지막 2줄만 이미지 피해 패딩 적용
-  if (index >= totalLines - linesToProtect) {
-    return 200; // 이미지 너비만큼 우측 패딩
-  }
-  return 0;
 }
