@@ -130,6 +130,12 @@ class _MissionStepPageState extends State<MissionStepPage> {
     final density = "혼잡";
 
     final prompt = """
+    
+    AI 코치 응답 규칙 (최우선 적용)
+1.  응답 길이: 모든 답변은 **4개의 문장**으로만 구성되어야 합니다.
+2. 문장 길이 : 각 문장은 공백 및 구두점을 포함하여 정확히 20자 이상 45자 이하로 구성되어야 합니다. 단, 이 규칙을 절대 위반하지 마십시오.
+3. 반말 유지: 모든 응답은 친근한 반말(자식에게 말하듯이) 진행해주세요.
+    
     # Mu 앱 AI 코치 프롬프트
 
 너는 Mu 어플을 사용하는 사용자의 비움 미션을 따뜻하게 돕는 AI 코치야. 우리 어플의 궁극적인 목표는 비움을 통해 사용자가 공간 활용을 잘하고, 그 과정에서 긍정적인 변화와 성취감을 느끼는 것이야. 너의 캐릭터는 사용자를 깊이 이해하고 지지하는 엄마의 마음으로, 자식에게 말하듯이 친근한 반말을 사용해.
@@ -335,10 +341,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                       .where((s) => s.isNotEmpty)
                       .toList();
 
-              return StepData(
-                title: step['title'],
-                lines: splitSentences,
-              );
+              return StepData(title: step['title'], lines: splitSentences);
             }).toList();
 
         _loadStepData(0);
@@ -848,7 +851,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                 // 왼쪽 (1:1.5), 오른쪽 (1.55:1.5)
                 final double leftBoxHeight = boxHeight;
                 final double leftBoxWidth = leftBoxHeight / 1.8; // 1:1.5 → W/H
-                final double rightBoxHeight = boxHeight/1;
+                final double rightBoxHeight = boxHeight / 1;
                 final double rightBoxWidth =
                     rightBoxHeight * (1.55 / 1.68); // ✅ 1.55:1.5 → W/H
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:mu/mission_start.dart';
 import 'widgets/shortbutton.dart';
 import 'package:mu/data/database.dart';
@@ -31,16 +32,16 @@ class ScheduleCard extends StatelessWidget {
 
     switch (status) {
       case '여유':
-        statusBackgroundColor = const Color(0xFFC6E9C6);
-        statusTextColor = const Color(0xFF63BB63);
+        statusBackgroundColor = const Color(0xFFC6DEFF);
+        statusTextColor = const Color(0xFF1B73EC);
         break;
       case '보통':
-        statusBackgroundColor = const Color(0xFFE9F0FC);
-        statusTextColor = const Color(0xFF678FF1);
+        statusBackgroundColor = const Color(0xFFC0F1D0);
+        statusTextColor = const Color(0xFF30AE65);
         break;
       case '혼잡':
-        statusBackgroundColor = const Color(0xFFF9C0C0);
-        statusTextColor = const Color(0xFFF16767);
+        statusBackgroundColor = const Color(0xFFFFD7D7);
+        statusTextColor = const Color(0xFFEC5353);
         break;
     }
 
@@ -55,7 +56,7 @@ class ScheduleCard extends StatelessWidget {
                 ? Border.all(color: Color(0xFF7F91FF), width: 4.0)
                 : null,
       ),
-      padding: EdgeInsets.all(24 * fontScale),
+      padding: EdgeInsets.symmetric(horizontal: 28,vertical: 28),
       child: Stack(
         children: [
           Column(
@@ -74,7 +75,7 @@ class ScheduleCard extends StatelessWidget {
                   status,
                   style: TextStyle(
                     color: statusTextColor,
-                    fontWeight: FontWeight.bold,
+                    fontFamily: 'PretendardMedium',
                     fontSize: 14 * fontScale,
                   ),
                 ),
@@ -83,18 +84,18 @@ class ScheduleCard extends StatelessWidget {
               Text(
                 section,
                 style: TextStyle(
-                  color: const Color(0xFF5D5D5D),
+                  color: const Color(0xFF8D93A1),
                   fontSize: 18 * fontScale,
-                  fontWeight: FontWeight.w600,
+                  fontFamily: 'PretendardMedium',
                 ),
               ),
-              SizedBox(height: 8 * fontScale),
+              SizedBox(height: 17 * fontScale),
               Text(
                 time,
                 style: TextStyle(
-                  color: const Color(0xFF333333),
+                  color: const Color(0xFF8D93A1),
                   fontSize: 32 * fontScale,
-                  fontWeight: FontWeight.w600,
+                  fontFamily: 'PretendardMedium',
                 ),
               ),
             ],
@@ -116,9 +117,9 @@ class ScheduleCard extends StatelessWidget {
                       ? Text(
                         orderNumber.toString(),
                         style: TextStyle(
+                          fontFamily: 'PretendardBold',
                           color: Colors.white,
                           fontSize: 20 * fontScale,
-                          fontWeight: FontWeight.bold,
                         ),
                       )
                       : null,
@@ -270,10 +271,7 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                     Padding(
                       padding: const EdgeInsets.only(left: 20, top: 20),
                       child: IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back_ios,
-                          color: Colors.grey,
-                        ),
+                        icon: SvgPicture.asset('assets/left.svg'),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ),
@@ -290,8 +288,8 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                             Text(
                               '비움 스케줄링',
                               style: TextStyle(
-                                fontSize: 25,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 32*widthRatio,
+                                fontFamily: 'PretendardBold',
                                 color: const Color(0xFF333333),
                               ),
                             ),
@@ -299,8 +297,9 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                             Text(
                               '비우고 싶은 순서대로 다시 정렬해보세요.',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 20*widthRatio,
                                 color: Color(0xFF5D5D5D),
+                                fontFamily: 'PretendardRegular'
                               ),
                             ),
 
@@ -344,7 +343,7 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                             // 버튼
                             Row(
                               children: [
-                                Expanded(
+                                Flexible(
                                   child: ShortButton(
                                     text: "초기화",
                                     isYes: false,
@@ -353,7 +352,7 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                                         _selectedOrder.clear();
                                       });
                                     },
-                                    height: 60 * heightRatio,
+                                    height: 64 * heightRatio,
                                     fontSize: 18 * fontScale,
                                   ),
                                 ),
@@ -400,7 +399,7 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                                                 ),
                                               );
                                             },
-                                    height: 60 * heightRatio,
+                                    height: 64 * heightRatio,
                                     fontSize: 18 * fontScale,
                                   ),
                                 ),

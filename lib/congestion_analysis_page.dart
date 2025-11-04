@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:mu/scheduling.dart';
@@ -41,23 +42,50 @@ class CongestionAnalysisLayout extends StatefulWidget {
       _CongestionAnalysisLayoutState();
 }
 
-class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
+class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
+    with TickerProviderStateMixin {
   CameraController? _cameraController;
   Interpreter? _interpreter;
   final int _inputSize = 300;
   List<String>? _labels;
   String? _currentSection;
-  bool _isCapturing = false;
 
   Future<void>? _initializationFuture;
 
   Map<String, String> _results = {};
   String _headerTitle = "";
+  String? _currentlyOpenSection;
+
+  final Map<String, SlidableController> _slidableControllers = {};
 
   @override
   void initState() {
     super.initState();
     _initializationFuture = _initializeAll();
+  }
+
+  @override
+  SlidableController _getControllerFor(String section) {
+    var controller = _slidableControllers[section];
+    if (controller == null) {
+      controller = SlidableController(this as TickerProvider);
+
+      controller.animation.addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          setState(() {
+            _currentlyOpenSection = section;
+          });
+        } else if (status == AnimationStatus.dismissed) {
+          if (_currentlyOpenSection == section) {
+            setState(() {
+              _currentlyOpenSection = null;
+            });
+          }
+        }
+      });
+      _slidableControllers[section] = controller;
+    }
+    return controller;
   }
 
   Future<void> _initializeAll() async {
@@ -178,13 +206,16 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
       img.Image? originalImage = img.decodeImage(imageBytes);
       if (originalImage == null) return "이미지 오류";
 
-      img.Image resizedImage = img.copyResizeCropSquare(originalImage, _inputSize);
+      img.Image resizedImage = img.copyResizeCropSquare(
+        originalImage,
+        _inputSize,
+      );
 
       var input = List.generate(
         1,
-            (_) => List.generate(
+        (_) => List.generate(
           _inputSize,
-              (y) => List.generate(_inputSize, (x) {
+          (y) => List.generate(_inputSize, (x) {
             final pixel = resizedImage.getPixel(x, y);
             return [
               img.getRed(pixel).toInt(),
@@ -207,16 +238,23 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
 
       _interpreter!.runForMultipleInputs([input], outputs);
 
-      final int locationsIndex =
-      outputTensors.indexWhere((t) => t.name.contains('PostProcess') && t.shape.length == 3);
-      final int classesIndex =
-      outputTensors.indexWhere((t) => t.name.contains('PostProcess') && t.name.contains(':1'));
-      final int scoresIndex =
-      outputTensors.indexWhere((t) => t.name.contains('PostProcess') && t.name.contains(':2'));
-      final int detectionsIndex =
-      outputTensors.indexWhere((t) => t.name.contains('PostProcess') && t.name.contains(':3'));
+      final int locationsIndex = outputTensors.indexWhere(
+        (t) => t.name.contains('PostProcess') && t.shape.length == 3,
+      );
+      final int classesIndex = outputTensors.indexWhere(
+        (t) => t.name.contains('PostProcess') && t.name.contains(':1'),
+      );
+      final int scoresIndex = outputTensors.indexWhere(
+        (t) => t.name.contains('PostProcess') && t.name.contains(':2'),
+      );
+      final int detectionsIndex = outputTensors.indexWhere(
+        (t) => t.name.contains('PostProcess') && t.name.contains(':3'),
+      );
 
-      if (locationsIndex == -1 || classesIndex == -1 || scoresIndex == -1 || detectionsIndex == -1) {
+      if (locationsIndex == -1 ||
+          classesIndex == -1 ||
+          scoresIndex == -1 ||
+          detectionsIndex == -1) {
         return "모델 출력 텐서를 찾을 수 없습니다.";
       }
 
@@ -410,8 +448,8 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
                 Padding(
                   padding: const EdgeInsets.only(left: 20, top: 20),
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios, color: Colors.grey),
                     onPressed: () => Navigator.of(context).pop(),
+                    icon: SvgPicture.asset('assets/left.svg'),
                   ),
                 ),
                 Expanded(
@@ -424,21 +462,22 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
                         Text(
                           _headerTitle,
                           style: TextStyle(
-                            fontSize: 25,
-                            fontWeight: FontWeight.bold,
+                            fontFamily: 'PretendardBold',
+                            fontSize: 32 * widthRatio,
                             height: 1.2,
                           ),
                         ),
-                        SizedBox(height: 20 * heightRatio),
-                        const Text(
+                        SizedBox(height: 30 * heightRatio),
+                        Text(
                           "현재 상태를 촬영하면, 혼잡/보통/여유 중 하나로 알려드릴게요.\n불필요한 공간은 밀어서 삭제할 수 있어요.",
                           style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF5D5D5D),
+                            fontFamily: 'PretendardRegular',
+                            fontSize: 20 * widthRatio,
+                            color: const Color(0xFF5D5D5D),
                             height: 1.4,
                           ),
                         ),
-                        SizedBox(height: 25 * heightRatio),
+                        SizedBox(height: 30 * heightRatio),
 
                         Expanded(
                           child: Row(
@@ -468,7 +507,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
                                               alignment: Alignment.topCenter,
                                               child: AspectRatio(
                                                 aspectRatio:
-                                                    2.29 /
+                                                    2.45 /
                                                     _cameraController!
                                                         .value
                                                         .aspectRatio,
@@ -582,7 +621,6 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
                                             ),
                                           ),
                                         ),
-                                        // 카메라 뷰의 텍스트 오버레이 (조건부)
                                         if (_currentSection != null)
                                           Positioned(
                                             bottom: 30 * heightRatio,
@@ -601,9 +639,13 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
                                               ),
                                               child: Text(
                                                 _currentSection!,
-                                                style: const TextStyle(
-                                                  color: Color(0xFf5D5D5D),
-                                                  fontSize: 14,
+                                                style: TextStyle(
+                                                  fontFamily:
+                                                      'PretendardMedium',
+                                                  color: const Color(
+                                                    0xFf5D5D5D,
+                                                  ),
+                                                  fontSize: 14 * widthRatio,
                                                 ),
                                               ),
                                             ),
@@ -616,176 +658,258 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout> {
                               SizedBox(width: 20 * widthRatio),
                               Expanded(
                                 flex: 2,
-                                child: ListView(
-                                  children: [
-                                    ..._results.keys.map((section) {
-                                      Color statusBackgroundColor =
-                                          Colors.transparent;
-                                      Color statusTextColor = Colors.black;
-                                      bool showStatus =
-                                          true; // "분석 전"일 때는 상태를 숨기기 위한 플래그
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10.0),
+                                  child: ListView(
+                                    children: [
+                                      ..._results.keys.map((section) {
+                                        Color statusBackgroundColor =
+                                            Colors.transparent;
+                                        Color statusTextColor = Colors.black;
+                                        bool showStatus = true;
 
-                                      switch (_results[section]!) {
-                                        case '혼잡':
-                                          statusBackgroundColor = const Color(
-                                            0xFFF9C0C0,
-                                          );
-                                          statusTextColor = const Color(
-                                            0xFFF16767,
-                                          );
-                                          break;
-                                        case '보통':
-                                          statusBackgroundColor = const Color(
-                                            0xFFE9F0FC,
-                                          );
-                                          statusTextColor = const Color(
-                                            0xFF678FF1,
-                                          );
-                                          break;
-                                        case '여유':
-                                          statusBackgroundColor = const Color(
-                                            0xFFC6E9C6,
-                                          );
-                                          statusTextColor = const Color(
-                                            0xFF63BB63,
-                                          );
-                                          break;
-                                        default: // "분석 전" 또는 "분석 중..."
-                                          showStatus = false;
-                                          break;
-                                      }
+                                        switch (_results[section]!) {
+                                          case '혼잡':
+                                            statusBackgroundColor = const Color(
+                                              0xFFFFD7D7,
+                                            );
+                                            statusTextColor = const Color(
+                                              0xFFEC5353,
+                                            );
+                                            break;
+                                          case '보통':
+                                            statusBackgroundColor = const Color(
+                                              0xFFC0F1D0,
+                                            );
+                                            statusTextColor = const Color(
+                                              0xFF30AE65,
+                                            );
+                                            break;
+                                          case '여유':
+                                            statusBackgroundColor = const Color(
+                                              0xFFC6DEFF,
+                                            );
+                                            statusTextColor = const Color(
+                                              0xFF1B73EC,
+                                            );
+                                            break;
+                                          default: // "분석 전" 또는 "분석 중..."
+                                            showStatus = false;
+                                            break;
+                                        }
+                                        final bool isSliding =
+                                            (_currentlyOpenSection == section);
 
-                                      return Slidable(
-                                        key: ValueKey(section),
+                                        final controller = _getControllerFor(
+                                          section,
+                                        );
 
-                                        endActionPane: ActionPane(
-                                          motion: const ScrollMotion(),
-                                          extentRatio: 0.25,
-                                          children: [
-                                            SlidableAction(
-                                              onPressed: (context) {
-                                                _deleteSection(section);
-                                              },
-                                              backgroundColor: Colors.redAccent,
-                                              foregroundColor: Colors.white,
-                                              icon: Icons.delete,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 4.0,
-                                            horizontal: 3,
-                                          ),
-                                          child: Card(
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            elevation: 0,
-                                            color: Color(0xFFF5F5F5),
-                                            // 카드 배경색을 연한 회색으로 변경
-                                            child: ListTile(
-                                              leading:
-                                                  showStatus // "분석 전"이 아닐 때만 상태 박스 표시
-                                                      ? Container(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 10,
-                                                              vertical: 4,
-                                                            ),
-                                                        decoration: BoxDecoration(
-                                                          color:
-                                                              statusBackgroundColor,
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                2,
-                                                              ),
+                                        return Slidable(
+                                          key: ValueKey(section),
+                                          controller: controller,
+                                          endActionPane: ActionPane(
+                                            motion: const ScrollMotion(),
+                                            extentRatio: 0.34,
+                                            children: [
+                                              CustomSlidableAction(
+                                                onPressed: (context) {
+                                                  _deleteSection(section);
+                                                },
+                                                flex: 1,
+                                                child: Transform.translate(
+                                                  offset: const Offset(
+                                                    -5.5,
+                                                    0.0,
+                                                  ),
+                                                  child: Container(
+                                                    margin:
+                                                        const EdgeInsets.fromLTRB(
+                                                          0.0,
+                                                          7.0,
+                                                          0.0,
+                                                          4.0,
                                                         ),
-                                                        child: Text(
-                                                          _results[section]!,
-                                                          style: TextStyle(
-                                                            color:
-                                                                statusTextColor,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            fontSize: 13,
+                                                    decoration: BoxDecoration(
+                                                      color: Color(0xFFEC5353),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
                                                           ),
-                                                        ),
-                                                      )
-                                                      : null,
-                                              title: Text(
-                                                section,
-                                                style: const TextStyle(
-                                                  color: Color(0xFF5D5D5D),
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              contentPadding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 16,
-                                                    vertical: 4,
-                                                  ),
-                                              onTap:
-                                                  () => _captureAndAnalyze(
-                                                    section,
-                                                  ),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                    // "추가" 버튼
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 4.0,
-                                      ),
-                                      child: Card(
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        elevation: 0,
-                                        color: const Color(0xFFF3F5FF),
-                                        // 추가 버튼 배경색 연하늘색
-                                        child: ListTile(
-                                          title: Text.rich(
-                                            TextSpan(
-                                              style: TextStyle(
-                                                color: const Color(0xFF5D5D5D),
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                              ),
-                                              children: [
-                                                TextSpan(text: " 추가"),
-                                                TextSpan(
-                                                  text: "  +",
-                                                  style: TextStyle(
-                                                    color: const Color(
-                                                      0xFFB0B8C1,
                                                     ),
-                                                    fontSize: 23,
-                                                    fontWeight:
-                                                        FontWeight.normal,
+                                                    child: Center(
+                                                      child: SvgPicture.asset(
+                                                        'assets/mission/delete.svg',
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
-                                              ],
+                                              ),
+                                            ],
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                              3.0,
+                                              7.0,
+                                              0.0,
+                                              4.0,
+                                            ),
+                                            child: Card(
+                                              margin: EdgeInsets.zero,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    isSliding
+                                                        ? const BorderRadius.only(
+                                                          topLeft:
+                                                              Radius.circular(
+                                                                8,
+                                                              ),
+                                                          bottomLeft:
+                                                              Radius.circular(
+                                                                8,
+                                                              ),
+                                                          topRight:
+                                                              Radius.circular(
+                                                                0,
+                                                              ),
+                                                          bottomRight:
+                                                              Radius.circular(
+                                                                0,
+                                                              ),
+                                                        )
+                                                        : BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                              ),
+                                              elevation: 0,
+                                              color:
+                                                  isSliding
+                                                      ? Color(0xFFFFF3F3)
+                                                      : Color(0xFFF3F5FF),
+                                              child: ListTile(
+                                                splashColor: Color(
+                                                  0xFF8D93A1,
+                                                ).withOpacity(0.2),
+                                                leading:
+                                                    showStatus
+                                                        ? Container(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 10,
+                                                                vertical: 4,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color:
+                                                                statusBackgroundColor,
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  2,
+                                                                ),
+                                                          ),
+                                                          child: Text(
+                                                            _results[section]!,
+                                                            style: TextStyle(
+                                                              fontFamily:
+                                                                  'PretendardMedium',
+                                                              color:
+                                                                  statusTextColor,
+
+                                                              fontSize:
+                                                                  14 *
+                                                                  widthRatio,
+                                                            ),
+                                                          ),
+                                                        )
+                                                        : null,
+                                                title: Text(
+                                                  section,
+                                                  style: TextStyle(
+                                                    fontFamily:
+                                                        'PretendardMedium',
+                                                    color: const Color(
+                                                      0xFF5D5D5D,
+                                                    ),
+                                                    fontSize: 18 * widthRatio,
+                                                  ),
+                                                ),
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 20,
+                                                      vertical: 4,
+                                                    ),
+                                                onTap:
+                                                    () => _captureAndAnalyze(
+                                                      section,
+                                                    ),
+                                              ),
                                             ),
                                           ),
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                horizontal: 14,
-                                                vertical: 4.0,
+                                        );
+                                      }).toList(),
+                                      // "추가" 버튼
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 4.0,
+                                        ),
+                                        child: Card(
+                                          margin: const EdgeInsets.symmetric(
+                                            horizontal: 2,
+                                            vertical: 3,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          elevation: 0,
+                                          color: const Color(0xFFF5F5F5),
+                                          child: ListTile(
+                                            title: Text.rich(
+                                              TextSpan(
+                                                style: TextStyle(
+                                                  fontFamily:
+                                                      'PretendardMedium',
+                                                  color: const Color(
+                                                    0xFF5D5D5D,
+                                                  ),
+                                                  fontSize: 18 * widthRatio,
+                                                ),
+                                                children: [
+                                                  TextSpan(text: "  추가"),
+                                                  WidgetSpan(
+                                                    alignment:
+                                                        PlaceholderAlignment
+                                                            .middle,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                            left: 8.0,
+                                                          ),
+                                                      child: SvgPicture.asset(
+                                                        'assets/mission/plus.svg',
+                                                        colorFilter:
+                                                            ColorFilter.mode(
+                                                              const Color(
+                                                                0xFFB0B8C1,
+                                                              ),
+                                                              BlendMode.srcIn,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                          onTap: _addSection,
+                                            ),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 14,
+                                                  vertical: 4.0,
+                                                ),
+                                            onTap: _addSection,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],

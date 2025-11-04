@@ -33,18 +33,29 @@ class ShortButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: isYes ? const Color(0xFF463EC6) : const Color(0xFFFBFCFF),
           borderRadius: BorderRadius.circular(8),
-          border: isYes ? null : Border.all(color: const Color(0xFFB0B8C1), width: 1),
-          boxShadow: isYes
-              ? [BoxShadow(color: const Color(0x26463EC6), blurRadius: 10, offset: Offset(2, 2), spreadRadius: 4)]
-              : null,
+          border:
+              isYes
+                  ? null
+                  : Border.all(color: const Color(0xFFB0B8C1), width: 1),
+          boxShadow:
+              isYes
+                  ? [
+                    BoxShadow(
+                      color: const Color(0xFF463EC6).withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: Offset(2, 2),
+                      spreadRadius: 4,
+                    ),
+                  ]
+                  : null,
         ),
         alignment: Alignment.center,
         child: Text(
           text,
           style: TextStyle(
-            color: isYes ? Colors.white : const Color(0xFF5C5C5C),
+            color: isYes ? Colors.white : const Color(0xFF5D5D5D),
             fontSize: txtSize,
-            fontWeight: FontWeight.w500,
+            fontFamily: 'PretendardMedium',
           ),
         ),
       ),

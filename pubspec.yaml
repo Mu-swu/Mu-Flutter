@@ -55,15 +55,6 @@ flutter:
     - assets/gradient/gradient.png
     - assets/gradient/gradient_gam.png
     - assets/gradient/gradient_mol.png
-    - assets/mission/loading_dr.mp4
-    - assets/mission/loading_cl.mp4
-    - assets/mission/loading_re.mp4
-    - assets/mission/still_re.png
-    - assets/mission/still_dr.png
-    - assets/mission/still_cl.png
-    - assets/mission/mission_cl.png
-    - assets/mission/mission_dr.png
-    - assets/mission/mission_re.png
     - assets/HourGlass.json
     - .env
     - assets/detect.tflite
@@ -94,6 +85,9 @@ flutter:
     - assets/home/refr.png
     - assets/home/closet.png
     - assets/home/drawer.png
+    - assets/home/refr_lock.png
+    - assets/home/closet_lock.png
+    - assets/home/drawer_lock.png
     - assets/my/right_arrow.png
     - assets/my/mymom_bang.png
     - assets/my/ex.png
@@ -115,4 +109,28 @@ flutter:
     - assets/my/cl3.png
     - assets/my/cl4.png
     - assets/my/idea.png
-    - assets/mission/edit.svg
+    - assets/home/lock.png
+    - assets/bottom_icons/home_unselected.svg
+    - assets/bottom_icons/home_selected.svg
+    - assets/bottom_icons/mission_unselected.svg
+    - assets/bottom_icons/mission_selected.svg
+    - assets/bottom_icons/my_unselected.svg
+    - assets/bottom_icons/my_selected.svg
+    - assets/left.svg
+    - assets/mission/
+
+
+  fonts:
+
+    - family: PretendardBold
+      fonts:
+        - asset: assets/fonts/Pretendard-Bold.otf
+    - family: PretendardRegular
+      fonts:
+        - asset: assets/fonts/Pretendard-Regular.otf
+    - family: PretendardSemiBold
+      fonts:
+        - asset: assets/fonts/Pretendard-SemiBold.otf
+    - family: PretendardMedium
+      fonts:
+        - asset: assets/fonts/Pretendard-Medium.otf

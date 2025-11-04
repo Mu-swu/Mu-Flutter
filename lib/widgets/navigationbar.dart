@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -14,31 +15,32 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration( // MARK: 높이를 제거하여 유연하게 조절되도록 함
-        color: Colors.white,
-      ),
+      height: 84,
+      decoration: const BoxDecoration(color: const Color(0xFFFAFBFF)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 220.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            // 홈 탭
             _buildNavItem(
-              icon: Icons.home,
+              selectedIconPath: 'assets/bottom_icons/home_selected.svg',
+              unselectedIconPath: 'assets/bottom_icons/home_unselected.svg',
               label: '홈',
               index: 0,
               context: context,
             ),
             // 미션 탭
             _buildNavItem(
-              icon: Icons.check_circle,
+              selectedIconPath: 'assets/bottom_icons/mission_selected.svg',
+              unselectedIconPath: 'assets/bottom_icons/mission_unselected.svg',
               label: '미션',
               index: 1,
               context: context,
             ),
             // 마이 탭
             _buildNavItem(
-              icon: Icons.person,
+              selectedIconPath: 'assets/bottom_icons/my_selected.svg',
+              unselectedIconPath: 'assets/bottom_icons/my_unselected.svg',
               label: '마이',
               index: 2,
               context: context,
@@ -50,26 +52,32 @@ class BottomNavBar extends StatelessWidget {
   }
 
   Widget _buildNavItem({
-    required IconData icon,
+    required String selectedIconPath,
+    required String unselectedIconPath,
     required String label,
     required int index,
     required BuildContext context,
   }) {
     final bool isSelected = selectedIndex == index;
-    final Color color = isSelected ? Colors.black : Colors.grey;
+    final Color color = isSelected ? Color(0xFF333333) : Color(0xFFB0B8C1);
+
+    final String currentIconPath =
+        isSelected ? selectedIconPath : unselectedIconPath;
 
     return GestureDetector(
       onTap: () => onItemTapped(index),
+      behavior: HitTestBehavior.translucent,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 28, color: color),
-          SizedBox(height: 1),
+          SvgPicture.asset(currentIconPath),
+          SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontFamily:
+                  isSelected ? 'PretendardSemibold' : 'PretendardRegular',
+              fontSize: 14,
               color: color,
             ),
           ),

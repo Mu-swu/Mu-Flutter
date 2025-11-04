@@ -22,22 +22,17 @@ class SpaceUnitCard extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final scaleFactor = screenWidth / 1280;
 
+    final String displayImagePath =
+        isLocked ? imagePath.replaceAll('.png', '_lock.png') : imagePath;
+
     return GestureDetector(
       onTap: isLocked ? null : onTap,
       child: Container(
         width: 300 * scaleFactor,
-        height: 330 * scaleFactor,
+        height: 324 * scaleFactor,
         decoration: BoxDecoration(
-          color: isLocked ? const Color(0xFFF5F5F5) : const Color(0xFFE9F0FC),
+          color: isLocked ? const Color(0xFFF5F5F5) : const Color(0xFFF3F5FF),
           borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              spreadRadius: 2,
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
         ),
         child: Stack(
           children: [
@@ -49,29 +44,25 @@ class SpaceUnitCard extends StatelessWidget {
                 children: [
                   SizedBox(height: 75 * scaleFactor),
                   Container(
-                    width: 110 * scaleFactor,
-                    height: 130 * scaleFactor,
+                    width: 120 * scaleFactor,
+                    height: 120 * scaleFactor,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Center(
-                      child: Image.asset(
-                        imagePath,
-                        width: 120 * scaleFactor,
-                        height: 120 * scaleFactor,
-                      ),
-                    ),
+                    child: Center(child: Image.asset(displayImagePath)),
                   ),
                   SizedBox(height: 24 * scaleFactor),
                   Text(
                     title,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: const Color(0xFF5C5C5C),
+                      color:
+                          isLocked
+                              ? const Color(0xFFB0B8C1)
+                              : const Color(0xFF5D5D5D),
                       fontSize: 24 * scaleFactor,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w500,
+                      fontFamily: 'PretendardMedium',
                     ),
                   ),
                 ],
@@ -81,15 +72,11 @@ class SpaceUnitCard extends StatelessWidget {
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0x4C8D93A1),
-                    borderRadius: BorderRadius.circular(10),
+                    color: const Color(0xFF8D93A1).withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(
-                    child: Icon(
-                      Icons.lock_rounded,
-                      size: 100 * scaleFactor,
-                      color: Colors.white,
-                    ),
+                    child: Image.asset('assets/home/lock.png', scale: 1.2),
                   ),
                 ),
               ),
@@ -151,12 +138,22 @@ class _SpaceStartScreenState extends State<SpaceStartScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CongestionAnalysisLayout()),
+                MaterialPageRoute(
+                  builder: (context) => CongestionAnalysisLayout(),
+                ),
               );
             },
           ),
-          const SpaceUnitCard(title: '서랍장', imagePath: 'assets/home/drawer.png', isLocked: true),
-          const SpaceUnitCard(title: '옷장', imagePath: 'assets/home/closet.png', isLocked: true),
+          const SpaceUnitCard(
+            title: '서랍장',
+            imagePath: 'assets/home/drawer.png',
+            isLocked: true,
+          ),
+          const SpaceUnitCard(
+            title: '옷장',
+            imagePath: 'assets/home/closet.png',
+            isLocked: true,
+          ),
         ];
       case '감정형':
         return [
@@ -166,12 +163,22 @@ class _SpaceStartScreenState extends State<SpaceStartScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CongestionAnalysisLayout()),
+                MaterialPageRoute(
+                  builder: (context) => CongestionAnalysisLayout(),
+                ),
               );
             },
           ),
-          const SpaceUnitCard(title: '냉장고', imagePath: 'assets/home/refr.png', isLocked: true),
-          const SpaceUnitCard(title: '서랍장', imagePath: 'assets/home/drawer.png', isLocked: true),
+          const SpaceUnitCard(
+            title: '냉장고',
+            imagePath: 'assets/home/refr.png',
+            isLocked: true,
+          ),
+          const SpaceUnitCard(
+            title: '서랍장',
+            imagePath: 'assets/home/drawer.png',
+            isLocked: true,
+          ),
         ];
       case '몰라형':
       default:
@@ -182,12 +189,22 @@ class _SpaceStartScreenState extends State<SpaceStartScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CongestionAnalysisLayout()),
+                MaterialPageRoute(
+                  builder: (context) => CongestionAnalysisLayout(),
+                ),
               );
             },
           ),
-          const SpaceUnitCard(title: '냉장고', imagePath: 'assets/home/refr.png', isLocked: true),
-          const SpaceUnitCard(title: '옷장', imagePath: 'assets/home/closet.png', isLocked: true),
+          const SpaceUnitCard(
+            title: '냉장고',
+            imagePath: 'assets/home/refr.png',
+            isLocked: true,
+          ),
+          const SpaceUnitCard(
+            title: '옷장',
+            imagePath: 'assets/home/closet.png',
+            isLocked: true,
+          ),
         ];
     }
   }
@@ -221,12 +238,11 @@ class _SpaceStartScreenState extends State<SpaceStartScreen> {
                     '미션',
                     style: TextStyle(
                       color: const Color(0xFF333333),
-                      fontSize: 28 * scaleFactor,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w900,
+                      fontSize: 32 * scaleFactor,
+                      fontFamily: 'PretendardBold',
                     ),
                   ),
-                  SizedBox(height: 150 * scaleFactor),
+                  SizedBox(height: 160 * scaleFactor),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: spaceCards,
