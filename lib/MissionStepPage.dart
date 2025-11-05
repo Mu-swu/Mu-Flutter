@@ -816,7 +816,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
         const SizedBox(height: 50),
 
         // 🔹 하단 버튼
-        longbutton(text: "끝났어요", onPressed: _onStepFinished),
+        LongButton(text: "끝났어요", onPressed: _onStepFinished),
       ],
     );
   }
@@ -973,7 +973,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
           const SizedBox(height: 30),
 
           // 🔹 하단 버튼
-          longbutton(text: "끝났어요", onPressed: _onStepFinished),
+          LongButton(text: "끝났어요", onPressed: _onStepFinished),
         ],
       ),
     );
@@ -1066,7 +1066,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
         _showChoices
             ? Align(
               alignment: Alignment.center,
-              child: longbutton(
+              child: LongButton(
                 text: "알겠어요",
                 onPressed: () {
                   setState(() {
@@ -1096,7 +1096,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: longbutton(text: "끝났어요", onPressed: _onStepFinished),
+                  child: LongButton(text: "끝났어요", onPressed: _onStepFinished),
                 ),
               ],
             ),

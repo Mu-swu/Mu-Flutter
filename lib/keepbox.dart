@@ -501,7 +501,7 @@ class _keepboxState extends State<keepbox> {
                           ),
                 ),
                 SizedBox(height: 10 * heightRatio),
-                longbutton(text: '저장', onPressed: _saveData),
+                LongButton(text: '저장', onPressed: _saveData),
                 SizedBox(height: 24 * heightRatio),
               ],
             ),

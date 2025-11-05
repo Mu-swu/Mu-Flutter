@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-class longbutton extends StatelessWidget {
+class LongButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
   final bool isEnabled;
 
-  const longbutton({
+  const LongButton({
     super.key,
     required this.text,
     required this.onPressed,
@@ -14,23 +14,34 @@ class longbutton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor:
-            isEnabled ? const Color(0xFF463EC6) : const Color(0xFFDBDEE7),
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        minimumSize: const Size(double.infinity, 64),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        elevation: isEnabled ? 6 : 0,
-        shadowColor: const Color(0xFF463EC6),
-      ),
-      onPressed: isEnabled ? onPressed : null,
-      child: Text(
-        text,
-        style: TextStyle(
-          fontFamily: 'PretendardMedium',
-          fontSize: 18,
-          color: isEnabled ? Colors.white : Color(0xFFB0B8C1),
+    return GestureDetector(
+      onTap: isEnabled ? onPressed : null,
+      child: Container(
+        width: double.infinity,
+        height: 64,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isEnabled ? const Color(0xFF463EC6) : const Color(0xFFDBDEE7),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow:
+              isEnabled
+                  ? [
+                    BoxShadow(
+                      color: const Color(0xFF463EC6).withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: Offset(2, 2),
+                      spreadRadius: 4,
+                    ),
+                  ]
+                  : null,
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontFamily: 'PretendardMedium',
+            fontSize: 18,
+            color: isEnabled ? Colors.white : Color(0xFFB0B8C1),
+          ),
         ),
       ),
     );

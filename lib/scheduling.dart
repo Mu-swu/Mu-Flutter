@@ -352,7 +352,7 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                                         _selectedOrder.clear();
                                       });
                                     },
-                                    height: 64 * heightRatio,
+                                    height: 64,
                                     fontSize: 18 * fontScale,
                                   ),
                                 ),
@@ -399,7 +399,7 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                                                 ),
                                               );
                                             },
-                                    height: 64 * heightRatio,
+                                    height: 64,
                                     fontSize: 18 * fontScale,
                                   ),
                                 ),

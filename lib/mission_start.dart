@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'MissionStepPage.dart';
 import 'widgets/custom_tag.dart';
 import 'widgets/longbutton.dart';
@@ -165,7 +166,7 @@ class MissionStartPage extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(left: 20, top: 20),
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios, color: Colors.grey),
+                    icon: SvgPicture.asset('assets/left.svg'),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
@@ -186,8 +187,7 @@ class MissionStartPage extends StatelessWidget {
                               style: const TextStyle(
                                 color: Colors.black,
                                 fontSize: 44,
-                                fontFamily: 'Pretendard',
-                                fontWeight: FontWeight.w600,
+                                fontFamily: 'PretendardBold',
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -208,7 +208,7 @@ class MissionStartPage extends StatelessWidget {
                               ),
                               child: Column(
                                 children: [
-                                  longbutton(
+                                  LongButton(
                                     text: '시작하기',
                                     onPressed: () {
                                       Navigator.push(

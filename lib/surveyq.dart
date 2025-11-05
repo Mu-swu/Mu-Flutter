@@ -124,8 +124,9 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
       final String? returnedType = await Navigator.push(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              ResultPage(resultType: resultType),
+          pageBuilder:
+              (context, animation, secondaryAnimation) =>
+                  ResultPage(resultType: resultType),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -316,7 +317,7 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
                   horizontalPadding,
                   80 * heightRatio,
                 ),
-                child: longbutton(
+                child: LongButton(
                   text: "결과 보기",
                   isEnabled: true,
                   onPressed: _showResult,
@@ -409,7 +410,7 @@ class _SurveyPageState extends State<SurveyPage> with TickerProviderStateMixin {
                   horizontalPadding,
                   80 * heightRatio,
                 ),
-                child: longbutton(
+                child: LongButton(
                   text: "결과 보기",
                   isEnabled: false,
                   onPressed: _showResult,

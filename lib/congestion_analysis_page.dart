@@ -8,33 +8,7 @@ import 'package:mu/scheduling.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:mu/data/database.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-
-class longbutton extends StatelessWidget {
-  final String text;
-  final VoidCallback? onPressed;
-  final bool isEnabled;
-
-  const longbutton({
-    super.key,
-    required this.text,
-    required this.onPressed,
-    this.isEnabled = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: isEnabled ? onPressed : null,
-      style: ElevatedButton.styleFrom(
-        foregroundColor: Colors.white,
-        backgroundColor: isEnabled ? Colors.indigo[600] : Colors.grey[400],
-        minimumSize: const Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      child: Text(text),
-    );
-  }
-}
+import 'package:mu/widgets/longbutton.dart';
 
 class CongestionAnalysisLayout extends StatefulWidget {
   @override
@@ -367,7 +341,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                   ),
                 ),
                 const SizedBox(height: 40),
-                longbutton(
+                LongButton(
                   text: "추가하기",
                   onPressed: () async {
                     if (controller.text.trim().isNotEmpty) {
@@ -381,7 +355,6 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
 
                       Navigator.of(context).pop();
                     } else {
-                      // 입력값이 없으면 경고 표시
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('칸 이름을 입력해주세요.')),
                       );
@@ -507,7 +480,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                               alignment: Alignment.topCenter,
                                               child: AspectRatio(
                                                 aspectRatio:
-                                                    2.45 /
+                                                    2.57 /
                                                     _cameraController!
                                                         .value
                                                         .aspectRatio,
@@ -916,10 +889,9 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                           ),
                         ),
                         SizedBox(height: 100 * heightRatio),
-                        longbutton(
+                        LongButton(
                           text: "다음",
                           onPressed: () {
-                            // 다음 페이지로 이동
                             final analyzedResults = Map<String, String>.from(
                               _results,
                             )..removeWhere(
