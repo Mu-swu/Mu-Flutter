@@ -10,15 +10,7 @@ class StepNavigation extends StatelessWidget {
     required this.missionType,
   }) : super(key: key);
 
-  final List<String> stepTitles = const [
-    '꺼내기',
-    '비우기',
-    '분류하기',
-    '넣기',
-    '보류하기',
-  ];
-
-
+  final List<String> stepTitles = const ['꺼내기', '확인하기', '분류하기', '넣기', '보류하기'];
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +18,7 @@ class StepNavigation extends StatelessWidget {
       padding: const EdgeInsets.only(left: 24.0),
       child: SizedBox(
         width: 189,
-        height: 480,
+        height: 424,
         child: Stack(
           children: [
             for (int index = 0; index < stepTitles.length; index++)
@@ -45,10 +37,10 @@ class StepNavigation extends StatelessWidget {
     Color selectedColor;
     switch (missionType) {
       case 'bas':
-        selectedColor = const Color(0xFFC484EF);
+        selectedColor = const Color(0xFFDB84EF);
         break;
       case 'gam':
-        selectedColor = const Color(0xFFFFB472);
+        selectedColor = const Color(0xFFFFB172);
         break;
       case 'mol':
       default:
@@ -61,14 +53,13 @@ class StepNavigation extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 원 + 선
           Column(
             children: [
               Container(
                 width: 28,
                 height: 28,
                 decoration: ShapeDecoration(
-                  color: isCurrent ? selectedColor : const Color(0xFFD6DDE5),
+                  color: isCurrent ? selectedColor : const Color(0xFFDBDEE7),
                   shape: const OvalBorder(),
                 ),
                 alignment: Alignment.center,
@@ -77,16 +68,14 @@ class StepNavigation extends StatelessWidget {
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
+                    fontFamily: 'PretendardSemiBold',
                   ),
                 ),
               ),
-              // 아래 선 (마지막이 아니면)
               if (!isLast)
                 Container(
-                  width: 3,
-                  height: 65, // 선의 길이
+                  width: 2,
+                  height: 65,
                   color: const Color(0xFFD6DDE5),
                 ),
             ],
@@ -94,16 +83,18 @@ class StepNavigation extends StatelessWidget {
 
           const SizedBox(width: 12),
 
-          // 텍스트
           Padding(
-            padding: const EdgeInsets.only(top: 4.0), // 텍스트 위치 보정
+            padding: const EdgeInsets.only(top: 4.0),
             child: Text(
               stepTitles[index],
               style: TextStyle(
                 fontSize: 16,
-                fontFamily: 'Pretendard',
-                fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
-                color: isCurrent ? const Color(0xFF5C5C5C) : const Color(0xFFB0B8C1),
+                fontFamily:
+                    isCurrent ? 'PretendardSemiBold' : 'PretendardRegular',
+                color:
+                    isCurrent
+                        ? const Color(0xFF5D5D5D)
+                        : const Color(0xFFB0B8C1),
               ),
             ),
           ),

@@ -12,15 +12,19 @@ Widget tts_text_box({
           ? currentLineIndex
           : -1;
   String missionImage;
+  Offset imageOffset;
   switch (userType) {
     case UserType.bang:
+      imageOffset = Offset(460, 166);
       missionImage = 'assets/mission/mission_re.png';
       break;
     case UserType.gam:
       missionImage = 'assets/mission/mission_cl.png';
+      imageOffset = Offset(190, 210);
       break;
     case UserType.mol:
       missionImage = 'assets/mission/mission_dr.png';
+      imageOffset = Offset(460, 166);
       break;
   }
   return Container(
@@ -53,7 +57,7 @@ Widget tts_text_box({
                               isCurrent
                                   ? const Color(0xFF463EC6)
                                   : Color(0xFFB0B8C1),
-                          height: 1.6,
+                          height: 1.8,
                         ),
                       ),
                     );
@@ -65,7 +69,7 @@ Widget tts_text_box({
         ),
 
         Transform.translate(
-          offset: Offset(460,166),
+          offset: imageOffset,
           child: SizedBox(
             width: 202,
             height: 86,
