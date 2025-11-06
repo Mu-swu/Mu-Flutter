@@ -13,6 +13,7 @@ Widget tts_text_box({
           : -1;
   String missionImage;
   Offset imageOffset;
+
   switch (userType) {
     case UserType.bang:
       imageOffset = Offset(460, 166);
@@ -20,13 +21,15 @@ Widget tts_text_box({
       break;
     case UserType.gam:
       missionImage = 'assets/mission/mission_cl.png';
-      imageOffset = Offset(190, 210);
+      imageOffset = Offset(215, 210);
       break;
     case UserType.mol:
       missionImage = 'assets/mission/mission_dr.png';
-      imageOffset = Offset(460, 166);
+      imageOffset = Offset(510, 166);
       break;
   }
+
+
   return Container(
     width: double.infinity,
     margin: const EdgeInsets.symmetric(vertical: 10),

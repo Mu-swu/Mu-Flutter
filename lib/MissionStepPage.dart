@@ -4,6 +4,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mu/ttsApi.dart';
+import 'package:mu/widgets/shortbutton.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'data/database.dart';
@@ -53,6 +54,13 @@ class StepData {
   StepData({required this.title, required this.lines});
 }
 
+class _MolChoiceData {
+  final String question;
+  final List<String> choices;
+
+  _MolChoiceData(this.question, this.choices);
+}
+
 class MissionStepPage extends StatefulWidget {
   final List<Section> orderedMissions;
   final int currentMissionIndex;
@@ -88,7 +96,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   String _molQuestion = "";
   List<String> _molChoices = [];
-  bool _isGeneratingChoices = false;
 
   List<StepData> _missionSteps = [];
   bool _isLoading = true;
@@ -97,6 +104,33 @@ class _MissionStepPageState extends State<MissionStepPage> {
   late final GenerativeModel _model;
 
   final ScrollController _scrollController = ScrollController();
+  final List<_MolChoiceData> _molStepData = [
+    _MolChoiceData("다음 세 가지 중 하나를 선택해보자. 어떤 기준으로 해야할지 생각해볼까?", [
+      "필요성",
+      "용도별",
+      "사용 주기",
+    ]),
+    _MolChoiceData("다음 세 가지 중 하나를 선택해보자. 어떤 기준으로 해야할지 생각해볼까?", [
+      "유통기한",
+      "상한 정도",
+      "보관 기간",
+    ]),
+    _MolChoiceData("다음 세 가지 중 하나를 선택해보자. 어떤 기준으로 해야할지 생각해볼까?", [
+      "남길 물건",
+      "버릴 물건",
+      "애매한 물건",
+    ]),
+    _MolChoiceData("다음 세 가지 중 하나를 선택해보자. 어떤 기준으로 해야할지 생각해볼까?", [
+      "자주 쓰는",
+      "모양/크기",
+      "품목별",
+    ]),
+    _MolChoiceData("다음 세 가지 중 하나를 선택해보자. 어떤 기준으로 해야할지 생각해볼까?", [
+      "기한",
+      "장소",
+      "가치",
+    ]),
+  ];
 
   @override
   void initState() {
@@ -140,12 +174,12 @@ class _MissionStepPageState extends State<MissionStepPage> {
   }
 
   void _showChoicePopup(String imagePath) {
-    // 단계별 메시지 리스트
     final List<String> stepMessages = [
       "와, 좋은 생각이야!\n첫 단계부터 아주 멋진 선택인데?",
-      "점점 더 잘하네! 역시 생각보다 어렵지 않지?\n그럼 이 기준으로 한 번 해볼까?",
-      "정말 좋은 생각이야! 이렇게 하면 나중에도 훨씬 쉬울 거야.",
-      "마지막까지 훌륭해! 이 기준이라면 어떤 것이든\n잘 해결할 수 있을 거야.",
+      "점점 더 잘하네!\n역시 생각보다 어렵지 않지?\n그럼 이 기준으로 한 번 해볼까?",
+      "정말 좋은 생각이야!\n이렇게 하면 나중에도 훨씬 쉬울 거야.",
+      "이제 정말 잘하네!\n역시 생각보다 어렵지 않지?\n그럼 이 기준으로 한 번 해볼까?",
+      "마지막까지 훌륭해!\n이 기준이라면 어떤 것이든\n잘 해결할 수 있을 거야.",
     ];
 
     final String message =
@@ -366,7 +400,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
   }
 
   Future<void> _loadStepData(int index) async {
-
     setState(() {
       _currentStepIndex = index;
       _currentLines = _missionSteps[index].lines;
@@ -388,53 +421,23 @@ class _MissionStepPageState extends State<MissionStepPage> {
   Future<void> _generateMolHelp() async {
     if (_missionSteps.isEmpty) return;
 
+    if (_currentStepIndex < 0 || _currentStepIndex >= _molStepData.length) {
+      print("Error: Invalid step index for Mol choices: $_currentStepIndex");
+      final data = _molStepData[0];
+      setState(() {
+        _molQuestion = data.question;
+        _molChoices = data.choices;
+        _showChoices = true;
+      });
+      return;
+    }
+    final data = _molStepData[_currentStepIndex];
+
     setState(() {
-      _isGeneratingChoices = true;
+      _molQuestion = data.question;
+      _molChoices = data.choices;
       _showChoices = true;
     });
-
-    final currentStepTitle = _missionSteps[_currentStepIndex].title;
-
-    final prompt = """
-  너는 사용자의 비움 미션을 돕는 친절한 AI 코치야. 사용자가 '$currentStepTitle' 단계에서 막막함을 느껴 '모르겠어요' 버튼을 눌렀어.
-  
-  사용자가 비움을 잘 실천할 수 있도록, 질문 1개와 단답형 선택지 3개를 제안해줘.
-  -질문은 한문장을 넘어가지 않게 짧게 부탁해.
-  - 모든 텍스트는 반말로 작성해줘.
-
-  아래 JSON 형식에 맞춰서 답변해줘.
-  {
-    "question": "여기에 질문 생성",
-    "choices": ["선택지 1 생성", "선택지 2 생성", "선택지 3 생성"]
-  }
-  """;
-
-    try {
-      final response = await _model.generateContent([Content.text(prompt)]);
-      String? text = response.text?.trim() ?? "";
-
-      final startIndex = text.indexOf('{');
-      final endIndex = text.lastIndexOf('}');
-      if (startIndex != -1 && endIndex != -1) {
-        final jsonString = text.substring(startIndex, endIndex + 1);
-        final decoded = jsonDecode(jsonString);
-
-        setState(() {
-          _molQuestion = decoded['question'];
-          _molChoices = List<String>.from(decoded['choices']);
-        });
-      }
-    } catch (e) {
-      print("몰라형 도움말 생성 오류: $e");
-      setState(() {
-        _molQuestion = "어떤 것부터 시작해볼까?";
-        _molChoices = ["가장 쉬워 보이는 것", "가장 오래된 것", "가장 자리 차지하는 것"];
-      });
-    } finally {
-      setState(() {
-        _isGeneratingChoices = false;
-      });
-    }
   }
 
   Future<void> _startTtsSequence({int startFrom = 0}) async {
@@ -736,7 +739,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
   }
 
   ///
-  /// 기본형 (bas) → 기존 코드 그대로
+  /// 방치형 (bas)
   ///
   Widget _buildBasLayout(BuildContext context) {
     return Column(
@@ -767,6 +770,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
               _formatDuration(_remainingTime),
               style: const TextStyle(
                 fontSize: 80,
+                color: Color(0xFF333333),
                 fontFamily: 'PretendardSemiBold',
                 fontFeatures: [FontFeature.tabularFigures()],
               ),
@@ -939,75 +943,71 @@ class _MissionStepPageState extends State<MissionStepPage> {
   }
 
   ///
-  /// 몰라형 (mol) - 수정된 코드
+  /// 몰라형 (mol)
   ///
   Widget _buildMolLayout(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 🔹 타이머 (작게)
+        Text(
+          ('  남은 시간'),
+          style: const TextStyle(
+            fontSize: 16,
+            color: Color(0xFF5D5D5D),
+            fontFamily: 'PretendardRegular',
+          ),
+        ),
+
+        // 타이머 + 버튼
         Row(
           children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF7F91FF),
+            IconButton(
+              icon: SvgPicture.asset(
+                'assets/mission/pause.svg',
+                width: 64,
+                height: 64,
               ),
-              child: IconButton(
-                icon: Icon(
-                  _isPaused ? Icons.play_arrow : Icons.pause,
-                  size: 40,
-                  color: Colors.white,
-                ),
-                onPressed: _togglePause,
-              ),
+              onPressed: _togglePause,
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 10),
             Text(
               _formatDuration(_remainingTime),
-              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Color(0xFF333333),
+                fontSize: 48,
+                fontFamily: 'PretendardSemiBold',
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 10),
             GestureDetector(
               onTap: () {
                 setState(() {
                   _remainingTime += const Duration(seconds: 30);
                 });
               },
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFFD7DCFA),
+              child: IconButton(
+                icon: SvgPicture.asset(
+                  'assets/mission/plus_time.svg',
+                  width: 64,
+                  height: 64,
                 ),
-                child: const Center(
-                  child: Text(
-                    '+',
-                    style: TextStyle(
-                      fontSize: 40,
-                      color: Color(0xFF7F91FF),
-                      fontWeight: FontWeight.bold,
-                      height: 1.0,
-                    ),
-                  ),
-                ),
+                iconSize: 72,
+                onPressed: null,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 20),
 
-        // 🔹 메인 콘텐츠 영역 (TTS or 선택지)
+        const SizedBox(height: 20),
+        //메인 콘텐츠 영역
         Expanded(
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 44, vertical: 60),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              color: Color(0xFFFDFFFA),
+              borderRadius: BorderRadius.circular(10),
             ),
             child:
                 _showChoices
@@ -1019,9 +1019,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
                     ),
           ),
         ),
-        const SizedBox(height: 25),
+        const SizedBox(height: 55),
 
-        // 🔹 하단 버튼 영역
+        // 하단 버튼 영역
         _showChoices
             ? Align(
               alignment: Alignment.center,
@@ -1037,20 +1037,14 @@ class _MissionStepPageState extends State<MissionStepPage> {
             : Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Expanded(
-                  child: OutlinedButton(
+                Flexible(
+                  child: ShortButton(
+                    text: "모르겠어요",
+                    isYes: false,
                     onPressed: _generateMolHelp,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.black),
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: const Text(
-                      "모르겠어요",
-                      style: TextStyle(color: Colors.black, fontSize: 18),
-                    ),
+                    height: 64,
+                    fontSize: 18,
+                    noBackgroundColor: Colors.transparent,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -1067,19 +1061,22 @@ class _MissionStepPageState extends State<MissionStepPage> {
   /// 몰라형 선택지 UI
   ///
   Widget _buildMolChoices() {
-    if (_isGeneratingChoices) {
-      return const Center(child: CircularProgressIndicator());
-    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _molQuestion,
-          style: const TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF463EC6),
-          ),
+        SizedBox(height: 25),
+        Row(
+          children: [
+            SizedBox(width: 10),
+            Text(
+              _molQuestion,
+              style: const TextStyle(
+                fontSize: 20,
+                fontFamily: 'PretendardSemiBold',
+                color: Color(0xFF463EC6),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         Row(
@@ -1090,7 +1087,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 6.0),
                     child: _choiceBox(
                       choiceText,
-                      imagePath: 'assets/popup.png', // 반드시 전달
+                      imagePath: 'assets/popup.png',
                     ),
                   ),
                 );
@@ -1107,23 +1104,23 @@ class _MissionStepPageState extends State<MissionStepPage> {
           _showChoicePopup(imagePath);
         }
       },
-      child: Container(
-        height: 260,
-        padding: const EdgeInsets.symmetric(vertical: 70),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF3F5FF),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          maxLines: 2, // ✅ ② 두 줄까지만 표시
-          overflow: TextOverflow.ellipsis, // ✅ ③ 너무 길면 ... 처리
-          style: const TextStyle(
-            fontSize: 25,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
+      child: Center(
+        child: Container(
+          height: 120,
+          width: 212,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F5FF),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 18,
+              fontFamily: 'PretendardMedium',
+              color: Color(0xFF5D5D5D),
+            ),
           ),
         ),
       ),

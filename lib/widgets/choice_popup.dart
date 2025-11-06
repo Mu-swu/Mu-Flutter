@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
-// choice_popup.dart
+import 'longbutton.dart';
+
 class ChoicePopup extends StatelessWidget {
-  final String message;       // 🔹 추가
+  final String message;
   final String imagePath;
   final VoidCallback onConfirm;
 
   const ChoicePopup({
     super.key,
-    required this.message,     // 🔹 필수로 받음
+    required this.message,
     required this.imagePath,
     required this.onConfirm,
   });
@@ -28,58 +29,41 @@ class ChoicePopup extends StatelessWidget {
           ),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            // 텍스트 영역
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                message,  // 전달받은 message 사용
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF5C5C5C),
-                  fontSize: 20,
-                  fontWeight: FontWeight.w400,
-                  height: 1.5,
-                ),
+            SizedBox(height: 35),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF5D5D5D),
+                fontSize: 20,
+                fontFamily: 'PretendardRegular',
+                height: 1.7,
               ),
             ),
 
-            // 이미지 영역
             Container(
               width: 389,
               height: 150,
-
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.contain,
-              ),
+              child: Image.asset(imagePath, fit: BoxFit.contain),
             ),
-
-            // 버튼
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.symmetric(
+                vertical: 5.0,
+                horizontal: 10,
+              ),
               child: SizedBox(
                 width: 389,
                 height: 52,
-                child: ElevatedButton(
+                child: LongButton(
+                  text: "알겠어요",
                   onPressed: onConfirm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF463EC6),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text(
-                    "알겠어요",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  fontSize: 16,
                 ),
               ),
             ),
+            SizedBox(height: 10),
           ],
         ),
       ),

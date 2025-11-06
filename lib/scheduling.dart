@@ -382,10 +382,6 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                                                         data['section'] ==
                                                         firstMissionName,
                                                   );
-                                              final timeString =
-                                                  missionData['time']!;
-                                              final missionDuration =
-                                                  _parseDuration(timeString);
 
                                               if (!mounted) return;
 

@@ -44,7 +44,7 @@ class StepNavigation extends StatelessWidget {
         break;
       case 'mol':
       default:
-        selectedColor = const Color(0xFFACC79D);
+        selectedColor = const Color(0xFFA1C68D);
     }
 
     return Positioned(

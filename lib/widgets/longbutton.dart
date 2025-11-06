@@ -4,12 +4,14 @@ class LongButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
   final bool isEnabled;
+  final double? fontSize;
 
   const LongButton({
     super.key,
     required this.text,
     required this.onPressed,
     this.isEnabled = true,
+    this.fontSize,
   });
 
   @override
@@ -39,7 +41,7 @@ class LongButton extends StatelessWidget {
           text,
           style: TextStyle(
             fontFamily: 'PretendardMedium',
-            fontSize: 18,
+            fontSize: fontSize ?? 18,
             color: isEnabled ? Colors.white : Color(0xFFB0B8C1),
           ),
         ),

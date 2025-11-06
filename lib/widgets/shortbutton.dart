@@ -7,6 +7,7 @@ class ShortButton extends StatelessWidget {
   final double? width;
   final double? height;
   final double? fontSize;
+  final Color? noBackgroundColor;
 
   const ShortButton({
     super.key,
@@ -16,6 +17,7 @@ class ShortButton extends StatelessWidget {
     this.width,
     this.height,
     this.fontSize,
+    this.noBackgroundColor,
   });
 
   @override
@@ -31,7 +33,7 @@ class ShortButton extends StatelessWidget {
         width: btnWidth,
         height: btnHeight,
         decoration: BoxDecoration(
-          color: isYes ? const Color(0xFF463EC6) : const Color(0xFFFBFCFF),
+          color: isYes ? const Color(0xFF463EC6)  : (noBackgroundColor ?? const Color(0xFFFBFCFF)),
           borderRadius: BorderRadius.circular(8),
           border:
               isYes
