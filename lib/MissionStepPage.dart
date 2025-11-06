@@ -1,5 +1,7 @@
 // mission_step_page.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mu/ttsApi.dart';
@@ -14,6 +16,36 @@ import 'package:lottie/lottie.dart';
 import 'widgets/choice_popup.dart';
 import 'widgets/longbutton.dart';
 import 'user_theme_manager.dart';
+
+List<StepData> _parseMissionSteps(String jsonText) {
+  String text = jsonText;
+
+  final startIndex = text.indexOf('{');
+  final endIndex = text.lastIndexOf('}');
+
+  if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+    text = text.substring(startIndex, endIndex + 1).trim();
+  }
+  final decoded = jsonDecode(text);
+
+  if (decoded is! Map<String, dynamic> || !decoded.containsKey('steps')) {
+    throw Exception("JSON 형식이 다르거나 'steps' 키를 포함하고 있지 않습니다.");
+  }
+
+  final List<dynamic> stepsJson = decoded['steps'];
+
+  return stepsJson.map((step) {
+    List<String> rawLines = List<String>.from(step['lines']);
+    String fullTextBlock = rawLines.join(' ');
+    List<String> splitSentences =
+        fullTextBlock
+            .split(RegExp(r'(?<=[.!?])\s*'))
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+    return StepData(title: step['title'], lines: splitSentences);
+  }).toList();
+}
 
 class StepData {
   final String title;
@@ -59,8 +91,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
   List<String> _molChoices = [];
   bool _isGeneratingChoices = false;
 
-  List<StepData> _missionSteps = []; //API로부터 받을 미션 데이터
-  bool _isLoading = true; //로딩 상태
+  List<StepData> _missionSteps = [];
+  bool _isLoading = true;
+  bool _isInitialized = false;
 
   late final GenerativeModel _model;
 
@@ -70,18 +103,30 @@ class _MissionStepPageState extends State<MissionStepPage> {
   void initState() {
     super.initState();
     _currentUserType = widget.userType;
-
-    _ttsEngine = ElevenLabsTTS(apiKey: dotenv.env['ELEVENLABS_API_KEY']!);
-    // _ttsEngine=ElevenLabsTTS();
     _remainingTime = widget.missionTime;
-    //API 키 사용해 gemini 모델 초기화
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeAsync();
+    });
+  }
+
+  Future<void> _initializeAsync() async {
     final apiKey = dotenv.env['GEMINI_API_KEY'];
     if (apiKey == null) {
       print('No API key found');
       return;
     }
+
+    _ttsEngine = ElevenLabsTTS(
+      apiKey: dotenv.env['ELEVENLABS_API_KEY']!,
+      userType: _currentUserType,
+    );
     _model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
 
+    if (mounted) {
+      setState(() {
+        _isInitialized = true;
+      });
+    }
     _generateMissionSteps();
   }
 
@@ -303,47 +348,10 @@ class _MissionStepPageState extends State<MissionStepPage> {
       if (text == null || text.isEmpty) {
         throw Exception("API가 비어있는 응답을 반환했습니다.");
       }
-
-      //파싱 위한 문자열 정리
-      final startIndex = text.indexOf('{');
-      final endIndex = text.lastIndexOf('}');
-
-      if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
-        text = text.substring(startIndex, endIndex + 1).trim();
-      } else {
-        if (text.startsWith("```json") && text.endsWith("```")) {
-          text = text.substring(7, text.length - 3).trim();
-        } else if (text.startsWith("```") && text.endsWith("```")) {
-          text = text.substring(3, text.length - 3).trim();
-        } else {
-          throw Exception("API 응답에서 유효한 JSON 형식을 추출하지 못했습니다.");
-        }
-      }
-
-      //API 응답(JSON)을 파싱해 StepData 리스트로 변환
-      final decoded = jsonDecode(text);
-
-      if (decoded is! Map<String, dynamic> || !decoded.containsKey('steps')) {
-        throw Exception("JSON 형식이 다르거나 'steps' 키를 포함하고 있지 않습니다.");
-      }
-
-      final List<dynamic> stepsJson = decoded['steps'];
+      final newMissionSteps = await compute(_parseMissionSteps, text);
 
       setState(() {
-        _missionSteps =
-            stepsJson.map((step) {
-              List<String> rawLines = List<String>.from(step['lines']);
-              String fullTextBlock = rawLines.join(' ');
-              List<String> splitSentences =
-                  fullTextBlock
-                      .split(RegExp(r'(?<=[.!?])\s*'))
-                      .map((s) => s.trim())
-                      .where((s) => s.isNotEmpty)
-                      .toList();
-
-              return StepData(title: step['title'], lines: splitSentences);
-            }).toList();
-
+        _missionSteps = newMissionSteps;
         _loadStepData(0);
         _isLoading = false;
       });
@@ -547,6 +555,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
     }
 
     String loadingVideoPath;
+
     switch (_currentUserType) {
       case UserType.bang:
         loadingVideoPath = 'assets/mission/loading_re.mp4';
@@ -561,147 +570,159 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body:
-          _isLoading
-              ? Center(
-                child: SizedBox(
-                  width:
-                      MediaQuery.of(context).size.width > 1000
-                          ? 1000
-                          : MediaQuery.of(context).size.width,
-                  child: LoadingVideo(videoPath: loadingVideoPath),
-                ),
-              )
-              : SafeArea(
-                child: SizedBox.expand(
-                  child: Stack(
-                    children: [
-                      Column(
-                        children: [
-                          // ─────── 상단바 ───────
-                          SizedBox(
-                            height: 56,
-                            child: Row(
-                              children: [
-                                // ◀︎ 뒤로가기 버튼 (15%)
-                                Container(
-                                  width: screenWidth * 0.15,
-                                  color: Colors.white,
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: IconButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      icon: const Icon(
-                                        Icons.arrow_back,
-                                        size: 28,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child:
+            !_isInitialized
+                ? Container(key: ValueKey('initializing'), color: Colors.white)
+                : _isLoading
+                ? Center(
+                  key: const ValueKey('loading'),
+                  child: SizedBox(
+                    width:
+                        MediaQuery.of(context).size.width > 1000
+                            ? 1000
+                            : MediaQuery.of(context).size.width,
+                    child: LoadingVideo(videoPath: loadingVideoPath),
+                  ),
+                )
+                : SafeArea(
+                  key: const ValueKey('mission_content'),
+                  child: SizedBox.expand(
+                    child: Stack(
+                      children: [
+                        Column(
+                          children: [
+                            // ─────── 상단바 ───────
+                            SizedBox(
+                              height: 150,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                    ),
+                                    width: screenWidth * 0.15,
+                                    color: Colors.white,
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: IconButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        icon: SvgPicture.asset(
+                                          'assets/left.svg',
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                // ▶︎ 타이틀 + TTS 버튼 (85%)
-                                Expanded(
-                                  child: Container(
-                                    color: baseColor,
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Center(
-                                            child: Text(
-                                              (_missionSteps.isNotEmpty &&
-                                                      _currentStepIndex >= 0 &&
-                                                      _currentStepIndex <
-                                                          _missionSteps.length)
-                                                  ? _missionSteps[_currentStepIndex]
-                                                      .title
-                                                  : '',
-                                              style: const TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold,
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 30,
+                                      ),
+                                      color: baseColor,
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Center(
+                                              child: Text(
+                                                (_missionSteps.isNotEmpty &&
+                                                        _currentStepIndex >=
+                                                            0 &&
+                                                        _currentStepIndex <
+                                                            _missionSteps
+                                                                .length)
+                                                    ? _missionSteps[_currentStepIndex]
+                                                        .title
+                                                    : '',
+                                                style: const TextStyle(
+                                                  fontSize: 20,
+                                                  fontFamily:
+                                                      'PretendardRegular',
+                                                  color: Color(0xFF5D5D5D),
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
-                                        ),
-                                        IconButton(
-                                          onPressed: _toggleTts,
-                                          icon: Icon(
-                                            _isTtsEnabled
-                                                ? Icons.volume_up
-                                                : Icons.volume_off,
-                                            size: 28,
+                                          IconButton(
+                                            onPressed: _toggleTts,
+                                            icon: SvgPicture.asset(
+                                              'assets/mission/sound_on.svg',
+                                              width: 36,
+                                              height: 36,
+                                            ),
                                           ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // ─────── 본문 영역 ───────
+                            Expanded(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // 왼쪽 네비게이션
+                                  Container(
+                                    width: screenWidth * 0.15,
+                                    color: Colors.white,
+                                    child: Column(
+                                      children: [
+                                        StepNavigation(
+                                          missionType:
+                                              _currentUserType == UserType.gam
+                                                  ? 'gam'
+                                                  : (_currentUserType ==
+                                                          UserType.mol
+                                                      ? 'mol'
+                                                      : 'bas'),
+                                          currentIndex: _currentStepIndex,
                                         ),
                                       ],
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
 
-                          // ─────── 본문 영역 ───────
-                          Expanded(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // ◀︎ 왼쪽 네비게이션
-                                Container(
-                                  width: screenWidth * 0.15,
-                                  color: Colors.white,
-                                  child: Column(
-                                    children: [
-                                      const SizedBox(height: 24),
-                                      StepNavigation(
-                                        missionType:
-                                            _currentUserType == UserType.gam
-                                                ? 'gam'
-                                                : (_currentUserType ==
-                                                        UserType.mol
-                                                    ? 'mol'
-                                                    : 'bas'),
-                                        currentIndex: _currentStepIndex,
+                                  // 오른쪽 본문 내용
+                                  Expanded(
+                                    child: Container(
+                                      color: baseColor,
+                                      padding: const EdgeInsets.fromLTRB(
+                                        110,
+                                        3,
+                                        110,
+                                        70,
                                       ),
-                                    ],
-                                  ),
-                                ),
-
-                                // ▶︎ 오른쪽 본문 내용
-                                Expanded(
-                                  child: Container(
-                                    color: baseColor,
-                                    padding: const EdgeInsets.fromLTRB(
-                                      90,
-                                      70,
-                                      90,
-                                      70,
+                                      child: _buildContentByType(context),
                                     ),
-                                    child: _buildContentByType(context),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-
-                      // 🔹 TTS 애니메이션 오버레이
-                      if (_isTtsSpeaking)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: Image.asset(
-                              _currentUserType == UserType.bang
-                                  ? 'assets/gradient/gradient.png'
-                                  : _currentUserType == UserType.gam
-                                  ? 'assets/gradient/gradient_gam.png'
-                                  : 'assets/gradient/gradient_mol.png',
-                              fit: BoxFit.fill,
-                            ),
-                          ),
+                          ],
                         ),
-                    ],
+
+                        // TTS 애니메이션 오버레이
+                        if (_isTtsSpeaking)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: Image.asset(
+                                _currentUserType == UserType.bang
+                                    ? 'assets/gradient/gradient.png'
+                                    : _currentUserType == UserType.gam
+                                    ? 'assets/gradient/gradient_gam.png'
+                                    : 'assets/gradient/gradient_mol.png',
+                                fit: BoxFit.fill,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+      ),
     );
   }
 
@@ -727,42 +748,30 @@ class _MissionStepPageState extends State<MissionStepPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          (_missionSteps.isNotEmpty &&
-                  _currentStepIndex >= 0 &&
-                  _currentStepIndex < _missionSteps.length)
-              ? _missionSteps[_currentStepIndex].title
-              : '',
+          ('    남은 시간'),
           style: const TextStyle(
             fontSize: 16,
-            color: Colors.grey,
-            fontWeight: FontWeight.w500,
+            color: Color(0xFF5D5D5D),
+            fontFamily: 'PretendardRegular',
           ),
         ),
-        const SizedBox(height: 20),
 
-        // 🔹 타이머 + 버튼
+        // 타이머 + 버튼
         Row(
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF7F91FF),
-              ),
-              child: IconButton(
-                icon: Icon(
-                  _isPaused ? Icons.play_arrow : Icons.pause,
-                  size: 60,
-                  color: Colors.white,
-                ),
-                onPressed: _togglePause,
-              ),
+            IconButton(
+              icon: SvgPicture.asset('assets/mission/pause.svg'),
+              iconSize: 72,
+              onPressed: _togglePause,
             ),
             const SizedBox(width: 20),
             Text(
               _formatDuration(_remainingTime),
-              style: const TextStyle(fontSize: 80, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 80,
+                fontFamily: 'PretendardSemiBold',
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
             ),
             const SizedBox(width: 20),
             GestureDetector(
@@ -771,38 +780,24 @@ class _MissionStepPageState extends State<MissionStepPage> {
                   _remainingTime += const Duration(seconds: 30);
                 });
               },
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFFD7DCFA),
-                ),
-                child: const Center(
-                  child: Text(
-                    '+',
-                    style: TextStyle(
-                      fontSize: 60,
-                      color: Color(0xFF7F91FF),
-                      fontWeight: FontWeight.bold,
-                      height: -0.1,
-                    ),
-                  ),
-                ),
+              child: IconButton(
+                icon: SvgPicture.asset('assets/mission/plus_time.svg'),
+                iconSize: 72,
+                onPressed: null,
               ),
             ),
           ],
         ),
 
-        const SizedBox(height: 30),
+        const SizedBox(height: 10),
 
-        // 🔹 TTS 텍스트 박스
+        // TTS 텍스트 박스
         Expanded(
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(43),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Color(0xFFFEFAFF),
               borderRadius: BorderRadius.circular(10),
             ),
             child: tts_text_box(
@@ -815,7 +810,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
         ),
         const SizedBox(height: 50),
 
-        // 🔹 하단 버튼
+        // 하단 버튼
         LongButton(text: "끝났어요", onPressed: _onStepFinished),
       ],
     );

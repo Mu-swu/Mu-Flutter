@@ -64,14 +64,23 @@ class MissionStartPage extends StatelessWidget {
   }
 
   Duration _parseDuration(String timeString) {
+    int hours = 0;
+    int minutes = 0;
+
     if (timeString.contains('시간')) {
-      final hours = int.tryParse(timeString.replaceAll('시간', '').trim()) ?? 0;
-      return Duration(hours: hours);
+      final parts = timeString.split('시간');
+      hours = int.tryParse(parts[0].trim()) ?? 0;
+
+      if (parts.length > 1 && parts[1].contains('분')) {
+        minutes = int.tryParse(parts[1].replaceAll('분', '').trim()) ?? 0;
+      }
     } else if (timeString.contains('분')) {
-      final minutes = int.tryParse(timeString.replaceAll('분', '').trim()) ?? 0;
-      return Duration(minutes: minutes);
+      minutes = int.tryParse(timeString.replaceAll('분', '').trim()) ?? 0;
+    } else {
+      return const Duration(minutes: 30);
     }
-    return const Duration(minutes: 30);
+
+    return Duration(hours: hours, minutes: minutes);
   }
 
   @override
@@ -133,20 +142,20 @@ class MissionStartPage extends StatelessWidget {
             tagLabel = '방치형';
             tagType = TagType.bang;
             missionImage = 'assets/mission/still_re.png';
-            userType=UserType.bang;
+            userType = UserType.bang;
             break;
           case '감정형':
             tagLabel = '감정형';
             tagType = TagType.gam;
             missionImage = 'assets/mission/still_cl.png';
-            userType=UserType.gam;
+            userType = UserType.gam;
             break;
           case '몰라형':
           default:
             tagLabel = '몰라형';
             tagType = TagType.mol;
             missionImage = 'assets/mission/still_dr.png';
-            userType=UserType.mol;
+            userType = UserType.mol;
             break;
         }
 
@@ -214,11 +223,15 @@ class MissionStartPage extends StatelessWidget {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => MissionStepPage(
-                                            orderedMissions: orderedMissions,
-                                            currentMissionIndex: currentMissionIndex,
-                                            missionTime: missionDuration, userType: userType,
-                                          ),
+                                          builder:
+                                              (context) => MissionStepPage(
+                                                orderedMissions:
+                                                    orderedMissions,
+                                                currentMissionIndex:
+                                                    currentMissionIndex,
+                                                missionTime: missionDuration,
+                                                userType: userType,
+                                              ),
                                         ),
                                       );
                                     },
