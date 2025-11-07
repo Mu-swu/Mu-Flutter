@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
-import 'package:mu/widgets/category_edit_popup.dart';
 import 'package:mu/widgets/keepdialogs.dart';
 import 'package:mu/widgets/longbutton.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'widgets/ItemSaveSection.dart';
-import 'package:mu/data/sampledata.dart';
-import 'user_theme_manager.dart'; // Import the user theme manager
+import 'user_theme_manager.dart';
 import 'package:mu/data/database.dart';
 import 'package:drift/drift.dart' show Value;
+import 'package:mu/notification_service.dart';
 
 class keepbox extends StatefulWidget {
   const keepbox({super.key});
@@ -35,6 +34,8 @@ class _keepboxState extends State<keepbox> {
 
   final AppDatabase _database = AppDatabase.instance;
   bool _isLoading = true;
+
+  final NotificationService _notificationService = NotificationService.instance;
 
   @override
   void initState() {
@@ -95,8 +96,12 @@ class _keepboxState extends State<keepbox> {
 
   Future<void> _saveData() async {
     if (_isLoading) return;
+    await _notificationService.cancelAllNotifications();
+
     final List<KeepBoxesCompanion> itemsToSave = [];
     final DateFormat formatter = DateFormat("yyyy.MM.dd");
+
+    int notificationId = 0;
 
     for (final categoryMap in categories) {
       final categoryName = categoryMap['name'] as String;
@@ -115,6 +120,27 @@ class _keepboxState extends State<keepbox> {
               expirationAt: expirationAt,
             ),
           );
+         // DateTime d3Date = expirationAt.subtract(const Duration(days: 3));
+
+          DateTime scheduleTime = DateTime.now().add(const Duration(seconds: 10));// 테스트용
+         /* DateTime scheduleTime = DateTime(
+            d3Date.year,
+          d3Date.month,
+            d3Date.day,
+            9,
+            0,
+          );
+          */
+
+          if (scheduleTime.isAfter(DateTime.now())) {
+            await _notificationService.scheduleNotification(
+              id: notificationId,
+              title: '냉장고 속 ${itemMap['name']}의 유예기간이 임박했어요!',
+              body: '버려야 할지, 아니면 마지막 기회를 줄지 지금 바로 확인하고 결정해보세요!',
+              scheduleDate: scheduleTime,
+            );
+          }
+          notificationId++;
         } catch (e) {
           print("날짜 파싱 오류 : $e, 항목 : ${itemMap['name']}");
         }
@@ -125,7 +151,7 @@ class _keepboxState extends State<keepbox> {
     if (mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('저장되었습니다!')));
+      ).showSnackBar(const SnackBar(content: Text('저장되었습니다! (D-3 알림이 예약되었습니다.)')));
     }
   }
 
@@ -510,6 +536,7 @@ class _keepboxState extends State<keepbox> {
       ),
     );
   }
+
   // _keepboxState 클래스 내부에 추가
 
   Future<void> _updateCategoryName(String oldName, String newName) async {

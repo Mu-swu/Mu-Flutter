@@ -442,7 +442,7 @@ class _InventoryPageState extends State<InventoryPage> {
 
                 // ─── 하단 버튼 ───
                 Padding(
-                  padding: const EdgeInsets.all(30),
+                  padding: const EdgeInsets.all(28),
                   child: LongButton(
                     text: '물품 추가하러 가기',
                     onPressed: () {},

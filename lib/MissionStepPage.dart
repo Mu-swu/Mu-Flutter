@@ -99,7 +99,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   List<StepData> _missionSteps = [];
   bool _isLoading = true;
-  bool _isInitialized = false;
 
   late final GenerativeModel _model;
 
@@ -155,12 +154,10 @@ class _MissionStepPageState extends State<MissionStepPage> {
     );
     _model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
 
+    await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) {
-      setState(() {
-        _isInitialized = true;
-      });
+      await _generateMissionSteps();
     }
-    _generateMissionSteps();
   }
 
   void _startTimer() {
@@ -571,9 +568,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         child:
-            !_isInitialized
-                ? Container(key: ValueKey('initializing'), color: Colors.white)
-                : _isLoading
+            _isLoading
                 ? Center(
                   key: const ValueKey('loading'),
                   child: SizedBox(

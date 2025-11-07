@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mu/data/database.dart';
 import 'package:mu/my_page.dart';
-import 'MissionStepPage.dart';
 import 'surveyq.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'space_start.dart';
@@ -10,12 +9,11 @@ import 'InventoryPage.dart';
 import 'widgets/navigationbar.dart';
 import 'widgets/shortbutton.dart';
 import 'widgets/schedule_item.dart';
-import 'mission_start.dart';
 import 'keepbox.dart';
-import 'user_theme_manager.dart'; // Import the new file
+import 'user_theme_manager.dart';
 import 'package:mu/data/sampledata.dart';
-// CustomTag 위젯 (요청에 따라 색상과 크기 수정)
-// 기존 TagType enum은 UserThemeManager.currentUserType에 맞게 사용합니다.
+import 'package:mu/notification_service.dart';
+
 enum TagType { bang, gam, mol }
 
 class CustomTag extends StatelessWidget {
@@ -63,7 +61,9 @@ class CustomTag extends StatelessWidget {
 }
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+  await NotificationService.instance.init();
   runApp(const MyApp());
 }
 

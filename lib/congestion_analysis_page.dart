@@ -182,7 +182,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
 
       img.Image resizedImage = img.copyResizeCropSquare(
         originalImage,
-        _inputSize,
+        size:_inputSize,
       );
 
       var input = List.generate(
@@ -192,9 +192,9 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
           (y) => List.generate(_inputSize, (x) {
             final pixel = resizedImage.getPixel(x, y);
             return [
-              img.getRed(pixel).toInt(),
-              img.getGreen(pixel).toInt(),
-              img.getBlue(pixel).toInt(),
+              pixel.r.toInt(),
+              pixel.g.toInt(),
+              pixel.b.toInt(),
             ];
           }),
         ),

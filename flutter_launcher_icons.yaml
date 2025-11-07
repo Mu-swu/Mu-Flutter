@@ -1,0 +1,24 @@
+# flutter pub run flutter_launcher_icons
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/mu_logo.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/icon/mu_logo.png"
+  remove_alpha_ios: true
+
+  web:
+    generate: true
+    image_path: "assets/icon/mu_logo.png"
+    background_color: "#FFFFFF"
+    theme_color: "#FFFFFF"
+
+  windows:
+    generate: true
+    image_path: "assets/icon/mu_logo.png"
+    icon_size: 48 # min:48, max:256, default: 48
+
+  macos:
+    generate: true
+    image_path: "assets/icon/mu_logo.png"

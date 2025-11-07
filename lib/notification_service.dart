@@ -1,0 +1,86 @@
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+
+class NotificationService {
+  NotificationService._privateConstructor();
+
+  static final NotificationService instance =
+  NotificationService._privateConstructor();
+
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
+
+  Future<void> init() async {
+    tz.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
+
+    const AndroidInitializationSettings androidSettings =
+    AndroidInitializationSettings('ic_notification');
+
+    const DarwinInitializationSettings iosSettings =
+    DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
+    const InitializationSettings settings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await _flutterLocalNotificationsPlugin.initialize(settings);
+  }
+
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduleDate,
+  }) async {
+    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+    final tz.TZDateTime tzScheduledDate = tz.TZDateTime.from(
+      scheduleDate,
+      tz.local,
+    );
+    if (tzScheduledDate.isBefore(now)) {
+      return;
+    }
+
+    const AndroidNotificationDetails androidDetails =
+    AndroidNotificationDetails(
+      'd_day_channel_id',
+      'D-Day 임박 알림',
+      channelDescription: '보관함 아이템의 기한 임박 시 알림을 보냅니다.',
+      importance: Importance.high,
+      priority: Priority.high,
+      subText: 'MU',
+      largeIcon: DrawableResourceAndroidBitmap('ic_launcher'),
+
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+
+    );
+
+    await _flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tzScheduledDate,
+      const NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
+  Future<void> cancelAllNotifications() async {
+    await _flutterLocalNotificationsPlugin.cancelAll();
+  }
+}

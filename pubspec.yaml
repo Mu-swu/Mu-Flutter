@@ -25,7 +25,7 @@ dependencies:
   path_provider: ^2.1.5
   lottie: ^2.2.0
   image_picker: ^0.8.9
-  image: ^3.0.1
+  image: ^4.3.0
   tflite_flutter: ^0.11.0
   camera: ^0.11.0+2
   audioplayers: ^6.0.0
@@ -35,6 +35,7 @@ dependencies:
   path: ^1.9.1
   flutter_slidable: ^4.0.3
   flutter_svg: 2.2.1
+  flutter_local_notifications: ^19.5.0
 
 dev_dependencies:
   flutter_test:
@@ -43,6 +44,7 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   drift_dev: ^2.29.0
   build_runner: ^2.9.0
+  flutter_launcher_icons: ^0.14.0
 
 flutter:
   uses-material-design: true
@@ -127,6 +129,7 @@ flutter:
     - assets/mission/delete.svg
     - assets/mission/edit.svg
     - assets/mission/pause.svg
+    - assets/mission/plus_time.svg
     - assets/mission/plus.svg
     - assets/mission/sound_on.svg
     - assets/mission/mission_dr.png
