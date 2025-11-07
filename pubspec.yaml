@@ -117,7 +117,21 @@ flutter:
     - assets/bottom_icons/my_unselected.svg
     - assets/bottom_icons/my_selected.svg
     - assets/left.svg
-    - assets/mission/
+    - assets/home/categorybox.png
+    - assets/mission/still_cl.png
+    - assets/mission/still_dr.png
+    - assets/mission/still_re.png
+    - assets/mission/loading_re.mp4
+    - assets/mission/loading_cl.mp4
+    - assets/mission/loading_dr.mp4
+    - assets/mission/delete.svg
+    - assets/mission/edit.svg
+    - assets/mission/pause.svg
+    - assets/mission/plus.svg
+    - assets/mission/sound_on.svg
+    - assets/mission/mission_dr.png
+    - assets/mission/mission_cl.png
+    - assets/mission/mission_re.png
 
 
   fonts:

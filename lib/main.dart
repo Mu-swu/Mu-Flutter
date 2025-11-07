@@ -6,14 +6,13 @@ import 'MissionStepPage.dart';
 import 'surveyq.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'space_start.dart';
+import 'InventoryPage.dart';
 import 'widgets/navigationbar.dart';
 import 'widgets/shortbutton.dart';
 import 'widgets/schedule_item.dart';
 import 'mission_start.dart';
 import 'keepbox.dart';
 import 'user_theme_manager.dart'; // Import the new file
-import 'package:mu/data/database.dart';
-import 'package:mu/data/tables.dart';
 import 'package:mu/data/sampledata.dart';
 // CustomTag 위젯 (요청에 따라 색상과 크기 수정)
 // 기존 TagType enum은 UserThemeManager.currentUserType에 맞게 사용합니다.
@@ -85,13 +84,14 @@ class MyApp extends StatelessWidget {
       supportedLocales: const [
         Locale('ko'), // 🇰🇷 한국어 달력 등 지원
       ],
-      initialRoute: '/',
+      initialRoute: '/inven',
       routes: {
         '/': (context) => const FigmaHomePage(),
         '/surveyq': (context) => const SurveyPage(),
         '/congestion': (context) => SpaceStartScreen(),
         '/my': (context) => const MyPage(),
         '/keepbox': (context) => const keepbox(),
+        '/inven': (context) => const InventoryPage(),
       },
     );
   }

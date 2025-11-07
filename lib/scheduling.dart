@@ -64,8 +64,8 @@ class ScheduleCard extends StatelessWidget {
             children: [
               Container(
                 padding: EdgeInsets.symmetric(
-                  horizontal: 8 * fontScale,
-                  vertical: 4 * fontScale,
+                  horizontal: 8 * fontScale*0.8,
+                  vertical: 4 * fontScale*0.8,
                 ),
                 decoration: BoxDecoration(
                   color: statusBackgroundColor,
@@ -80,7 +80,7 @@ class ScheduleCard extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 8 * fontScale),
+              SizedBox(height: 8 * fontScale*0.6),
               Text(
                 section,
                 style: TextStyle(
@@ -89,7 +89,7 @@ class ScheduleCard extends StatelessWidget {
                   fontFamily: 'PretendardMedium',
                 ),
               ),
-              SizedBox(height: 17 * fontScale),
+              SizedBox(height: 17 * fontScale*0.6),//오버플로우 해결
               Text(
                 time,
                 style: TextStyle(
@@ -104,8 +104,8 @@ class ScheduleCard extends StatelessWidget {
             right: 0,
             top: 0,
             child: Container(
-              width: 42 * fontScale,
-              height: 42 * fontScale,
+              width: 42 * fontScale*0.8,
+              height: 42 * fontScale*0.8,
               decoration: BoxDecoration(
                 color:
                     orderNumber != null ? Color(0xFF7F91FF) : Color(0xFFDBDEE7),
