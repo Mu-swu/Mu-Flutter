@@ -10,6 +10,7 @@ import 'user_theme_manager.dart';
 import 'package:mu/data/database.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:mu/notification_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class keepbox extends StatefulWidget {
   const keepbox({super.key});
@@ -111,6 +112,7 @@ class _keepboxState extends State<keepbox> {
         break;
     }
     if (_isLoading) return;
+    await requestExactAlarmPermission();
     await _notificationService.cancelAllNotifications();
 
     final List<KeepBoxesCompanion> itemsToSave = [];
@@ -167,6 +169,19 @@ class _keepboxState extends State<keepbox> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('저장되었습니다! (D-3 알림이 예약되었습니다.)')));
+    }
+  }
+  Future<void> requestExactAlarmPermission() async {
+    // 정확한 알람 권한 상태 확인
+    var status = await Permission.scheduleExactAlarm.status;
+
+    if (status.isDenied || status.isLimited || status.isPermanentlyDenied) {
+      // 권한이 없으면 설정 화면을 띄웁니다.
+      // Android 시스템이 '특수 접근 권한' 목록 화면을 띄워 사용자에게 '정확한 알람'을 켜도록 유도합니다.
+      await openAppSettings();
+
+      // 사용자에게 메시지 표시 (예시)
+      // showDialog(context: context, builder: (context) => AlertDialog(... 권한을 켜주세요...))
     }
   }
 

@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:mu/data/database.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:mu/widgets/longbutton.dart';
+import 'package:flutter/foundation.dart';
 
 class CongestionAnalysisLayout extends StatefulWidget {
   @override
@@ -390,8 +391,18 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
   @override
   void dispose() {
     _cameraController?.dispose();
-    _interpreter?.close();
     super.dispose();
+    // 🎯 TFLite 인터프리터 이중 해제 방지 로직 추가
+    if (_interpreter != null) { // _interpreter가 null이거나 유효한 상태인지 확인
+      try {
+        _interpreter?.close();
+      } catch (e) {
+        // 이미 닫혔거나 오류 발생 시 무시
+        if (kDebugMode) {
+          print('TFLite Interpreter disposal error: $e');
+        }
+      }
+    }
   }
 
   @override
@@ -891,7 +902,10 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                         SizedBox(height: 100 * heightRatio),
                         LongButton(
                           text: "다음",
+
                           onPressed: () {
+                            _cameraController?.dispose();
+                            _interpreter?.close();
                             final analyzedResults = Map<String, String>.from(
                               _results,
                             )..removeWhere(

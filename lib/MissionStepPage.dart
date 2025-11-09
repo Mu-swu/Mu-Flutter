@@ -12,10 +12,10 @@ import 'widgets/tts_text_box.dart';
 import 'widgets/step_navigation.dart';
 import 'keepbox_start.dart';
 import 'widgets/loadingvideo.dart';
-import 'package:lottie/lottie.dart';
 import 'widgets/choice_popup.dart';
 import 'widgets/longbutton.dart';
 import 'user_theme_manager.dart';
+import 'package:video_player/video_player.dart';
 
 List<StepData> _parseMissionSteps(String jsonText) {
   String text = jsonText;
@@ -101,6 +101,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
   bool _isLoading = true;
 
   late final GenerativeModel _model;
+  VideoPlayerController? _gamHourglassController;
+
 
   final ScrollController _scrollController = ScrollController();
   final List<_MolChoiceData> _molStepData = [
@@ -143,8 +145,9 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   Future<void> _initializeAsync() async {
     final apiKey = dotenv.env['GEMINI_API_KEY'];
-    if (apiKey == null) {
-      print('No API key found');
+    if (apiKey == null || apiKey.isEmpty) {
+      setState(() => _isLoading = false);
+      print('🚫 GEMINI_API_KEY 없음');
       return;
     }
 
@@ -199,7 +202,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
     final userTypeMap = {'gam': '감정형', 'mol': '몰라형', 'bas': '방치형'};
     final userType = userTypeMap[_currentUserType] ?? '방치형';
     final missionName =
-        widget.orderedMissions.isNotEmpty ? widget.orderedMissions[0] : '미션';
+    widget.orderedMissions.isNotEmpty ? widget.orderedMissions[0] : '미션';
 
     final density = "혼잡";
 
@@ -369,30 +372,64 @@ class _MissionStepPageState extends State<MissionStepPage> {
     }
     """;
 
-    try {
-      final response = await _model.generateContent([Content.text(prompt)]);
+    // 🎯 최대 재시도 횟수를 정의합니다.
+    const int maxRetries = 3;
 
-      String? text = response.text;
+// 재시도 루프 시작
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        print('API Key 확인: ${dotenv.env['GEMINI_API_KEY']}');
+        print('Gemini API 호출 시도: $attempt회');
 
-      if (text == null || text.isEmpty) {
-        throw Exception("API가 비어있는 응답을 반환했습니다.");
+        // 1. API 호출 및 20초 타임아웃
+        final response = await _model
+            .generateContent([Content.text(prompt)])
+            .timeout(const Duration(seconds: 20), onTimeout: () {
+          throw Exception("Gemini API 응답 시간 초과");
+        });
+
+        String? text = response.text;
+
+        // 2. 응답 내용 유효성 검사
+        if (text == null || text.isEmpty) {
+          throw Exception("API가 비어있는 응답을 반환했습니다.");
+        }
+
+        // 3. 미션 단계 파싱
+        final newMissionSteps = await compute(_parseMissionSteps, text);
+
+        // ✅ 성공: 상태 업데이트 및 타이머 시작
+        setState(() {
+          _missionSteps = newMissionSteps;
+          _loadStepData(0);
+          _isLoading = false;
+        });
+
+        if (!_isPaused) {
+          _startTimer();
+        }
+
+        print('미션 생성 성공 (총 $attempt회 시도)');
+        // 성공 시 루프 및 함수를 종료합니다.
+        return;
+      } catch (e) {
+        print('미션 생성 중 오류 발생 (시도 $attempt회): $e');
+
+        // 🚨 마지막 시도까지 실패한 경우 (최대 횟수 초과)
+        if (attempt == maxRetries) {
+          print("최대 재시도 횟수($maxRetries회) 초과. 초기화 실패 처리.");
+
+          // 최종 실패 처리 (원래 catch 블록의 역할)
+          setState(() {
+            _isLoading = false;
+          });
+          // 팝업 등을 띄워 사용자에게 오류를 알릴 수 있습니다.
+          return; // 함수 종료
+        }
+
+        // ⚠️ 재시도 대기 (Backoff): 잠시 기다린 후 다음 시도로 넘어갑니다.
+        await Future.delayed(const Duration(seconds: 3));
       }
-      final newMissionSteps = await compute(_parseMissionSteps, text);
-
-      setState(() {
-        _missionSteps = newMissionSteps;
-        _loadStepData(0);
-        _isLoading = false;
-      });
-
-      if (!_isPaused) {
-        _startTimer();
-      }
-    } catch (e) {
-      print('미션 생성 중 오류 발생:$e');
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
 
@@ -523,12 +560,14 @@ class _MissionStepPageState extends State<MissionStepPage> {
     return "${(duration.inHours).toString().padLeft(2, '0')}:$minutes:$seconds";
   }
 
+
   @override
   void dispose() {
     _ttsEngine?.stop();
     _ttsSessionId++;
     _scrollController.dispose();
     _timer?.cancel();
+    _gamHourglassController?.dispose();
     super.dispose();
   }
 
@@ -821,6 +860,19 @@ class _MissionStepPageState extends State<MissionStepPage> {
   /// 감정형 (gam)
   ///
   Widget _buildGamLayout(BuildContext context) {
+    if (_gamHourglassController == null) {
+      _gamHourglassController = VideoPlayerController.asset(
+        'assets/mission/hourglass.mp4',
+      );
+
+      _gamHourglassController!
+        ..setLooping(true)       // 1️⃣ 미리 looping 설정
+        ..setVolume(0.0)
+        ..initialize().then((_) {
+          _gamHourglassController!.play(); // 2️⃣ 초기화 완료 후 재생
+          if (mounted) setState(() {});
+        });
+    }
     double progressValue = 0.0;
     if (widget.missionTime.inSeconds > 0) {
       progressValue =
@@ -876,11 +928,15 @@ class _MissionStepPageState extends State<MissionStepPage> {
                                   color: const Color(0xFF463EC6),
                                 ),
                               ),
-                              Lottie.asset(
-                                'assets/HourGlass.json',
-                                width: 200,
-                                height: 200,
-                                fit: BoxFit.contain,
+                              SizedBox(
+                                width: 100, // 너비는 Stack 크기에 맞게 조정
+                                height: 100, // 높이는 Stack 크기에 맞게 조정
+                                child: _gamHourglassController!.value.isInitialized
+                                    ? AspectRatio(
+                                  aspectRatio: _gamHourglassController!.value.aspectRatio,
+                                  child: VideoPlayer(_gamHourglassController!),
+                                )
+                                    : Container(), // 초기화 전에는 빈 컨테이너
                               ),
                             ],
                           ),

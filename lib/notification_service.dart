@@ -1,6 +1,8 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:permission_handler/permission_handler.dart';
+
 
 class NotificationService {
   NotificationService._privateConstructor();
@@ -39,6 +41,15 @@ class NotificationService {
     required String body,
     required DateTime scheduleDate,
   }) async {
+    final status = await Permission.scheduleExactAlarm.status;
+
+    if (!status.isGranted) {
+      // 권한이 없으면 사용자에게 설정 변경을 유도
+      await openAppSettings();
+      // 알림이 예약되지 않았음을 알리는 로그를 추가하거나 팝업을 띄울 수 있습니다.
+      print("🚨 알림 예약 실패: 정확한 알람 권한이 없습니다. 설정에서 mu 앱의 권한을 확인해주세요.");
+      return;
+    }
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     final tz.TZDateTime tzScheduledDate = tz.TZDateTime.from(
       scheduleDate,

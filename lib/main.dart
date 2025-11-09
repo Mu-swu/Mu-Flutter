@@ -43,6 +43,8 @@ class CustomTag extends StatelessWidget {
         break;
     }
 
+
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -70,6 +72,7 @@ Future<void> main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +118,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
   void initState() {
     super.initState();
     _loadUserData(showLoading: true);
+
   }
 
   Future<void> _loadUserData({bool showLoading = false}) async {
