@@ -10,7 +10,6 @@ import 'user_theme_manager.dart';
 import 'package:mu/data/database.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:mu/notification_service.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class keepbox extends StatefulWidget {
   const keepbox({super.key});
@@ -77,9 +76,9 @@ class _keepboxState extends State<keepbox> {
     }
 
     final newCategories =
-        groupedItems.entries.map((entry) {
-          return {'name': entry.key, 'items': entry.value};
-        }).toList();
+    groupedItems.entries.map((entry) {
+      return {'name': entry.key, 'items': entry.value};
+    }).toList();
 
     for (final defaultCat in []) {
       if (!newCategories.any((c) => c['name'] == defaultCat)) {
@@ -96,23 +95,7 @@ class _keepboxState extends State<keepbox> {
   }
 
   Future<void> _saveData() async {
-    final db = AppDatabase.instance;
-    final userType = await db.getUserType(1) ?? '방치형';
-    final space;
-    switch (userType) {
-      case '감정형':
-        space = "옷장";
-        break;
-      case '몰라형':
-        space = "서랍";
-        break;
-      case '방치형':
-      default:
-        space = "냉장고";
-        break;
-    }
     if (_isLoading) return;
-    await requestExactAlarmPermission();
     await _notificationService.cancelAllNotifications();
 
     final List<KeepBoxesCompanion> itemsToSave = [];
@@ -137,10 +120,10 @@ class _keepboxState extends State<keepbox> {
               expirationAt: expirationAt,
             ),
           );
-         // DateTime d3Date = expirationAt.subtract(const Duration(days: 3));
+          // DateTime d3Date = expirationAt.subtract(const Duration(days: 3));
 
           DateTime scheduleTime = DateTime.now().add(const Duration(seconds: 10));// 테스트용
-         /* DateTime scheduleTime = DateTime(
+          /* DateTime scheduleTime = DateTime(
             d3Date.year,
           d3Date.month,
             d3Date.day,
@@ -152,7 +135,7 @@ class _keepboxState extends State<keepbox> {
           if (scheduleTime.isAfter(DateTime.now())) {
             await _notificationService.scheduleNotification(
               id: notificationId,
-              title: '${space} 속 ${itemMap['name']}의 유예기간이 임박했어요!',
+              title: '냉장고 속 ${itemMap['name']}의 유예기간이 임박했어요!',
               body: '버려야 할지, 아니면 마지막 기회를 줄지 지금 바로 확인하고 결정해보세요!',
               scheduleDate: scheduleTime,
             );
@@ -169,19 +152,6 @@ class _keepboxState extends State<keepbox> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('저장되었습니다! (D-3 알림이 예약되었습니다.)')));
-    }
-  }
-  Future<void> requestExactAlarmPermission() async {
-    // 정확한 알람 권한 상태 확인
-    var status = await Permission.scheduleExactAlarm.status;
-
-    if (status.isDenied || status.isLimited || status.isPermanentlyDenied) {
-      // 권한이 없으면 설정 화면을 띄웁니다.
-      // Android 시스템이 '특수 접근 권한' 목록 화면을 띄워 사용자에게 '정확한 알람'을 켜도록 유도합니다.
-      await openAppSettings();
-
-      // 사용자에게 메시지 표시 (예시)
-      // showDialog(context: context, builder: (context) => AlertDialog(... 권한을 켜주세요...))
     }
   }
 
@@ -305,7 +275,7 @@ class _keepboxState extends State<keepbox> {
               setState(() {
                 for (final cat in categories) {
                   (cat['items'] as List).removeWhere(
-                    (it) => it['name'] == itemName,
+                        (it) => it['name'] == itemName,
                   );
                 }
                 _pushItemToCategory(
@@ -319,7 +289,7 @@ class _keepboxState extends State<keepbox> {
               setState(() {
                 for (final cat in categories) {
                   (cat['items'] as List).removeWhere(
-                    (it) => it['name'] == itemName,
+                        (it) => it['name'] == itemName,
                   );
                 }
 
@@ -408,16 +378,16 @@ class _keepboxState extends State<keepbox> {
             decoration: BoxDecoration(
               // Dynamically set the gradient based on user type
               gradient:
-                  _speechToText.isListening
-                      ? LinearGradient(
-                        colors: [
-                          UserThemeManager.keepboxGradientStartColor,
-                          const Color(0xFFD7DCFA),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      )
-                      : null,
+              _speechToText.isListening
+                  ? LinearGradient(
+                colors: [
+                  UserThemeManager.keepboxGradientStartColor,
+                  const Color(0xFFD7DCFA),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              )
+                  : null,
               color: _speechToText.isListening ? null : const Color(0xFFF3F5FF),
             ),
             child: Column(
@@ -452,17 +422,17 @@ class _keepboxState extends State<keepbox> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color:
-                          _speechToText.isListening
-                              ? Colors.white
-                              : const Color(0xFF7F91FF),
+                      _speechToText.isListening
+                          ? Colors.white
+                          : const Color(0xFF7F91FF),
                     ),
                     child: Icon(
                       _speechToText.isListening ? Icons.stop : Icons.mic,
                       size: 36 * widthRatio,
                       color:
-                          _speechToText.isListening
-                              ? const Color(0xFF7F91FF)
-                              : Colors.white,
+                      _speechToText.isListening
+                          ? const Color(0xFF7F91FF)
+                          : Colors.white,
                     ),
                   ),
                 ),
@@ -489,9 +459,9 @@ class _keepboxState extends State<keepbox> {
                     style: TextStyle(
                       fontSize: 12 * widthRatio,
                       color:
-                          _lastWords.isNotEmpty
-                              ? Colors.blue
-                              : Colors.transparent,
+                      _lastWords.isNotEmpty
+                          ? Colors.blue
+                          : Colors.transparent,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -531,30 +501,30 @@ class _keepboxState extends State<keepbox> {
                 SizedBox(height: 20 * heightRatio),
                 Expanded(
                   child:
-                      _isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // 아이템 리스트 영역
-                              Expanded(
-                                child: ItemSaveSection(
-                                  categories: categories,
-                                  widthRatio: widthRatio,
-                                  heightRatio: heightRatio,
-                                  itemName: _currentItemName,
-                                  itemCategory: currentItemCategory,
-                                  onExit: () {
-                                    _lastWords = '';
-                                    selectedIndex = null;
-                                  },
-                                  onDateChanged: _handleDateChange,
-                                  onCategoryUpdated: _updateCategoryName,
-                                  onCategoryDeleted: _deleteCategory,
-                                ),
-                              ),
-                            ],
-                          ),
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 아이템 리스트 영역
+                      Expanded(
+                        child: ItemSaveSection(
+                          categories: categories,
+                          widthRatio: widthRatio,
+                          heightRatio: heightRatio,
+                          itemName: _currentItemName,
+                          itemCategory: currentItemCategory,
+                          onExit: () {
+                            _lastWords = '';
+                            selectedIndex = null;
+                          },
+                          onDateChanged: _handleDateChange,
+                          onCategoryUpdated: _updateCategoryName,
+                          onCategoryDeleted: _deleteCategory,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 SizedBox(height: 10 * heightRatio),
                 LongButton(text: '저장', onPressed: _saveData),
