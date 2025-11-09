@@ -8,7 +8,7 @@ import 'tables.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [Users, Sections, Missions, KeepBoxes])
+@DriftDatabase(tables: [Users, Sections, Missions, KeepBoxes,SpaceProgresses])
 class AppDatabase extends _$AppDatabase {
   AppDatabase._internal() : super(_openConnection());
 
@@ -198,6 +198,69 @@ class AppDatabase extends _$AppDatabase {
         Constant(targetDateEnd),
       );
     })).get();
+  }
+
+  Future<void> initializeSpaceProgress(int userId, String userType) async {
+    final existing =
+    await (select(spaceProgresses)
+      ..where((s) => s.userId.equals(userId))).get();
+
+    if (existing.isNotEmpty) {
+      return;
+    }
+
+    Map<String, bool> initialUnlockStatus = {
+      '냉장고': false,
+      '서랍장': false,
+      '옷장': false,
+    };
+
+    switch (userType) {
+      case '방치형':
+        initialUnlockStatus['냉장고'] = true;
+        break;
+      case '감정형':
+        initialUnlockStatus['옷장'] = true;
+        break;
+      case '몰라형':
+      default:
+        initialUnlockStatus['서랍장'] = true;
+        break;
+    }
+
+
+    await batch((batch) {
+      for (var entry in initialUnlockStatus.entries) {
+        batch.insert(
+          spaceProgresses,
+          SpaceProgressesCompanion.insert(
+            userId: userId,
+            spaceName: entry.key,
+            isUnlocked: Value(entry.value),
+            isCompleted: const Value(false),
+          ),
+        );
+      }
+    });
+  }
+
+  Future<List<SpaceProgress>> getSpaceProgressForUser(int userId) {
+    return (select(spaceProgresses)..where((s) => s.userId.equals(userId))).get();
+  }
+
+  Future<void> completeSpaceAndUnlockAll(
+      int userId,
+      String completedSpaceName,
+      ) async {
+    await transaction(() async {
+      await (update(spaceProgresses)..where(
+            (s) => s.userId.equals(userId) & s.spaceName.equals(completedSpaceName),
+      )).write(const SpaceProgressesCompanion(isCompleted: Value(true)));
+
+      await (update(spaceProgresses)..where(
+            (s) => s.userId.equals(userId),
+      )).write(const SpaceProgressesCompanion(isUnlocked: Value(true)));
+    });
   }
 }
 

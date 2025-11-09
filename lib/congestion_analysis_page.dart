@@ -12,6 +12,10 @@ import 'package:mu/widgets/longbutton.dart';
 import 'package:flutter/foundation.dart';
 
 class CongestionAnalysisLayout extends StatefulWidget {
+  final String spaceName;
+
+  const CongestionAnalysisLayout({super.key, required this.spaceName});
+
   @override
   _CongestionAnalysisLayoutState createState() =>
       _CongestionAnalysisLayoutState();
@@ -73,38 +77,30 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
     }
 
     final db = AppDatabase.instance;
-    final userType = await db.getUserType(1) ?? '방치형';
 
-    switch (userType) {
-      case '감정형':
-        _headerTitle = "옷장 속 물건이\n얼마나 많은지 볼까요?";
-        break;
-      case '몰라형':
-        _headerTitle = "서랍장 속 물건이\n얼마나 많은지 볼까요?";
-        break;
-      case '방치형':
-      default:
-        _headerTitle = "냉장고 속 물건이\n얼마나 많은지 볼까요?";
-        break;
-    }
+    final String currentSpace = widget.spaceName;
 
     List<String> defaultSections;
-    switch (userType) {
-      case '감정형':
+
+    switch (currentSpace) {
+      case '옷장':
+        _headerTitle = "옷장 속 물건이\n얼마나 많은지 볼까요?";
         defaultSections = ["선반", "행거 구역", "옷장 바닥 공간", "서랍"];
         break;
-      case '몰라형':
+      case '서랍장':
+        _headerTitle = "서랍장 속 물건이\n얼마나 많은지 볼까요?";
         defaultSections = ["1단", "2단", "3단"];
         break;
-      case '방치형':
+      case '냉장고':
       default:
+        _headerTitle = "냉장고 속 물건이\n얼마나 많은지 볼까요?";
         defaultSections = ["냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"];
         break;
     }
 
+    bool needsReset = false;
     final dbSections = await db.getSectionsForUser(1);
 
-    bool needsReset = false;
     if (dbSections.isEmpty) {
       needsReset = true;
     } else {
@@ -114,7 +110,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
       }
     }
     if (needsReset) {
-      print("사용자 유형이 변경되었거나 첫 실행입니다. 섹션을 리셋합니다.");
+      print("사용자 공간이 변경되었거나 첫 실행입니다. 섹션을 리셋합니다.");
       await db.deleteAllSectionsForUser(1);
       await db.batchInsertSections(1, defaultSections);
       _results = {for (var section in defaultSections) section: "분석 전"};
@@ -183,7 +179,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
 
       img.Image resizedImage = img.copyResizeCropSquare(
         originalImage,
-        size:_inputSize,
+        size: _inputSize,
       );
 
       var input = List.generate(
@@ -192,11 +188,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
           _inputSize,
           (y) => List.generate(_inputSize, (x) {
             final pixel = resizedImage.getPixel(x, y);
-            return [
-              pixel.r.toInt(),
-              pixel.g.toInt(),
-              pixel.b.toInt(),
-            ];
+            return [pixel.r.toInt(), pixel.g.toInt(), pixel.b.toInt()];
           }),
         ),
       );
@@ -393,7 +385,8 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
     _cameraController?.dispose();
     super.dispose();
     // 🎯 TFLite 인터프리터 이중 해제 방지 로직 추가
-    if (_interpreter != null) { // _interpreter가 null이거나 유효한 상태인지 확인
+    if (_interpreter != null) {
+      // _interpreter가 null이거나 유효한 상태인지 확인
       try {
         _interpreter?.close();
       } catch (e) {
@@ -905,7 +898,6 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
 
                           onPressed: () {
                             _cameraController?.dispose();
-                            _interpreter?.close();
                             final analyzedResults = Map<String, String>.from(
                               _results,
                             )..removeWhere(
