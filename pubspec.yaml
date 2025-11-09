@@ -135,6 +135,7 @@ flutter:
     - assets/mission/mission_dr.png
     - assets/mission/mission_cl.png
     - assets/mission/mission_re.png
+    - assets/mu.png
 
 
   fonts:

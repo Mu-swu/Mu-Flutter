@@ -95,6 +95,21 @@ class _keepboxState extends State<keepbox> {
   }
 
   Future<void> _saveData() async {
+    final db = AppDatabase.instance;
+    final userType = await db.getUserType(1) ?? '방치형';
+    final space;
+    switch (userType) {
+      case '감정형':
+        space = "옷장";
+        break;
+      case '몰라형':
+        space = "서랍";
+        break;
+      case '방치형':
+      default:
+        space = "냉장고";
+        break;
+    }
     if (_isLoading) return;
     await _notificationService.cancelAllNotifications();
 
@@ -135,7 +150,7 @@ class _keepboxState extends State<keepbox> {
           if (scheduleTime.isAfter(DateTime.now())) {
             await _notificationService.scheduleNotification(
               id: notificationId,
-              title: '냉장고 속 ${itemMap['name']}의 유예기간이 임박했어요!',
+              title: '${space} 속 ${itemMap['name']}의 유예기간이 임박했어요!',
               body: '버려야 할지, 아니면 마지막 기회를 줄지 지금 바로 확인하고 결정해보세요!',
               scheduleDate: scheduleTime,
             );

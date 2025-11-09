@@ -175,6 +175,30 @@ class AppDatabase extends _$AppDatabase {
       });
     });
   }
+
+  Future<List<KeepBox>> getImpendingDDayItems() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final targetDateStart = today.add(const Duration(days: 1));
+
+    final targetDateEnd_day = today.add(const Duration(days: 3));
+    final targetDateEnd = DateTime(
+      targetDateEnd_day.year,
+      targetDateEnd_day.month,
+      targetDateEnd_day.day,
+      23,
+      59,
+      59,
+    );
+
+    return (select(keepBoxes)..where((tbl) {
+      return tbl.expirationAt.isBetween(
+        Constant(targetDateStart),
+        Constant(targetDateEnd),
+      );
+    })).get();
+  }
 }
 
 LazyDatabase _openConnection() {
