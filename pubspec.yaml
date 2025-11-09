@@ -57,7 +57,6 @@ flutter:
     - assets/gradient/gradient.png
     - assets/gradient/gradient_gam.png
     - assets/gradient/gradient_mol.png
-    - assets/HourGlass.json
     - .env
     - assets/detect.tflite
     - assets/1.tflite
@@ -135,7 +134,7 @@ flutter:
     - assets/mission/mission_dr.png
     - assets/mission/mission_cl.png
     - assets/mission/mission_re.png
-    - assets/mission/hourglass.mp4
+    - assets/mission/hourglass.gif
     - assets/mu.png
 
 

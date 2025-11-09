@@ -2,7 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
-
+import 'dart:io';
 
 class NotificationService {
   NotificationService._privateConstructor();
@@ -33,6 +33,18 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.initialize(settings);
+
+    if (Platform.isAndroid) {
+      // permission_handler 사용
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
+      // (플러그인 자체 요청 API도 안전하게 호출)
+      await _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    }
   }
 
   Future<void> scheduleNotification({
@@ -59,6 +71,17 @@ class NotificationService {
       return;
     }
 
+    AndroidScheduleMode mode = AndroidScheduleMode.exactAllowWhileIdle;
+    try {
+      final exact = await Permission.scheduleExactAlarm.status;
+      if (!exact.isGranted) {
+        // 폴백: inexact로라도 스케줄
+        mode = AndroidScheduleMode.inexactAllowWhileIdle;
+        print("⚠️ exact alarm 미허용 → inexact로 폴백합니다.");
+      }
+    } catch (_) {
+      // API 미지원 기기 등은 그대로 진행
+    }
     const AndroidNotificationDetails androidDetails =
     AndroidNotificationDetails(
       'd_day_channel_id',
@@ -87,7 +110,7 @@ class NotificationService {
         android: androidDetails,
         iOS: iosDetails,
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: mode,
     );
   }
 
