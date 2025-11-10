@@ -380,31 +380,41 @@ class SpaceStartScreen extends StatefulWidget {
 class _SpaceStartScreenState extends State<SpaceStartScreen> {
   int? _selectedIndex;
   bool _isLoading = true;
-  String? _userType;
+  List<SpaceProgress> _spaceProgress = [];
+  String _userType = '방치형';
   bool _showTutorial = true;
-
-
 
   @override
   void initState() {
     super.initState();
-    _loadUserType();
+    _loadProgress();
   }
 
-  Future<void> _loadUserType() async {
+  Future<void> _loadProgress() async {
     try {
       final db = AppDatabase.instance;
       const userId = 1;
-      final userType = await db.getUserType(userId);
+
+      final userType = await db.getUserType(userId) ?? '방치형';
+
+      var progress = await db.getSpaceProgressForUser(userId);
+
+      if (progress.isEmpty) {
+        await db.initializeSpaceProgress(userId, userType);
+        progress = await db.getSpaceProgressForUser(userId);
+      }
+
+      final sortedProgress = _sortProgressByUserType(progress, userType);
 
       if (mounted) {
         setState(() {
-          _userType = userType ?? '방치형';
+          _spaceProgress = sortedProgress;
+          _userType = userType;
           _isLoading = false;
         });
       }
     } catch (e) {
-      print("사용자 유형 불러오기 에러 : $e");
+      print("진행 상태 불러오기 에러 : $e");
       if (mounted) {
         setState(() {
           _userType = "방치형";
@@ -419,85 +429,64 @@ class _SpaceStartScreenState extends State<SpaceStartScreen> {
     });
   }
 
-  List<Widget> _buildSpaceCards() {
-    switch (_userType) {
+  List<SpaceProgress> _sortProgressByUserType(
+    List<SpaceProgress> progress,
+    String userType,
+  ) {
+    List<String> order;
+    switch (userType) {
       case '방치형':
-        return [
-          SpaceUnitCard(
-            title: '냉장고',
-            imagePath: 'assets/home/refr.png',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CongestionAnalysisLayout(),
-                ),
-              );
-            },
-          ),
-          const SpaceUnitCard(
-            title: '서랍장',
-            imagePath: 'assets/home/drawer.png',
-            isLocked: true,
-          ),
-          const SpaceUnitCard(
-            title: '옷장',
-            imagePath: 'assets/home/closet.png',
-            isLocked: true,
-          ),
-        ];
+        order = ['냉장고', '서랍장', '옷장'];
+        break;
       case '감정형':
-        return [
-          SpaceUnitCard(
-            title: '옷장',
-            imagePath: 'assets/home/closet.png',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CongestionAnalysisLayout(),
-                ),
-              );
-            },
-          ),
-          const SpaceUnitCard(
-            title: '냉장고',
-            imagePath: 'assets/home/refr.png',
-            isLocked: true,
-          ),
-          const SpaceUnitCard(
-            title: '서랍장',
-            imagePath: 'assets/home/drawer.png',
-            isLocked: true,
-          ),
-        ];
+        order = ['옷장', '냉장고', '서랍장'];
+        break;
       case '몰라형':
       default:
-        return [
-          SpaceUnitCard(
-            title: '서랍장',
-            imagePath: 'assets/home/drawer.png',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CongestionAnalysisLayout(),
-                ),
-              );
-            },
-          ),
-          const SpaceUnitCard(
-            title: '냉장고',
-            imagePath: 'assets/home/refr.png',
-            isLocked: true,
-          ),
-          const SpaceUnitCard(
-            title: '옷장',
-            imagePath: 'assets/home/closet.png',
-            isLocked: true,
-          ),
-        ];
+        order = ['서랍장', '냉장고', '옷장'];
+        break;
     }
+
+    progress.sort((a, b) {
+      return order.indexOf(a.spaceName).compareTo(order.indexOf(b.spaceName));
+    });
+    return progress;
+  }
+
+  String _getImagePathForSpace(String spaceName) {
+    switch (spaceName) {
+      case '냉장고':
+        return 'assets/home/refr.png';
+      case '서랍장':
+        return 'assets/home/drawer.png';
+      case '옷장':
+        return 'assets/home/closet.png';
+      default:
+        return 'assets/home/refr.png';
+    }
+  }
+
+  List<Widget> _buildSpaceCards() {
+    return _spaceProgress.map((progress) {
+      final spaceName = progress.spaceName;
+      final bool isLocked = !progress.isUnlocked;
+      final String imagePath = _getImagePathForSpace(spaceName);
+
+      return SpaceUnitCard(
+        title: spaceName,
+        imagePath: imagePath,
+        isLocked: isLocked,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => CongestionAnalysisLayout(spaceName: spaceName),
+            ),
+          );
+        },
+      );
+    }).toList();
   }
 
   @override

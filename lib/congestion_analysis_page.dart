@@ -12,6 +12,10 @@ import 'package:mu/widgets/longbutton.dart';
 import 'package:flutter/foundation.dart';
 
 class CongestionAnalysisLayout extends StatefulWidget {
+  final String spaceName;
+
+  const CongestionAnalysisLayout({super.key, required this.spaceName});
+
   @override
   _CongestionAnalysisLayoutState createState() =>
       _CongestionAnalysisLayoutState();
@@ -27,7 +31,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
 
   Future<void>? _initializationFuture;
 
-  Map<String, String> _results = {};
+  Map<String, Map<String, dynamic>> _results = {};
   String _headerTitle = "";
   String? _currentlyOpenSection;
 
@@ -73,53 +77,51 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
     }
 
     final db = AppDatabase.instance;
-    final userType = await db.getUserType(1) ?? '방치형';
 
-    switch (userType) {
-      case '감정형':
-        _headerTitle = "옷장 속 물건이\n얼마나 많은지 볼까요?";
-        break;
-      case '몰라형':
-        _headerTitle = "서랍장 속 물건이\n얼마나 많은지 볼까요?";
-        break;
-      case '방치형':
-      default:
-        _headerTitle = "냉장고 속 물건이\n얼마나 많은지 볼까요?";
-        break;
-    }
+    final String currentSpace = widget.spaceName;
 
     List<String> defaultSections;
-    switch (userType) {
-      case '감정형':
+
+    switch (currentSpace) {
+      case '옷장':
+        _headerTitle = "옷장 속 물건이\n얼마나 많은지 볼까요?";
         defaultSections = ["선반", "행거 구역", "옷장 바닥 공간", "서랍"];
         break;
-      case '몰라형':
+      case '서랍장':
+        _headerTitle = "서랍장 속 물건이\n얼마나 많은지 볼까요?";
         defaultSections = ["1단", "2단", "3단"];
         break;
-      case '방치형':
+      case '냉장고':
       default:
+        _headerTitle = "냉장고 속 물건이\n얼마나 많은지 볼까요?";
         defaultSections = ["냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"];
         break;
     }
 
+    bool needsReset = false;
     final dbSections = await db.getSectionsForUser(1);
 
-    bool needsReset = false;
     if (dbSections.isEmpty) {
       needsReset = true;
     } else {
-      String firstDBSectionName = dbSections.first.name;
-      if (!defaultSections.contains(firstDBSectionName)) {
+      String firstDefaultSection = defaultSections.first;
+      if (!dbSections.any((s) => s.name == firstDefaultSection)) {
         needsReset = true;
       }
     }
     if (needsReset) {
-      print("사용자 유형이 변경되었거나 첫 실행입니다. 섹션을 리셋합니다.");
+      print("사용자 공간이 변경되었거나 첫 실행입니다. 섹션을 리셋합니다.");
       await db.deleteAllSectionsForUser(1);
       await db.batchInsertSections(1, defaultSections);
-      _results = {for (var section in defaultSections) section: "분석 전"};
+      _results = {
+        for (var section in defaultSections)
+          section: {"clutter": "분석 전", "completed": false},
+      };
     } else {
-      _results = {for (var s in dbSections) s.name: s.clutterLevel};
+      _results = {
+        for (var s in dbSections)
+          s.name: {"clutter": s.clutterLevel, "completed": s.progress == 100},
+      };
     }
     await _initCamera();
     await _loadModel();
@@ -154,7 +156,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
     try {
       setState(() {
         _currentSection = section;
-        _results[section] = "분석 중...";
+        _results[section]!["clutter"] = "분석 중...";
       });
 
       final XFile photo = await _cameraController!.takePicture();
@@ -162,12 +164,12 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
 
       final result = await _analyzeImage(imageFile);
 
-      setState(() => _results[section] = result);
+      setState(() => _results[section]!["clutter"] = result);
 
       final db = AppDatabase.instance;
       await db.updateSectionClutterByName(1, section, result);
     } catch (e) {
-      setState(() => _results[section] = "분석 오류");
+      setState(() => _results[section]!["clutter"] = "분석 오류");
     }
   }
 
@@ -183,7 +185,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
 
       img.Image resizedImage = img.copyResizeCropSquare(
         originalImage,
-        size:_inputSize,
+        size: _inputSize,
       );
 
       var input = List.generate(
@@ -192,11 +194,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
           _inputSize,
           (y) => List.generate(_inputSize, (x) {
             final pixel = resizedImage.getPixel(x, y);
-            return [
-              pixel.r.toInt(),
-              pixel.g.toInt(),
-              pixel.b.toInt(),
-            ];
+            return [pixel.r.toInt(), pixel.g.toInt(), pixel.b.toInt()];
           }),
         ),
       );
@@ -349,7 +347,10 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                       final newName = controller.text.trim();
 
                       setState(() {
-                        _results[controller.text.trim()] = "분석 전";
+                        _results[newName] = {
+                          "clutter": "분석 전",
+                          "completed": false,
+                        };
                       });
                       final db = AppDatabase.instance;
                       await db.addSection(1, newName);
@@ -393,7 +394,8 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
     _cameraController?.dispose();
     super.dispose();
     // 🎯 TFLite 인터프리터 이중 해제 방지 로직 추가
-    if (_interpreter != null) { // _interpreter가 null이거나 유효한 상태인지 확인
+    if (_interpreter != null) {
+      // _interpreter가 null이거나 유효한 상태인지 확인
       try {
         _interpreter?.close();
       } catch (e) {
@@ -647,12 +649,18 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                   child: ListView(
                                     children: [
                                       ..._results.keys.map((section) {
+                                        final sectionData = _results[section]!;
+                                        final String clutterStatus =
+                                            sectionData["clutter"] as String;
+                                        final bool isCompleted =
+                                            sectionData["completed"] as bool;
+
                                         Color statusBackgroundColor =
                                             Colors.transparent;
                                         Color statusTextColor = Colors.black;
                                         bool showStatus = true;
 
-                                        switch (_results[section]!) {
+                                        switch (clutterStatus) {
                                           case '혼잡':
                                             statusBackgroundColor = const Color(
                                               0xFFFFD7D7,
@@ -766,9 +774,11 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                               ),
                                               elevation: 0,
                                               color:
-                                                  isSliding
-                                                      ? Color(0xFFFFF3F3)
-                                                      : Color(0xFFF3F5FF),
+                                                  isCompleted
+                                                      ? Color(0xFFF5F5F5)
+                                                      : (isSliding
+                                                          ? Color(0xFFFFF3F3)
+                                                          : Color(0xFFF3F5FF)),
                                               child: ListTile(
                                                 splashColor: Color(
                                                   0xFF8D93A1,
@@ -790,7 +800,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                                                 ),
                                                           ),
                                                           child: Text(
-                                                            _results[section]!,
+                                                            clutterStatus,
                                                             style: TextStyle(
                                                               fontFamily:
                                                                   'PretendardMedium',
@@ -821,9 +831,12 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                                       vertical: 4,
                                                     ),
                                                 onTap:
-                                                    () => _captureAndAnalyze(
-                                                      section,
-                                                    ),
+                                                    isCompleted
+                                                        ? null
+                                                        : () =>
+                                                            _captureAndAnalyze(
+                                                              section,
+                                                            ),
                                               ),
                                             ),
                                           ),
@@ -905,13 +918,18 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
 
                           onPressed: () {
                             _cameraController?.dispose();
-                            _interpreter?.close();
-                            final analyzedResults = Map<String, String>.from(
-                              _results,
-                            )..removeWhere(
-                              (key, value) =>
-                                  value == '분석 전' || value.contains('분석'),
-                            );
+                            final analyzedResults = <String, String>{};
+                            _results.forEach((key, value) {
+                              final clutter = value["clutter"] as String;
+                              final isCompleted = value["completed"] as bool;
+
+                              if (!isCompleted &&
+                                  (clutter == '혼잡' ||
+                                      clutter == '보통' ||
+                                      clutter == '여유')) {
+                                analyzedResults[key] = clutter;
+                              }
+                            });
 
                             Navigator.of(context).push(
                               MaterialPageRoute(
