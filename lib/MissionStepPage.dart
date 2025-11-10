@@ -15,7 +15,7 @@ import 'widgets/loadingvideo.dart';
 import 'widgets/choice_popup.dart';
 import 'widgets/longbutton.dart';
 import 'user_theme_manager.dart';
-import 'package:video_player/video_player.dart';
+
 
 List<StepData> _parseMissionSteps(String jsonText) {
   String text = jsonText;
@@ -101,7 +101,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
   bool _isLoading = true;
 
   late final GenerativeModel _model;
-  VideoPlayerController? _gamHourglassController;
 
 
   final ScrollController _scrollController = ScrollController();
@@ -405,12 +404,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
           _isLoading = false;
         });
 
-        if (!_isPaused) {
-          _startTimer();
-        }
-
-        print('미션 생성 성공 (총 $attempt회 시도)');
-        // 성공 시 루프 및 함수를 종료합니다.
+        if (!_isPaused) _startTimer();
         return;
       } catch (e) {
         print('미션 생성 중 오류 발생 (시도 $attempt회): $e');
@@ -428,7 +422,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
         }
 
         // ⚠️ 재시도 대기 (Backoff): 잠시 기다린 후 다음 시도로 넘어갑니다.
-        await Future.delayed(const Duration(seconds: 3));
+        await Future.delayed(const Duration(seconds: 2));
       }
     }
   }
@@ -445,7 +439,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
       _scrollController.jumpTo(0);
     });
 
-    await Future.delayed(Duration(milliseconds: 300));
+    //await Future.delayed(Duration(milliseconds: 300));
 
     if (_isTtsEnabled) {
       _startTtsSequence();
@@ -561,13 +555,13 @@ class _MissionStepPageState extends State<MissionStepPage> {
   }
 
 
+
   @override
   void dispose() {
     _ttsEngine?.stop();
     _ttsSessionId++;
     _scrollController.dispose();
     _timer?.cancel();
-    _gamHourglassController?.dispose();
     super.dispose();
   }
 
@@ -860,19 +854,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
   /// 감정형 (gam)
   ///
   Widget _buildGamLayout(BuildContext context) {
-    if (_gamHourglassController == null) {
-      _gamHourglassController = VideoPlayerController.asset(
-        'assets/mission/hourglass.mp4',
-      );
-
-      _gamHourglassController!
-        ..setLooping(true)       // 1️⃣ 미리 looping 설정
-        ..setVolume(0.0)
-        ..initialize().then((_) {
-          _gamHourglassController!.play(); // 2️⃣ 초기화 완료 후 재생
-          if (mounted) setState(() {});
-        });
-    }
     double progressValue = 0.0;
     if (widget.missionTime.inSeconds > 0) {
       progressValue =
@@ -929,14 +910,12 @@ class _MissionStepPageState extends State<MissionStepPage> {
                                 ),
                               ),
                               SizedBox(
-                                width: 100, // 너비는 Stack 크기에 맞게 조정
-                                height: 100, // 높이는 Stack 크기에 맞게 조정
-                                child: _gamHourglassController!.value.isInitialized
-                                    ? AspectRatio(
-                                  aspectRatio: _gamHourglassController!.value.aspectRatio,
-                                  child: VideoPlayer(_gamHourglassController!),
-                                )
-                                    : Container(), // 초기화 전에는 빈 컨테이너
+                                width: 100,
+                                height: 100,
+                                child: Image.asset(
+                                  'assets/mission/hourglass.gif',
+                                  fit: BoxFit.contain, // 비율 유지하며 맞추기
+                                ),
                               ),
                             ],
                           ),

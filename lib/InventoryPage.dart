@@ -2,6 +2,370 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:math';
 import 'widgets/longbutton.dart';
+import 'widgets/shortbutton.dart';
+import 'package:intl/intl.dart';
+import 'widgets/category_edit_popup.dart';
+
+
+// ───────────── ItemEditPopup 정의 ─────────────
+
+// 날짜 포맷팅 유틸리티 함수
+String _formatDate(DateTime date) {
+  return DateFormat("yyyy년 M월 d일").format(date);
+}
+
+// 캘린더 피커 함수 (요청하신 커스텀 테마 적용)
+Future<void> _pickDate({
+  required BuildContext context,
+  required DateTime initialDate,
+  required Function(DateTime) onSelected,
+  required DateTime firstDate,
+}) async {
+  final DateTime? picked = await showDatePicker(
+    context: context,
+    initialDate: initialDate,
+    firstDate: firstDate, // 시작 날짜는 오늘 이전이 될 수 없도록 설정
+    lastDate: DateTime(2100),
+    locale: const Locale('ko', 'KR'), // locale 설정
+    initialEntryMode: DatePickerEntryMode.calendarOnly,
+
+    // ⬇️ 캘린더 테마 및 여백 적용 부분 ⬇️
+    builder: (BuildContext context, Widget? child) {
+      return Padding(
+        padding: const EdgeInsets.all(30.0), // 👈 전체 여백 30 적용
+        child: Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              // 배경색 (전체 다이얼로그 배경)
+              surface: const Color(0xFFFAFBFF),
+              // 선택된 날짜 배경색
+              primary: const Color(0xFF463EC6),
+            ),
+            // 오늘 날짜 테두리/배경색 등을 위한 설정
+            datePickerTheme: DatePickerThemeData(
+              // 오늘 날짜 배경색
+              todayBackgroundColor: MaterialStateProperty.all(const Color(0xFFD7D7FA)),
+            ),
+            // TextButton의 색상 (예: OK, CANCEL 버튼)
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF463EC6), // 버튼 텍스트 색상
+              ),
+            ),
+          ),
+          child: child!,
+        ),
+      );
+    },
+    // ⬆️ 캘린더 테마 및 여백 적용 부분 ⬆️
+  );
+
+  if (picked != null) {
+    onSelected(picked);
+  }
+}
+
+
+Future<void> ItemEditPopup({
+  required BuildContext context,
+  required String initialName,
+  required DateTime initialStartDate,
+  required DateTime initialEndDate,
+  required Function(String newName, DateTime newEndDate) onSave,
+  required Function() onDelete,
+}) async {
+  // 상태 관리를 위해 showDialog 내부에서 State<T>를 모방하는 변수 선언
+  String itemName = initialName;
+  DateTime startDate = initialStartDate;
+  DateTime endDate = initialEndDate;
+  TextEditingController nameController = TextEditingController(text: initialName);
+
+  return showDialog(
+    context: context,
+    barrierDismissible: false,
+    barrierColor: Colors.black.withOpacity(0.5),
+    builder: (context) {
+      // 팝업 내부의 상태를 관리하기 위해 StatefulBuilder 사용
+      return StatefulBuilder(
+        builder: (BuildContext context, StateSetter setState) {
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.zero,
+            alignment: Alignment.center,
+            child: Container(
+              width: 543, // 적절한 고정 너비 설정 (화면 중앙에 팝업을 띄우기 위함)
+              padding: const EdgeInsets.only(top: 32.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 1. 헤더 (취소/물품 수정/완료)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 50),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: const Text(
+                            '취소',
+                            style: TextStyle(fontSize: 18, color: Colors.black),
+                          ),
+                        ),
+                        const Text(
+                          '물품 수정',
+                          style: TextStyle(fontSize: 18, fontFamily: 'PretendardBold'),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            onSave(nameController.text, endDate);
+                            Navigator.pop(context);
+                          },
+                          child: const Text(
+                            '완료',
+                            style: TextStyle(fontSize: 18, color: Colors.black),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // 2. 입력 필드 (이름, 날짜)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 50),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 이름 입력 필드
+                        _buildLabel('이름'),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: nameController,
+                          decoration: InputDecoration(
+                            hintText: '물품 이름을 입력하세요',
+                            filled: true,
+                            fillColor: Colors.grey.shade100,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          style: const TextStyle(fontSize: 16),
+                          onChanged: (value) => itemName = value,
+                        ),
+                        const SizedBox(height: 24),
+
+                        // 날짜 입력 필드
+                        _buildLabel('날짜'),
+                        const SizedBox(height: 8),
+                        _buildDateBox(
+                          context,
+                          date: startDate,
+                          canEdit: false,
+                          onTap: () {},
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 날짜 입력 필드 (리마인드/종료일)
+                        _buildDateBox(
+                          context,
+                          date: endDate,
+                          canEdit: true,
+                          onTap: () async {
+                            await _pickDate(
+                              context: context,
+                              initialDate: endDate,
+                              firstDate: startDate, // 납부일 이후만 선택 가능하도록 제한
+                              onSelected: (picked) {
+                                setState(() {
+                                  endDate = picked;
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 100),
+
+                  // 3. 삭제하기 버튼
+                  Padding(
+                    padding: const EdgeInsets.only(left: 50.0, right:50.0, bottom: 24.0),
+                    child: ShortButton(
+                      text: "삭제하기",
+                      isYes: true, // 삭제는 보통 'No' 스타일 버튼
+
+                      onPressed: () {
+                        onDelete();
+                        Navigator.pop(context);
+                      },
+                      width: double.infinity,
+                      height: 56,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+// ───────────── CategoryDeleteConfirmPopup 정의 ─────────────
+Future<void> CategoryDeleteConfirmPopup({
+  required BuildContext context,
+  required String categoryName,
+  required VoidCallback onConfirmDelete,
+}) async {
+  return showDialog(
+    context: context,
+    barrierDismissible: false,
+    barrierColor: Colors.black.withOpacity(0.5),
+    builder: (context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        // 🌟 요청하신 가로 543px 너비와 중앙 정렬 팝업 스타일 적용
+        child: Container(
+          width: 543,
+          constraints: const BoxConstraints(maxWidth: 543),
+          padding: const EdgeInsets.all(32.0), // 내부 패딩
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1. 제목
+              const Text(
+                '정말로 삭제하시겠습니까?',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontFamily: 'PretendardBold',
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+
+              // 2. 설명 텍스트
+              const Text(
+                '삭제 시 카테고리 속에 들어있던\n모든 물품이 삭제돼요!',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontFamily: 'PretendardRegular',
+                  color: Color(0xFF5D5D5D),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+
+              // 3. 버튼 영역 (아니요/네)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 아니요 (취소 버튼)
+                  ShortButton(
+                    text: '아니요',
+                    onPressed: () => Navigator.pop(context),
+                    width: 120,
+                    height: 56,
+                    fontSize: 18,
+                    isYes: false, // 회색 버튼 스타일
+                  ),
+                  const SizedBox(width: 16),
+                  // 네 (확인 버튼)
+                  ShortButton(
+                    text: '네',
+                    onPressed: () {
+                      onConfirmDelete();
+                      Navigator.pop(context);
+                    },
+                    width: 120,
+                    height: 56,
+                    fontSize: 18,
+                    isYes: true, // 보라색 버튼 스타일
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+// 팝업 내부 위젯 빌더 함수 (정적)
+Widget _buildLabel(String label) {
+  return Text(
+    label,
+    style: const TextStyle(fontSize: 16, fontFamily: 'PretendardRegular'),
+  );
+}
+
+Widget _buildDateBox(
+    BuildContext context, {
+      required DateTime date,
+      required bool canEdit,
+      required VoidCallback onTap,
+    }) {
+  return GestureDetector(
+    onTap: canEdit ? onTap : null,
+    child: Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: canEdit ? Colors.white : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        border: canEdit ? Border.all(color: Colors.grey.shade300) : null,
+      ),
+      alignment: Alignment.centerLeft,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            _formatDate(date),
+            style: TextStyle(
+              fontSize: 16,
+              color: canEdit ? Colors.black : Colors.black54,
+            ),
+          ),
+          if (canEdit)
+            const Icon(
+              Icons.calendar_today,
+              size: 20,
+              color: Colors.grey,
+            ),
+          if (!canEdit)
+            const SizedBox.shrink(), // 납부일은 아이콘 숨김
+        ],
+      ),
+    ),
+  );
+}
 
 // ───────────── ItemCard ─────────────
 class ItemCard extends StatelessWidget {
@@ -69,6 +433,8 @@ class CategoryBox extends StatefulWidget {
   final String imagePath;
   final bool isSelected;
   final VoidCallback onSelect;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   const CategoryBox({
     super.key,
@@ -76,6 +442,8 @@ class CategoryBox extends StatefulWidget {
     required this.imagePath,
     required this.isSelected,
     required this.onSelect,
+    required this.onEdit,   // 추가
+    required this.onDelete, // 추가
   });
 
   @override
@@ -112,7 +480,10 @@ class _CategoryBoxState extends State<CategoryBox> {
         mainAxisSize: MainAxisSize.min,
         children: [
           InkWell(
-            onTap: _toggleActions,
+            onTap: () {
+              _toggleActions();
+              widget.onEdit(); // 🌟 수정하기 콜백 호출
+            },
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 6),
               child: Text('수정하기',
@@ -121,7 +492,10 @@ class _CategoryBoxState extends State<CategoryBox> {
           ),
           const Divider(height: 1, color: Color(0xFFE0E0E0)),
           InkWell(
-            onTap: _toggleActions,
+            onTap: () {
+              _toggleActions();
+              widget.onDelete(); // 🌟 삭제하기 콜백 호출
+            },
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 6),
               child: Text('삭제하기',
@@ -232,6 +606,52 @@ class _InventoryPageState extends State<InventoryPage> {
     {'category': '식품', 'title': '냉동피자', 'date': '2025. 05. 26 ~ 2025. 08. 26'},
   ];
 
+  // 카테고리 수정 핸들러
+  void _handleCategoryEdit(String oldName, int index) {
+    // CategoryEditPopup 함수가 외부에서 정의되어 있어야 합니다.
+    CategoryEditPopup(
+      context: context,
+      initialCategoryName: oldName,
+      onSave: (newName) {
+        if (newName != oldName) {
+          // TODO: 실제 DB 및 상태 업데이트 로직 구현
+          setState(() {
+            _categories[index] = newName;
+            print('카테고리 수정: $oldName -> $newName');
+          });
+        }
+      },
+      // CategoryEditPopup 내부에 이미 onDelete 콜백이 존재하므로,
+      // 이 콜백은 CategoryDeleteConfirmPopup을 띄우는 역할을 합니다.
+      onDelete: () {
+        // CategoryEditPopup에서 삭제 버튼을 누르면 이 함수가 호출되고,
+        // 여기서 확인 팝업을 띄웁니다.
+        _handleCategoryDeleteConfirm(oldName, index);
+      },
+    );
+  }
+
+// 카테고리 삭제 확인 팝업 핸들러
+  void _handleCategoryDeleteConfirm(String categoryName, int index) {
+    CategoryDeleteConfirmPopup(
+      context: context,
+      categoryName: categoryName,
+      onConfirmDelete: () {
+        // 🌟 최종 삭제 실행 🌟
+        // TODO: 실제 DB 및 상태 업데이트 로직 구현 (해당 카테고리 및 물품 모두 삭제)
+        setState(() {
+          _categories.removeAt(index);
+          _items.removeWhere((item) => item['category'] == categoryName);
+          if (_selectedCategoryIndex >= _categories.length && _categories.isNotEmpty) {
+            _selectedCategoryIndex = _categories.length - 1;
+          } else if (_categories.isEmpty) {
+            _selectedCategoryIndex = 0;
+          }
+          print('카테고리 최종 삭제됨: $categoryName');
+        });
+      },
+    );
+  }
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -357,6 +777,7 @@ class _InventoryPageState extends State<InventoryPage> {
                                       );
                                     }
 
+                                    final categoryName = _categories[index];
                                     return CategoryBox(
                                       categoryName: _categories[index],
                                       imagePath: 'assets/home/categorybox.png',
@@ -367,6 +788,8 @@ class _InventoryPageState extends State<InventoryPage> {
                                           _selectedCategoryIndex = index;
                                         });
                                       },
+                                      onEdit: () => _handleCategoryEdit(categoryName, index),
+                                      onDelete: () => _handleCategoryDeleteConfirm(categoryName, index),
                                     );
                                   },
                                 ),
@@ -410,23 +833,49 @@ class _InventoryPageState extends State<InventoryPage> {
                                   itemCount: _items.length,
                                   itemBuilder: (context, index) {
                                     final item = _items[index];
-                                    return Container(
-                                      decoration: BoxDecoration(
-                                        color: index == 0
-                                            ? const Color(0xFFFFF3F3)
-                                            : const Color(0xFFF3F5FF),
-                                        borderRadius: BorderRadius.circular(4),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.1),
-                                            blurRadius: 5,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: ItemCard(
-                                        title: item['title']!,
-                                        dateRange: item['date']!,
+                                    // 🌟 이 부분을 수정하여 GestureDetector로 감싸고 팝업을 호출합니다. 🌟
+                                    return GestureDetector(
+                                      onTap: () {
+                                        // 임시 데이터 파싱
+                                        final dates = item['date']!.split(' ~ ');
+                                        final startDate = DateFormat("yyyy.MM.dd").parse(dates[0].trim());
+                                        // 종료일이 없는 경우 시작일로 대체
+                                        final endDate = dates.length > 1 ? DateFormat("yyyy.MM.dd").parse(dates[1].trim()) : startDate;
+
+                                        ItemEditPopup(
+                                          context: context,
+                                          initialName: item['title']!,
+                                          initialStartDate: startDate,
+                                          initialEndDate: endDate,
+                                          onSave: (newName, newEndDate) {
+                                            // TODO: 여기에 실제 물품 수정 로직 (DB 업데이트 및 _items 리스트 업데이트) 구현
+                                            print('물품 저장: $newName, 새로운 종료일: $newEndDate');
+                                          },
+                                          onDelete: () {
+                                            // TODO: 여기에 실제 물품 삭제 로직 (DB 삭제 및 _items 리스트 업데이트) 구현
+                                            print('물품 삭제: ${item['title']}');
+                                          },
+                                        );
+                                      },
+                                      child: Container(
+                                        // ... (기존 Container decoration 및 ItemCard)
+                                        decoration: BoxDecoration(
+                                          color: index == 0
+                                              ? const Color(0xFFFFF3F3)
+                                              : const Color(0xFFF3F5FF),
+                                          borderRadius: BorderRadius.circular(4),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.1),
+                                              blurRadius: 5,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: ItemCard(
+                                          title: item['title']!,
+                                          dateRange: item['date']!,
+                                        ),
                                       ),
                                     );
                                   },

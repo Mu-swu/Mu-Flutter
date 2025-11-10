@@ -653,7 +653,10 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                       const Spacer(),
                       GestureDetector(
                         onTap: () {
-                          _showKeepBoxDialog(context);
+                          Navigator.pushNamed(
+                            context,
+                            '/inven',
+                          );
                         },
                         child: Container(
                           padding: EdgeInsets.all(12 * overallRatio),

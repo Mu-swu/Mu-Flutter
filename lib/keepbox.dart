@@ -42,6 +42,7 @@ class _keepboxState extends State<keepbox> {
     super.initState();
     _initGemini();
     _initSpeech();
+    NotificationService.instance.init();
     _loadData();
   }
 

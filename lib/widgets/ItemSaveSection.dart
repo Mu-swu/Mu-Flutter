@@ -55,7 +55,39 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
       locale: const Locale('ko'),
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+
+      // ⬇️ 캘린더 테마 및 여백 적용 부분 ⬇️
+      builder: (BuildContext context, Widget? child) {
+        return Padding(
+          padding: const EdgeInsets.all(30.0), // 👈 전체 여백 20 적용
+          child: Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: ColorScheme.light(
+                // 배경색 (전체 다이얼로그 배경)
+                surface: const Color(0xFFFAFBFF),
+                // 선택된 날짜 배경색
+                primary: const Color(0xFF463EC6),
+              ),
+              // 오늘 날짜 테두리/배경색 등을 위한 설정
+              datePickerTheme: DatePickerThemeData(
+                // 오늘 날짜 배경색 (DatePickerDialog의 Calendar Day 부분)
+                todayBackgroundColor: MaterialStateProperty.all(const Color(0xFFD7D7FA)),
+              ),
+              // TextButton의 색상 (예: OK, CANCEL 버튼)
+              textButtonTheme: TextButtonThemeData(
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF463EC6), // 버튼 텍스트 색상
+                ),
+              ),
+            ),
+            child: child!,
+          ),
+        );
+      },
+      // ⬆️ 캘린더 테마 및 여백 적용 부분 ⬆️
     );
+
 
     if (picked != null && picked != initialDate) {
       onSelected(picked);
