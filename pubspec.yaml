@@ -136,6 +136,8 @@ flutter:
     - assets/mission/mission_re.png
     - assets/mission/hourglass.gif
     - assets/mu.png
+    - assets/mission/done.png
+    - assets/mission/undone.png
 
 
   fonts:

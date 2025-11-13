@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:mu/keepbox.dart';
 import 'package:mu/ttsApi.dart';
 import 'package:mu/widgets/shortbutton.dart';
 import 'dart:async';
@@ -15,7 +16,6 @@ import 'widgets/loadingvideo.dart';
 import 'widgets/choice_popup.dart';
 import 'widgets/longbutton.dart';
 import 'user_theme_manager.dart';
-
 
 List<StepData> _parseMissionSteps(String jsonText) {
   String text = jsonText;
@@ -102,7 +102,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   late final GenerativeModel _model;
 
-
   final ScrollController _scrollController = ScrollController();
   final List<_MolChoiceData> _molStepData = [
     _MolChoiceData("다음 세 가지 중 하나를 선택해보자. 어떤 기준으로 해야할지 생각해볼까?", [
@@ -146,7 +145,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
     final apiKey = dotenv.env['GEMINI_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
       setState(() => _isLoading = false);
-      print('🚫 GEMINI_API_KEY 없음');
       return;
     }
 
@@ -200,10 +198,20 @@ class _MissionStepPageState extends State<MissionStepPage> {
   Future<void> _generateMissionSteps() async {
     final userTypeMap = {'gam': '감정형', 'mol': '몰라형', 'bas': '방치형'};
     final userType = userTypeMap[_currentUserType] ?? '방치형';
-    final missionName =
-    widget.orderedMissions.isNotEmpty ? widget.orderedMissions[0] : '미션';
 
-    final density = "혼잡";
+    if (widget.orderedMissions.isEmpty ||
+        widget.currentMissionIndex >= widget.orderedMissions.length) {
+      print("오류: 미션 정보를 찾을 수 없습니다. (인덱스: ${widget.currentMissionIndex})");
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final Section currentMission =
+        widget.orderedMissions[widget.currentMissionIndex];
+
+    final String missionName = currentMission.name;
+
+    final String density = currentMission.clutterLevel;
 
     final prompt = """
     
@@ -371,33 +379,30 @@ class _MissionStepPageState extends State<MissionStepPage> {
     }
     """;
 
-    // 🎯 최대 재시도 횟수를 정의합니다.
     const int maxRetries = 3;
 
-// 재시도 루프 시작
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         print('API Key 확인: ${dotenv.env['GEMINI_API_KEY']}');
         print('Gemini API 호출 시도: $attempt회');
 
-        // 1. API 호출 및 20초 타임아웃
         final response = await _model
             .generateContent([Content.text(prompt)])
-            .timeout(const Duration(seconds: 20), onTimeout: () {
-          throw Exception("Gemini API 응답 시간 초과");
-        });
+            .timeout(
+              const Duration(seconds: 20),
+              onTimeout: () {
+                throw Exception("Gemini API 응답 시간 초과");
+              },
+            );
 
         String? text = response.text;
 
-        // 2. 응답 내용 유효성 검사
         if (text == null || text.isEmpty) {
           throw Exception("API가 비어있는 응답을 반환했습니다.");
         }
 
-        // 3. 미션 단계 파싱
         final newMissionSteps = await compute(_parseMissionSteps, text);
 
-        // ✅ 성공: 상태 업데이트 및 타이머 시작
         setState(() {
           _missionSteps = newMissionSteps;
           _loadStepData(0);
@@ -409,19 +414,15 @@ class _MissionStepPageState extends State<MissionStepPage> {
       } catch (e) {
         print('미션 생성 중 오류 발생 (시도 $attempt회): $e');
 
-        // 🚨 마지막 시도까지 실패한 경우 (최대 횟수 초과)
         if (attempt == maxRetries) {
           print("최대 재시도 횟수($maxRetries회) 초과. 초기화 실패 처리.");
 
-          // 최종 실패 처리 (원래 catch 블록의 역할)
           setState(() {
             _isLoading = false;
           });
-          // 팝업 등을 띄워 사용자에게 오류를 알릴 수 있습니다.
-          return; // 함수 종료
+          return;
         }
 
-        // ⚠️ 재시도 대기 (Backoff): 잠시 기다린 후 다음 시도로 넘어갑니다.
         await Future.delayed(const Duration(seconds: 2));
       }
     }
@@ -508,9 +509,20 @@ class _MissionStepPageState extends State<MissionStepPage> {
     if (_currentStepIndex < _missionSteps.length - 1) {
       await _loadStepData(_currentStepIndex + 1);
     } else {
+      final int nextMissionIndex = widget.currentMissionIndex + 1;
+      await AppDatabase.instance.updateUserMissionIndex(1, nextMissionIndex);
+      print("✅ 미션 단계 완료! DB 인덱스를 ${nextMissionIndex}로 업데이트.");
+
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const Keepbox_start()),
+        MaterialPageRoute(
+          builder:
+              (context) => keepbox(
+                nextMissionIndex: nextMissionIndex,
+                totalMissionCount: widget.orderedMissions.length,
+              ),
+        ),
       );
     }
   }
@@ -553,8 +565,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
         .padLeft(2, '0');
     return "${(duration.inHours).toString().padLeft(2, '0')}:$minutes:$seconds";
   }
-
-
 
   @override
   void dispose() {

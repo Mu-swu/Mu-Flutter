@@ -3,8 +3,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import 'package:mu/widgets/keepdialogs.dart';
 import 'package:mu/widgets/longbutton.dart';
+import 'package:mu/widgets/mission_complete_dialog.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'mission_start.dart';
 import 'widgets/ItemSaveSection.dart';
 import 'user_theme_manager.dart';
 import 'package:mu/data/database.dart';
@@ -12,7 +14,10 @@ import 'package:drift/drift.dart' show Value;
 import 'package:mu/notification_service.dart';
 
 class keepbox extends StatefulWidget {
-  const keepbox({super.key});
+  final int? nextMissionIndex;
+  final int? totalMissionCount;
+
+  const keepbox({super.key, this.nextMissionIndex, this.totalMissionCount});
 
   @override
   State<keepbox> createState() => _keepboxState();
@@ -77,9 +82,9 @@ class _keepboxState extends State<keepbox> {
     }
 
     final newCategories =
-    groupedItems.entries.map((entry) {
-      return {'name': entry.key, 'items': entry.value};
-    }).toList();
+        groupedItems.entries.map((entry) {
+          return {'name': entry.key, 'items': entry.value};
+        }).toList();
 
     for (final defaultCat in []) {
       if (!newCategories.any((c) => c['name'] == defaultCat)) {
@@ -123,7 +128,9 @@ class _keepboxState extends State<keepbox> {
           );
           // DateTime d3Date = expirationAt.subtract(const Duration(days: 3));
 
-          DateTime scheduleTime = DateTime.now().add(const Duration(seconds: 10));// 테스트용
+          DateTime scheduleTime = DateTime.now().add(
+            const Duration(seconds: 10),
+          ); // 테스트용
           /* DateTime scheduleTime = DateTime(
             d3Date.year,
           d3Date.month,
@@ -149,10 +156,25 @@ class _keepboxState extends State<keepbox> {
     }
     await _database.replaceAllKeepBoxes(itemsToSave);
 
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('저장되었습니다! (D-3 알림이 예약되었습니다.)')));
+    final bool isMissionFlow =
+        widget.nextMissionIndex != null && widget.totalMissionCount != null;
+
+    if (isMissionFlow) {
+      if (mounted) {
+        final bool allMissionsCompleted =
+            widget.nextMissionIndex! >= widget.totalMissionCount!;
+
+        await showMissionCompleteDialog(
+          context: context,
+          allMissionsCompleted: allMissionsCompleted,
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('저장되었습니다! (D-3 알림이 예약되었습니다.)')),
+        );
+      }
     }
   }
 
@@ -276,7 +298,7 @@ class _keepboxState extends State<keepbox> {
               setState(() {
                 for (final cat in categories) {
                   (cat['items'] as List).removeWhere(
-                        (it) => it['name'] == itemName,
+                    (it) => it['name'] == itemName,
                   );
                 }
                 _pushItemToCategory(
@@ -290,7 +312,7 @@ class _keepboxState extends State<keepbox> {
               setState(() {
                 for (final cat in categories) {
                   (cat['items'] as List).removeWhere(
-                        (it) => it['name'] == itemName,
+                    (it) => it['name'] == itemName,
                   );
                 }
 
@@ -379,16 +401,16 @@ class _keepboxState extends State<keepbox> {
             decoration: BoxDecoration(
               // Dynamically set the gradient based on user type
               gradient:
-              _speechToText.isListening
-                  ? LinearGradient(
-                colors: [
-                  UserThemeManager.keepboxGradientStartColor,
-                  const Color(0xFFD7DCFA),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              )
-                  : null,
+                  _speechToText.isListening
+                      ? LinearGradient(
+                        colors: [
+                          UserThemeManager.keepboxGradientStartColor,
+                          const Color(0xFFD7DCFA),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      )
+                      : null,
               color: _speechToText.isListening ? null : const Color(0xFFF3F5FF),
             ),
             child: Column(
@@ -423,17 +445,17 @@ class _keepboxState extends State<keepbox> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color:
-                      _speechToText.isListening
-                          ? Colors.white
-                          : const Color(0xFF7F91FF),
+                          _speechToText.isListening
+                              ? Colors.white
+                              : const Color(0xFF7F91FF),
                     ),
                     child: Icon(
                       _speechToText.isListening ? Icons.stop : Icons.mic,
                       size: 36 * widthRatio,
                       color:
-                      _speechToText.isListening
-                          ? const Color(0xFF7F91FF)
-                          : Colors.white,
+                          _speechToText.isListening
+                              ? const Color(0xFF7F91FF)
+                              : Colors.white,
                     ),
                   ),
                 ),
@@ -460,9 +482,9 @@ class _keepboxState extends State<keepbox> {
                     style: TextStyle(
                       fontSize: 12 * widthRatio,
                       color:
-                      _lastWords.isNotEmpty
-                          ? Colors.blue
-                          : Colors.transparent,
+                          _lastWords.isNotEmpty
+                              ? Colors.blue
+                              : Colors.transparent,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -502,30 +524,30 @@ class _keepboxState extends State<keepbox> {
                 SizedBox(height: 20 * heightRatio),
                 Expanded(
                   child:
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 아이템 리스트 영역
-                      Expanded(
-                        child: ItemSaveSection(
-                          categories: categories,
-                          widthRatio: widthRatio,
-                          heightRatio: heightRatio,
-                          itemName: _currentItemName,
-                          itemCategory: currentItemCategory,
-                          onExit: () {
-                            _lastWords = '';
-                            selectedIndex = null;
-                          },
-                          onDateChanged: _handleDateChange,
-                          onCategoryUpdated: _updateCategoryName,
-                          onCategoryDeleted: _deleteCategory,
-                        ),
-                      ),
-                    ],
-                  ),
+                      _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 아이템 리스트 영역
+                              Expanded(
+                                child: ItemSaveSection(
+                                  categories: categories,
+                                  widthRatio: widthRatio,
+                                  heightRatio: heightRatio,
+                                  itemName: _currentItemName,
+                                  itemCategory: currentItemCategory,
+                                  onExit: () {
+                                    _lastWords = '';
+                                    selectedIndex = null;
+                                  },
+                                  onDateChanged: _handleDateChange,
+                                  onCategoryUpdated: _updateCategoryName,
+                                  onCategoryDeleted: _deleteCategory,
+                                ),
+                              ),
+                            ],
+                          ),
                 ),
                 SizedBox(height: 10 * heightRatio),
                 LongButton(text: '저장', onPressed: _saveData),

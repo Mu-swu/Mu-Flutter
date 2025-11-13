@@ -13,6 +13,7 @@ class ScheduleCard extends StatelessWidget {
   final double cardHeight;
   final double fontScale;
   final int? orderNumber;
+  final bool isCompleted;
 
   const ScheduleCard({
     super.key,
@@ -23,40 +24,87 @@ class ScheduleCard extends StatelessWidget {
     required this.cardHeight,
     required this.fontScale,
     this.orderNumber,
+    this.isCompleted = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    Color statusBackgroundColor = Colors.transparent;
-    Color statusTextColor = Colors.black;
+    final bool isSelected = orderNumber != null;
 
+    Color statusBackgroundColor;
+    Color statusTextColor;
+    Color contentTextColor;
+    Color circleColor;
+    Widget circleChild;
+    Border? border;
+    Color cardBackgroundColor = const Color(0xFFF5F5F5);
+
+    Color originalStatusBackgroundColor;
+    Color originalStatusTextColor;
     switch (status) {
       case '여유':
-        statusBackgroundColor = const Color(0xFFC6DEFF);
-        statusTextColor = const Color(0xFF1B73EC);
+        originalStatusBackgroundColor = const Color(0xFFC6DEFF);
+        originalStatusTextColor = const Color(0xFF1B73EC);
         break;
       case '보통':
-        statusBackgroundColor = const Color(0xFFC0F1D0);
-        statusTextColor = const Color(0xFF30AE65);
+        originalStatusBackgroundColor = const Color(0xFFC0F1D0);
+        originalStatusTextColor = const Color(0xFF30AE65);
         break;
       case '혼잡':
-        statusBackgroundColor = const Color(0xFFFFD7D7);
-        statusTextColor = const Color(0xFFEC5353);
+      default:
+        originalStatusBackgroundColor = const Color(0xFFFFD7D7);
+        originalStatusTextColor = const Color(0xFFEC5353);
         break;
+    }
+
+    if (isCompleted) {
+      statusBackgroundColor = const Color(0xFFE0E0E0);
+      statusTextColor = const Color(0xFF8D93A1);
+      contentTextColor = const Color(0xFF8D93A1);
+      circleColor = const Color(0xFFDBDEE7);
+      border = null;
+      cardBackgroundColor = const Color(0xFFF0F0F0);
+      circleChild = Image.asset(
+        'assets/mission/done.png',
+        width: 42,
+        height: 42,
+      );
+    } else if (isSelected) {
+      statusBackgroundColor = originalStatusBackgroundColor;
+      statusTextColor = originalStatusTextColor;
+      contentTextColor = const Color(0xFF333333);
+      circleColor = const Color(0xFF7F91FF);
+      border = Border.all(color: Color(0xFF7F91FF), width: 4.0);
+      circleChild = Text(
+        orderNumber.toString(),
+        style: TextStyle(
+          fontFamily: 'PretendardBold',
+          color: Colors.white,
+          fontSize: 20 * fontScale,
+        ),
+      );
+    } else {
+      statusBackgroundColor = originalStatusBackgroundColor;
+      statusTextColor = originalStatusTextColor;
+      contentTextColor = const Color(0xFF8D93A1);
+      circleColor = const Color(0xFFDBDEE7);
+      border = null;
+      circleChild = Image.asset(
+        'assets/mission/undone.png',
+        width: 42,
+        height: 42,
+      );
     }
 
     return Container(
       width: cardWidth,
       height: cardHeight,
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: cardBackgroundColor,
         borderRadius: BorderRadius.circular(10),
-        border:
-            orderNumber != null
-                ? Border.all(color: Color(0xFF7F91FF), width: 4.0)
-                : null,
+        border: border,
       ),
-      padding: EdgeInsets.symmetric(horizontal: 28,vertical: 28),
+      padding: EdgeInsets.symmetric(horizontal: 28, vertical: 28),
       child: Stack(
         children: [
           Column(
@@ -64,8 +112,8 @@ class ScheduleCard extends StatelessWidget {
             children: [
               Container(
                 padding: EdgeInsets.symmetric(
-                  horizontal: 8 * fontScale*0.8,
-                  vertical: 4 * fontScale*0.8,
+                  horizontal: 8 * fontScale * 0.8,
+                  vertical: 4 * fontScale * 0.8,
                 ),
                 decoration: BoxDecoration(
                   color: statusBackgroundColor,
@@ -80,20 +128,20 @@ class ScheduleCard extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 8 * fontScale*0.6),
+              SizedBox(height: 8 * fontScale * 0.6),
               Text(
                 section,
                 style: TextStyle(
-                  color: const Color(0xFF8D93A1),
+                  color: contentTextColor,
                   fontSize: 18 * fontScale,
                   fontFamily: 'PretendardMedium',
                 ),
               ),
-              SizedBox(height: 17 * fontScale*0.6),//오버플로우 해결
+              SizedBox(height: 17 * fontScale * 0.6),
               Text(
                 time,
                 style: TextStyle(
-                  color: const Color(0xFF8D93A1),
+                  color: contentTextColor,
                   fontSize: 32 * fontScale,
                   fontFamily: 'PretendardMedium',
                 ),
@@ -104,25 +152,14 @@ class ScheduleCard extends StatelessWidget {
             right: 0,
             top: 0,
             child: Container(
-              width: 42 * fontScale*0.8,
-              height: 42 * fontScale*0.8,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
-                color:
-                    orderNumber != null ? Color(0xFF7F91FF) : Color(0xFFDBDEE7),
+                color: circleColor,
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child:
-                  orderNumber != null
-                      ? Text(
-                        orderNumber.toString(),
-                        style: TextStyle(
-                          fontFamily: 'PretendardBold',
-                          color: Colors.white,
-                          fontSize: 20 * fontScale,
-                        ),
-                      )
-                      : null,
+              child: circleChild,
             ),
           ),
         ],
@@ -142,11 +179,13 @@ class EmptyingSchedulePage extends StatefulWidget {
 }
 
 class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
-  // 카드 데이터 리스트
   List<String> _selectedOrder = [];
-
   Future<void>? _initializationFuture;
   String? _userType;
+
+  List<String> _completedMissionNames = [];
+  List<String> _orderedMissionNames = [];
+  int _currentMissionIndex = 0;
 
   @override
   void initState() {
@@ -160,6 +199,18 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
 
     if (_userType == null || _userType!.isEmpty) {
       _userType = '방치형';
+    }
+
+    _currentMissionIndex = await db.getUserMissionIndex(1);
+    final orderedMissions = await db.getOrderedMissions(1);
+    _orderedMissionNames = orderedMissions.map((s) => s.name).toList();
+
+    if (_currentMissionIndex > 0 &&
+        _currentMissionIndex <= _orderedMissionNames.length) {
+      _completedMissionNames = _orderedMissionNames.sublist(
+        0,
+        _currentMissionIndex,
+      );
     }
   }
 
@@ -176,7 +227,6 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
           default:
             return '45분';
         }
-
       case '몰라형':
         switch (status) {
           case '혼잡':
@@ -188,7 +238,6 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
           default:
             return '20분';
         }
-
       case '방치형':
       default:
         switch (status) {
@@ -216,6 +265,9 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
   }
 
   void _toggleSelection(String section) {
+    if (_completedMissionNames.contains(section)) {
+      return;
+    }
     setState(() {
       if (_selectedOrder.contains(section)) {
         _selectedOrder.remove(section);
@@ -255,12 +307,10 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
               final screenW = constraints.maxWidth;
               final screenH = constraints.maxHeight;
 
-              // 기준 해상도(1280x800)에 대한 비율
               final widthRatio = screenW / 1280;
               final heightRatio = screenH / 800;
               final fontScale = (widthRatio + heightRatio) / 2.1;
 
-              // 카드 크기
               final cardWidth = 310 * widthRatio;
               final cardHeight = 170 * heightRatio;
 
@@ -284,11 +334,10 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             SizedBox(height: 25 * heightRatio),
-                            // 타이틀
                             Text(
                               '비움 스케줄링',
                               style: TextStyle(
-                                fontSize: 32*widthRatio,
+                                fontSize: 32 * widthRatio,
                                 fontFamily: 'PretendardBold',
                                 color: const Color(0xFF333333),
                               ),
@@ -297,13 +346,11 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                             Text(
                               '비우고 싶은 순서대로 다시 정렬해보세요.',
                               style: TextStyle(
-                                fontSize: 20*widthRatio,
+                                fontSize: 20 * widthRatio,
                                 color: Color(0xFF5D5D5D),
-                                fontFamily: 'PretendardRegular'
+                                fontFamily: 'PretendardRegular',
                               ),
                             ),
-
-                            // 카드 영역
                             Expanded(
                               child: Align(
                                 alignment: Alignment.center,
@@ -314,6 +361,11 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                                   children:
                                       cardData.map((c) {
                                         final sectionName = c['section']!;
+                                        final bool isCompleted =
+                                            _completedMissionNames.contains(
+                                              sectionName,
+                                            );
+
                                         final int? order =
                                             _selectedOrder.contains(sectionName)
                                                 ? _selectedOrder.indexOf(
@@ -321,6 +373,7 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                                                     ) +
                                                     1
                                                 : null;
+
                                         return GestureDetector(
                                           onTap:
                                               () =>
@@ -334,6 +387,7 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                                             cardHeight: cardHeight,
                                             fontScale: fontScale,
                                             orderNumber: order,
+                                            isCompleted: isCompleted,
                                           ),
                                         );
                                       }).toList(),
@@ -365,14 +419,24 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                                         _selectedOrder.isEmpty
                                             ? null
                                             : () async {
+                                              final List<String>
+                                              finalMissionOrder = [
+                                                ..._completedMissionNames,
+                                                ..._selectedOrder,
+                                              ];
+
                                               await AppDatabase.instance
                                                   .updateMissionOrder(
                                                     1,
-                                                    _selectedOrder,
+                                                    finalMissionOrder,
                                                   );
 
                                               await AppDatabase.instance
-                                              .updateUserMissionIndex(1, 0);
+                                                  .updateUserMissionIndex(
+                                                    1,
+                                                    _completedMissionNames
+                                                        .length,
+                                                  );
 
                                               final firstMissionName =
                                                   _selectedOrder.first;
@@ -390,8 +454,7 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                                                 MaterialPageRoute(
                                                   builder:
                                                       (context) =>
-                                                          MissionStartPage(
-                                                          ),
+                                                          MissionStartPage(),
                                                 ),
                                               );
                                             },
