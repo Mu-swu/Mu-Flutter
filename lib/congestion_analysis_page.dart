@@ -98,35 +98,55 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
         break;
     }
 
-    bool needsReset = false;
-    final dbSections = await db.getSectionsForUser(1);
+    final allDbSections = await db.getSectionsForUser(1);
+    final allDbSectionNames = allDbSections.map((s) => s.name).toSet();
 
-    if (dbSections.isEmpty) {
-      needsReset = true;
+    final int currentMissionIndex = await db.getUserMissionIndex(1);
+    final List<Section> orderedMissions = await db.getOrderedMissions(1);
+    final Set<String> completedMissionNames;
+    if (currentMissionIndex > 0 && currentMissionIndex <= orderedMissions.length) {
+      completedMissionNames = orderedMissions
+          .sublist(0, currentMissionIndex)
+          .map((s) => s.name)
+          .toSet();
     } else {
-      String firstDefaultSection = defaultSections.first;
-      if (!dbSections.any((s) => s.name == firstDefaultSection)) {
-        needsReset = true;
+      completedMissionNames = {};
+    }
+
+    List<String> missingSections = [];
+    for (String defaultName in defaultSections) {
+      if (!allDbSectionNames.contains(defaultName)) {
+        missingSections.add(defaultName);
       }
     }
-    if (needsReset) {
-      print("사용자 공간이 변경되었거나 첫 실행입니다. 섹션을 리셋합니다.");
-      await db.deleteAllSectionsForUser(1);
-      await db.batchInsertSections(1, defaultSections);
-      _results = {
-        for (var section in defaultSections)
-          section: {"clutter": "분석 전", "completed": false},
-      };
-    } else {
-      _results = {
-        for (var s in dbSections)
-          s.name: {"clutter": s.clutterLevel, "completed": s.progress == 100},
-      };
+
+    if (missingSections.isNotEmpty) {
+      print("새로운 가구(${widget.spaceName})의 섹션 ${missingSections.join(', ')}을(를) DB에 추가합니다.");
+
+      await db.batchInsertSections(1, missingSections);
+
+      await db.updateUserMissionIndex(1, 0);
+      await db.updateMissionOrder(1, []);
     }
+    final currentDbSections = await db.getSectionsForUser(1);
+    final Set<String> currentSpaceDefaultNames = defaultSections.toSet();
+
+    Map<String, Map<String, dynamic>> tempResults = {};
+
+    for (var s in currentDbSections) {
+      if (currentSpaceDefaultNames.contains(s.name)) {
+        tempResults[s.name] = {
+          "clutter": s.clutterLevel,
+          "completed": completedMissionNames.contains(s.name)
+        };
+      }
+    }
+
+    _results = tempResults;
+
     await _initCamera();
     await _loadModel();
   }
-
   Future<void> _initCamera() async {
     final cameras = await availableCameras();
     _cameraController = CameraController(
@@ -655,46 +675,68 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                         final bool isCompleted =
                                             sectionData["completed"] as bool;
 
-                                        Color statusBackgroundColor =
-                                            Colors.transparent;
-                                        Color statusTextColor = Colors.black;
+                                        Color statusBackgroundColor;
+                                        Color statusTextColor;
+                                        Color titleColor;
+                                        Color tileBackgroundColor;
                                         bool showStatus = true;
 
-                                        switch (clutterStatus) {
-                                          case '혼잡':
-                                            statusBackgroundColor = const Color(
-                                              0xFFFFD7D7,
-                                            );
-                                            statusTextColor = const Color(
-                                              0xFFEC5353,
-                                            );
-                                            break;
-                                          case '보통':
-                                            statusBackgroundColor = const Color(
-                                              0xFFC0F1D0,
-                                            );
-                                            statusTextColor = const Color(
-                                              0xFF30AE65,
-                                            );
-                                            break;
-                                          case '여유':
-                                            statusBackgroundColor = const Color(
-                                              0xFFC6DEFF,
-                                            );
-                                            statusTextColor = const Color(
-                                              0xFF1B73EC,
-                                            );
-                                            break;
-                                          default: // "분석 전" 또는 "분석 중..."
-                                            showStatus = false;
-                                            break;
-                                        }
                                         final bool isSliding =
                                             (_currentlyOpenSection == section);
-
                                         final controller = _getControllerFor(
                                           section,
                                         );
+
+                                        if (isCompleted) {
+                                          statusBackgroundColor = const Color(
+                                            0xFFDBDEE7,
+                                          );
+                                          statusTextColor = const Color(
+                                            0xFFB0B8C1,
+                                          );
+                                          titleColor = const Color(0xFFB0B8C1);
+                                          tileBackgroundColor = const Color(
+                                            0xFFF5F5F5,
+                                          );
+                                        } else {
+                                          titleColor = const Color(0xFF5D5D5D);
+                                          tileBackgroundColor =
+                                              isSliding
+                                                  ? const Color(0xFFFFF3F3)
+                                                  : const Color(0xFFF3F5FF);
+
+                                          switch (clutterStatus) {
+                                            case '혼잡':
+                                              statusBackgroundColor =
+                                                  const Color(0xFFFFD7D7);
+                                              statusTextColor = const Color(
+                                                0xFFEC5353,
+                                              );
+                                              break;
+                                            case '보통':
+                                              statusBackgroundColor =
+                                                  const Color(0xFFC0F1D0);
+                                              statusTextColor = const Color(
+                                                0xFF30AE65,
+                                              );
+                                              break;
+                                            case '여유':
+                                              statusBackgroundColor =
+                                                  const Color(0xFFC6DEFF);
+                                              statusTextColor = const Color(
+                                                0xFF1B73EC,
+                                              );
+                                              break;
+                                            default:
+                                              showStatus = false;
+                                              statusBackgroundColor =
+                                                  Colors.transparent;
+                                              statusTextColor = Color(
+                                                0XFF5D5D5D,
+                                              );
+                                              break;
+                                          }
+                                        }
 
                                         return Slidable(
                                           key: ValueKey(section),
@@ -773,12 +815,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                                         ),
                                               ),
                                               elevation: 0,
-                                              color:
-                                                  isCompleted
-                                                      ? Color(0xFFF5F5F5)
-                                                      : (isSliding
-                                                          ? Color(0xFFFFF3F3)
-                                                          : Color(0xFFF3F5FF)),
+                                              color: tileBackgroundColor,
                                               child: ListTile(
                                                 splashColor: Color(
                                                   0xFF8D93A1,
@@ -819,9 +856,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                                   style: TextStyle(
                                                     fontFamily:
                                                         'PretendardMedium',
-                                                    color: const Color(
-                                                      0xFF5D5D5D,
-                                                    ),
+                                                    color: titleColor,
                                                     fontSize: 18 * widthRatio,
                                                   ),
                                                 ),
@@ -917,20 +952,11 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                           text: "다음",
 
                           onPressed: () {
-                            _cameraController?.dispose();
                             final analyzedResults = <String, String>{};
-                            _results.forEach((key, value) {
-                              final clutter = value["clutter"] as String;
-                              final isCompleted = value["completed"] as bool;
-
-                              if (!isCompleted &&
-                                  (clutter == '혼잡' ||
-                                      clutter == '보통' ||
-                                      clutter == '여유')) {
-                                analyzedResults[key] = clutter;
-                              }
+                            _results.forEach((key, valueMap) {
+                              analyzedResults[key] =
+                                  valueMap["clutter"] as String;
                             });
-
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder:

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mu/data/database.dart';
@@ -14,6 +15,7 @@ import 'keepbox.dart';
 import 'user_theme_manager.dart';
 import 'package:mu/data/sampledata.dart';
 import 'package:mu/notification_service.dart';
+import 'widgets/schedule_item.dart';
 
 enum TagType { bang, gam, mol }
 
@@ -114,6 +116,12 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
   String _userSpace = "냉장고";
   bool _showOverlayBanner = false;
 
+  String _userTypeString = '방치형';
+  List<Section> _orderedMissions = [];
+  int _currentMissionIndex = 0;
+  Section? _challengeMission;
+  int _currentSpaceProgressPercentage = 0;
+
   @override
   void initState() {
     super.initState();
@@ -129,10 +137,11 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
     }
     try {
       await db.getOrCreateUser(1);
-      final String? userTypeString = await db.getUserType(1);
+      final String? userType = await db.getUserType(1);
+      _userTypeString = userType ?? '방치형';
 
       UserType loadedType;
-      switch (userTypeString) {
+      switch (_userTypeString) {
         case '감정형':
           loadedType = UserType.gam;
           _userSpace = '옷장';
@@ -148,11 +157,47 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
       }
       UserThemeManager.currentUserType = loadedType;
       _urgentItems = await db.getTopTowUrgentItems();
+
+      _orderedMissions = await db.getOrderedMissions(1);
+      _currentMissionIndex = await db.getUserMissionIndex(1);
+
+      if (_currentMissionIndex < _orderedMissions.length) {
+        _challengeMission = _orderedMissions[_currentMissionIndex];
+      } else {
+        _challengeMission = null;
+      }
+
+      final allProgress = await db.getSpaceProgressForUser(1);
+      SpaceProgress? currentSpaceProgress;
+      try {
+      final currentSpaceProgress = allProgress.firstWhere(
+            (p) => p.spaceName == _userSpace,
+      );
+      } catch (e) {
+        currentSpaceProgress = null;
+      }
+      if (currentSpaceProgress != null) {
+        if (currentSpaceProgress.isCompleted) {
+          _currentSpaceProgressPercentage = 100;
+        }
+        else if (_orderedMissions.isNotEmpty) {
+          _currentSpaceProgressPercentage = ((_currentMissionIndex / _orderedMissions.length) * 100).toInt();
+        }
+        else {
+          _currentSpaceProgressPercentage = 0;
+        }
+      } else {
+        _currentSpaceProgressPercentage = 0;
+      }
     } catch (e) {
       print("사용자 데이터 로드 실패 : $e");
       UserThemeManager.currentUserType = UserType.bang;
       _urgentItems = [];
       _userSpace = "냉장고";
+      _orderedMissions = [];
+      _currentMissionIndex = 0;
+      _challengeMission = null;
+      _currentSpaceProgressPercentage = 0;
     }
 
     final items = await db.getImpendingDDayItems();
@@ -176,6 +221,34 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
           });
         }
       });
+    }
+  }
+
+  String _getMissionTime(Section mission) {
+    final status = mission.clutterLevel;
+    switch (_userTypeString) { // 상태 변수(_userTypeString) 사용
+      case '감정형':
+        switch (status) {
+          case '혼잡': return '1시간 30분';
+          case '보통': return '1시간';
+          case '여유': return '45분';
+          default: return '45분';
+        }
+      case '몰라형':
+        switch (status) {
+          case '혼잡': return '1시간';
+          case '보통': return '40분';
+          case '여유': return '20분';
+          default: return '20분';
+        }
+      case '방치형':
+      default:
+        switch (status) {
+          case '혼잡': return '1시간';
+          case '보통': return '45분';
+          case '여유': return '30분';
+          default: return '30분';
+        }
     }
   }
 
@@ -742,18 +815,10 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                       ),
                                                     ),
                                                     Text(
-                                                      UserThemeManager
-                                                                  .currentUserType ==
-                                                              UserType.gam
-                                                          ? '냉장실 상단 비우기'
-                                                          : (UserThemeManager
-                                                                      .currentUserType ==
-                                                                  UserType.mol
-                                                              ? '서랍장 2단 비우기'
-                                                              : '옷장 서랍 비우기'),
+                                                      _challengeMission?.name ?? '모든 미션을 완료했어요!',
                                                       style: TextStyle(
                                                         fontSize:
-                                                            16 * overallRatio,
+                                                        16 * overallRatio,
                                                       ),
                                                     ),
                                                   ],
@@ -761,13 +826,17 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                               ),
                                               ShortButton(
                                                 text: '시작하기',
-                                                isYes: true,
+                                                // [수정] 5. 챌린지 없으면 버튼 비활성화
+                                                isYes: _challengeMission != null,
                                                 width: 100 * overallRatio,
                                                 height: 40 * overallRatio,
-                                                onPressed: () {
+                                                onPressed: _challengeMission == null
+                                                    ? null // 미션 없으면 비활성화
+                                                    : () {
+                                                  // [수정] 6. '/congestion'으로 경로 수정
                                                   Navigator.pushNamed(
                                                     context,
-                                                    '/mission_start',
+                                                    '/congestion',
                                                   );
                                                 },
                                               ),
@@ -804,66 +873,30 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           borderRadius: BorderRadius.circular(
                                             24 * overallRatio,
                                           ),
-                                          child: ListView(
+                                          child: _orderedMissions.isEmpty
+                                              ? Center(
+                                            child: Text(
+                                              "스케줄링된 미션이 없습니다.\n미션을 시작해 분석해주세요!",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: Color(0xFF8D93A1),
+                                                fontSize: 14 * overallRatio,
+                                              ),
+                                            ),
+                                          )
+                                              : ListView(
                                             padding: EdgeInsets.zero,
-                                            children: [
-                                              ScheduleItem(
-                                                title:
-                                                    UserThemeManager
-                                                                .currentUserType ==
-                                                            UserType.mol
-                                                        ? '2단'
-                                                        : (UserThemeManager
-                                                                    .currentUserType ==
-                                                                UserType.gam
-                                                            ? '서랍'
-                                                            : '냉장실 한 칸'),
-                                                time: '45분',
-                                                isCompleted: false,
-                                              ),
-                                              ScheduleItem(
-                                                title:
-                                                    UserThemeManager
-                                                                .currentUserType ==
-                                                            UserType.mol
-                                                        ? '3단'
-                                                        : (UserThemeManager
-                                                                    .currentUserType ==
-                                                                UserType.gam
-                                                            ? '행거 구역'
-                                                            : '얼음/얼린 식재료 칸'),
-                                                time: '1시간',
-                                                isCompleted: false,
-                                              ),
-                                              ScheduleItem(
-                                                title:
-                                                    UserThemeManager
-                                                                .currentUserType ==
-                                                            UserType.mol
-                                                        ? '1단'
-                                                        : (UserThemeManager
-                                                                    .currentUserType ==
-                                                                UserType.gam
-                                                            ? '옷장 바닥 공간'
-                                                            : '냉동식품 칸'),
-                                                time: '30분',
-                                                isCompleted: true,
-                                              ),
-                                              ScheduleItem(
-                                                title:
-                                                    UserThemeManager
-                                                                .currentUserType ==
-                                                            UserType.mol
-                                                        ? '보조 포켓'
-                                                        : (UserThemeManager
-                                                                    .currentUserType ==
-                                                                UserType.gam
-                                                            ? '보조 포켓'
-                                                            : '냉장실 포켓'),
-                                                time: '30분',
-                                                isCompleted: true,
-                                              ),
-                                            ],
+                                            children: _orderedMissions.asMap().entries.map((entry) {
+                                              int index = entry.key;
+                                              Section mission = entry.value;
+                                              bool isCompleted = index < _currentMissionIndex;
+
+                                              return ScheduleItem(
+                                                title: mission.name,
+                                                time: _getMissionTime(mission),
+                                                isCompleted: isCompleted,
+                                              );
+                                            }).toList(),
                                           ),
                                         ),
                                       ),
@@ -961,15 +994,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                       MainAxisAlignment.center,
                                                   children: [
                                                     Text(
-                                                      UserThemeManager
-                                                                  .currentUserType ==
-                                                              UserType.mol
-                                                          ? '서랍'
-                                                          : (UserThemeManager
-                                                                      .currentUserType ==
-                                                                  UserType.gam
-                                                              ? '옷장'
-                                                              : '냉장고'),
+                                                      _userSpace,
                                                       style: TextStyle(
                                                         fontSize:
                                                             20 * overallRatio,
@@ -996,8 +1021,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                               height: 20,
                                                               // Set a fixed height for the progress bar
                                                               child: LinearProgressIndicator(
-                                                                value: 0.3,
-                                                                // 30% progress
+                                                                value: _currentSpaceProgressPercentage / 100.0,
                                                                 backgroundColor:
                                                                     Colors
                                                                         .grey[300],
@@ -1016,9 +1040,9 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                         ),
                                                         SizedBox(width: 10),
                                                         // 진행바와 텍스트 사이 간격
-                                                        const Text(
-                                                          '30%',
-                                                          style: TextStyle(
+                                                        Text(
+                                                          '$_currentSpaceProgressPercentage%',
+                                                          style: const TextStyle(
                                                             fontSize: 16,
                                                             // 적절한 크기로 설정
                                                             fontWeight:
@@ -1158,10 +1182,15 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                             ],
                                                           )
                                                           : const Center(
-                                                            child: Text(
-                                                              '데이터 없음',
-                                                            ),
+                                                        child: Text(
+                                                          '아직 보관된 물품이 없어요.',
+                                                          textAlign: TextAlign.center,
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            color: Color(0xFF8D93A1),
                                                           ),
+                                                        ),
+                                                      ),
                                                 ),
                                               ),
                                               Expanded(

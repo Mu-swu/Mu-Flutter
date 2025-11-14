@@ -83,6 +83,20 @@ class MissionStartPage extends StatelessWidget {
     return Duration(hours: hours, minutes: minutes);
   }
 
+  String _getSpaceCodeFromMission(Section mission) {
+    final String sectionName = mission.name;
+
+    final Set<String> fridgeSet = {"냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"};
+    final Set<String> closetSet = {"선반", "행거 구역", "옷장 바닥 공간", "서랍"};
+    final Set<String> drawerSet = {"1단", "2단", "3단"};
+
+    if (fridgeSet.contains(sectionName)) return 're'; // Refrigerator
+    if (closetSet.contains(sectionName)) return 'cl'; // Closet
+    if (drawerSet.contains(sectionName)) return 'dr'; // Drawer
+
+    return 're';
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -134,31 +148,40 @@ class MissionStartPage extends StatelessWidget {
 
         String tagLabel;
         TagType tagType;
-        String missionImage;
         UserType userType;
 
         switch (userTypeString) {
           case '방치형':
             tagLabel = '방치형';
             tagType = TagType.bang;
-            missionImage = 'assets/mission/still_re.png';
             userType = UserType.bang;
             break;
           case '감정형':
             tagLabel = '감정형';
             tagType = TagType.gam;
-            missionImage = 'assets/mission/still_cl.png';
             userType = UserType.gam;
             break;
           case '몰라형':
           default:
             tagLabel = '몰라형';
             tagType = TagType.mol;
-            missionImage = 'assets/mission/still_dr.png';
             userType = UserType.mol;
             break;
         }
-
+        final String spaceCode = _getSpaceCodeFromMission(currentMission);
+        String missionImage;
+        switch (spaceCode) {
+          case 're': // 냉장고
+            missionImage = 'assets/mission/still_re.png';
+            break;
+          case 'cl': // 옷장
+            missionImage = 'assets/mission/still_cl.png';
+            break;
+          case 'dr': // 서랍장
+          default:
+            missionImage = 'assets/mission/still_dr.png';
+            break;
+        }
         final String missionTitle = currentMission.name;
         final String timeString = _getTimeForStatus(
           currentMission.clutterLevel,
@@ -235,7 +258,7 @@ class MissionStartPage extends StatelessWidget {
                                         ),
                                       );
                                     },
-                                    isEnabled: true, // 필요 시 false로 비활성화 가능
+                                    isEnabled: true,
                                   ),
                                 ],
                               ),

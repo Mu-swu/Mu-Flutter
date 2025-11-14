@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
@@ -195,6 +197,26 @@ class _MissionStepPageState extends State<MissionStepPage> {
     );
   }
 
+  String _getSpaceCode() {
+    if (widget.orderedMissions.isEmpty ||
+        widget.currentMissionIndex >= widget.orderedMissions.length) {
+      return 're';
+    }
+
+    final String sectionName =
+        widget.orderedMissions[widget.currentMissionIndex].name;
+
+    final Set<String> fridgeSet = {"냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"};
+    final Set<String> closetSet = {"선반", "행거 구역", "옷장 바닥 공간", "서랍"};
+    final Set<String> drawerSet = {"1단", "2단", "3단"};
+
+    if (fridgeSet.contains(sectionName)) return 're'; // Refrigerator
+    if (closetSet.contains(sectionName)) return 'cl'; // Closet
+    if (drawerSet.contains(sectionName)) return 'dr'; // Drawer
+
+    return 're'; // 기본값
+  }
+
   Future<void> _generateMissionSteps() async {
     final userTypeMap = {'gam': '감정형', 'mol': '몰라형', 'bas': '방치형'};
     final userType = userTypeMap[_currentUserType] ?? '방치형';
@@ -378,52 +400,58 @@ class _MissionStepPageState extends State<MissionStepPage> {
      ]
     }
     """;
+    int maxRetries = 5;
+    int baseDelayMs = 1000;
+    Random jitter = Random();
 
-    const int maxRetries = 3;
-
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+    for (int i = 0; i < maxRetries; i++) {
       try {
-        print('API Key 확인: ${dotenv.env['GEMINI_API_KEY']}');
-        print('Gemini API 호출 시도: $attempt회');
+        // ─────── 1. [추가] API 호출 ───────
+        final content = [Content.text(prompt)];
+        final response = await _model.generateContent(content);
 
-        final response = await _model
-            .generateContent([Content.text(prompt)])
-            .timeout(
-              const Duration(seconds: 20),
-              onTimeout: () {
-                throw Exception("Gemini API 응답 시간 초과");
-              },
-            );
-
-        String? text = response.text;
-
-        if (text == null || text.isEmpty) {
-          throw Exception("API가 비어있는 응답을 반환했습니다.");
+        if (response.text == null) {
+          throw Exception("Gemini API가 null 응답을 반환했습니다.");
         }
 
-        final newMissionSteps = await compute(_parseMissionSteps, text);
+        // ─────── 2. [추가] 파싱 및 상태 업데이트 ───────
+        final List<StepData> newSteps = _parseMissionSteps(response.text!);
 
-        setState(() {
-          _missionSteps = newMissionSteps;
-          _loadStepData(0);
-          _isLoading = false;
-        });
-
-        if (!_isPaused) _startTimer();
-        return;
-      } catch (e) {
-        print('미션 생성 중 오류 발생 (시도 $attempt회): $e');
-
-        if (attempt == maxRetries) {
-          print("최대 재시도 횟수($maxRetries회) 초과. 초기화 실패 처리.");
-
+        if (mounted) {
           setState(() {
+            _missionSteps = newSteps;
             _isLoading = false;
           });
-          return;
+
+          _loadStepData(0);
+          _startTimer();
         }
 
-        await Future.delayed(const Duration(seconds: 2));
+        return;
+      } on GenerativeAIException catch (e) {
+        if (e.message.contains("503") || e.message.contains("overloaded")) {
+          print("오류 (시도 ${i + 1}): 모델 과부하(503). 재시도합니다.");
+          if (i == maxRetries - 1) {
+            print("최대 재시도 횟수 초과. 실패 처리.");
+            if (mounted) setState(() => _isLoading = false);
+            throw Exception("Gemini API 호출 실패: $e");
+          }
+          num delay = (baseDelayMs * pow(2, i)) + jitter.nextInt(1000);
+          print("${delay}ms 후 재시도...");
+          await Future.delayed(Duration(milliseconds: delay.toInt()));
+        } else {
+          print("503이 아닌 다른 오류 발생: $e");
+          if (mounted) setState(() => _isLoading = false);
+          throw e;
+        }
+      } catch (e) {
+        print("예외 발생 (시도 ${i + 1}): $e");
+        if (i == maxRetries - 1) {
+          if (mounted) setState(() => _isLoading = false);
+          throw e;
+        }
+        num delay = (baseDelayMs * pow(2, i)) + jitter.nextInt(1000);
+        await Future.delayed(Duration(milliseconds: delay.toInt()));
       }
     }
   }
@@ -439,8 +467,6 @@ class _MissionStepPageState extends State<MissionStepPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollController.jumpTo(0);
     });
-
-    //await Future.delayed(Duration(milliseconds: 300));
 
     if (_isTtsEnabled) {
       _startTtsSequence();
@@ -592,17 +618,19 @@ class _MissionStepPageState extends State<MissionStepPage> {
         break;
     }
 
-    String loadingVideoPath;
+    final String spaceCode = _getSpaceCode();
 
-    switch (_currentUserType) {
-      case UserType.bang:
+    String loadingVideoPath;
+    switch (spaceCode) {
+      case 're': // 냉장고
         loadingVideoPath = 'assets/mission/loading_re.mp4';
         break;
-      case UserType.gam:
-        loadingVideoPath = 'assets/mission/loading_dr.mp4';
-        break;
-      case UserType.mol:
+      case 'dr': // 서랍장
         loadingVideoPath = 'assets/mission/loading_cl.mp4';
+        break;
+      case 'cl': // 옷장
+      default:
+        loadingVideoPath = 'assets/mission/loading_dr.mp4';
         break;
     }
 
@@ -849,6 +877,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
               currentLineIndex:
                   _currentLines.isNotEmpty ? _currentLineIndex : -1,
               controller: _scrollController,
+              spaceCode: _getSpaceCode(),
             ),
           ),
         ),
@@ -966,6 +995,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                       lines: _currentLines,
                       currentLineIndex: _currentLineIndex,
                       controller: _scrollController,
+                      spaceCode: _getSpaceCode(),
                     ),
                   ),
                 ),
@@ -1056,6 +1086,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
                       lines: _currentLines,
                       currentLineIndex: _currentLineIndex,
                       controller: _scrollController,
+                      spaceCode: _getSpaceCode(),
                     ),
           ),
         ),

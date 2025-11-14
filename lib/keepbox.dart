@@ -160,10 +160,22 @@ class _keepboxState extends State<keepbox> {
         widget.nextMissionIndex != null && widget.totalMissionCount != null;
 
     if (isMissionFlow) {
-      if (mounted) {
-        final bool allMissionsCompleted =
-            widget.nextMissionIndex! >= widget.totalMissionCount!;
+      final bool allMissionsCompleted =
+          widget.nextMissionIndex! >= widget.totalMissionCount!;
 
+      if (allMissionsCompleted) {
+        final String? completedSpaceName =
+        await _database.inferCurrentSpaceName(1);
+
+        if (completedSpaceName != null) {
+          print("'$completedSpaceName' 미션 완료! 모든 가구 잠금 해제.");
+          await _database.completeSpaceAndUnlockAll(1, completedSpaceName);
+        } else {
+          print("오류: 완료된 가구 이름을 찾지 못해 잠금 해제에 실패했습니다.");
+        }
+      }
+
+      if (mounted) {
         await showMissionCompleteDialog(
           context: context,
           allMissionsCompleted: allMissionsCompleted,

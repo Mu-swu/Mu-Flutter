@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:mu/user_theme_manager.dart';
 
 Widget tts_text_box({
   required List<String> lines,
   required int currentLineIndex,
+  required String spaceCode,
   ScrollController? controller,
 }) {
-  final UserType userType = UserThemeManager.currentUserType;
   final safeCurrentLineIndex =
       (currentLineIndex >= 0 && currentLineIndex < lines.length)
           ? currentLineIndex
@@ -14,21 +13,21 @@ Widget tts_text_box({
   String missionImage;
   Offset imageOffset;
 
-  switch (userType) {
-    case UserType.bang:
+  switch (spaceCode) {
+    case 're':
       imageOffset = Offset(460, 166);
       missionImage = 'assets/mission/mission_re.png';
       break;
-    case UserType.gam:
+    case 'cl':
       missionImage = 'assets/mission/mission_cl.png';
       imageOffset = Offset(215, 210);
       break;
-    case UserType.mol:
+    case 'dr':
+    default:
       missionImage = 'assets/mission/mission_dr.png';
       imageOffset = Offset(510, 166);
       break;
   }
-
 
   return Container(
     width: double.infinity,

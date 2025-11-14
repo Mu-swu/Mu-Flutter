@@ -248,6 +248,40 @@ class AppDatabase extends _$AppDatabase {
     return (select(spaceProgresses)..where((s) => s.userId.equals(userId))).get();
   }
 
+  String getSpaceNameForSection(String sectionName) {
+    final Set<String> fridgeSections = {
+      "냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"
+    };
+    final Set<String> closetSections = {"선반", "행거 구역", "옷장 바닥 공간", "서랍"};
+    final Set<String> drawerSections = {"1단", "2단", "3단"};
+
+    if (fridgeSections.contains(sectionName)) return '냉장고';
+    if (closetSections.contains(sectionName)) return '옷장';
+    if (drawerSections.contains(sectionName)) return '서랍장';
+
+    return 'Unknown';
+  }
+
+  Future<String?> inferCurrentSpaceName(int userId) async {
+    final userSections = await getSectionsForUser(userId);
+    if (userSections.isEmpty) return null;
+
+    final Set<String> fridgeSections = {
+      "냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"
+    };
+    final Set<String> closetSections = {"선반", "행거 구역", "옷장 바닥 공간", "서랍"};
+    final Set<String> drawerSections = {"1단", "2단", "3단"};
+
+    for (final section in userSections) {
+      if (fridgeSections.contains(section.name)) return '냉장고';
+      if (closetSections.contains(section.name)) return '옷장';
+      if (drawerSections.contains(section.name)) return '서랍장';
+    }
+
+    print("경고: 현재 섹션들의 부모 가구(space)를 찾을 수 없습니다.");
+
+    return null;
+  }
   Future<void> completeSpaceAndUnlockAll(
       int userId,
       String completedSpaceName,

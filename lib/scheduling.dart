@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:mu/mission_start.dart';
+import 'package:mu/widgets/longbutton.dart';
 import 'widgets/shortbutton.dart';
 import 'package:mu/data/database.dart';
 
@@ -34,6 +35,7 @@ class ScheduleCard extends StatelessWidget {
     Color statusBackgroundColor;
     Color statusTextColor;
     Color contentTextColor;
+    Color timeTextColor;
     Color circleColor;
     Widget circleChild;
     Border? border;
@@ -58,12 +60,13 @@ class ScheduleCard extends StatelessWidget {
     }
 
     if (isCompleted) {
-      statusBackgroundColor = const Color(0xFFE0E0E0);
-      statusTextColor = const Color(0xFF8D93A1);
+      statusBackgroundColor = const Color(0xFFDBDEE7);
+      statusTextColor = const Color(0xFFB0B8C1);
       contentTextColor = const Color(0xFF8D93A1);
+      timeTextColor = const Color(0xFF8D93A1);
       circleColor = const Color(0xFFDBDEE7);
       border = null;
-      cardBackgroundColor = const Color(0xFFF0F0F0);
+      cardBackgroundColor = const Color(0xFFF5F5F5);
       circleChild = Image.asset(
         'assets/mission/done.png',
         width: 42,
@@ -72,7 +75,8 @@ class ScheduleCard extends StatelessWidget {
     } else if (isSelected) {
       statusBackgroundColor = originalStatusBackgroundColor;
       statusTextColor = originalStatusTextColor;
-      contentTextColor = const Color(0xFF333333);
+      contentTextColor = const Color(0xFF5D5D5D);
+      timeTextColor = const Color(0xFF333333);
       circleColor = const Color(0xFF7F91FF);
       border = Border.all(color: Color(0xFF7F91FF), width: 4.0);
       circleChild = Text(
@@ -86,7 +90,8 @@ class ScheduleCard extends StatelessWidget {
     } else {
       statusBackgroundColor = originalStatusBackgroundColor;
       statusTextColor = originalStatusTextColor;
-      contentTextColor = const Color(0xFF8D93A1);
+      contentTextColor = const Color(0xFF5D5D5D);
+      timeTextColor = const Color(0xFF333333);
       circleColor = const Color(0xFFDBDEE7);
       border = null;
       circleChild = Image.asset(
@@ -254,14 +259,22 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
   }
 
   Duration _parseDuration(String timeString) {
+    int hours = 0;
+    int minutes = 0;
+
     if (timeString.contains('시간')) {
-      final hours = int.tryParse(timeString.replaceAll('시간', '').trim()) ?? 0;
-      return Duration(hours: hours);
+      final parts = timeString.split('시간');
+      hours = int.tryParse(parts[0].trim()) ?? 0;
+      if (parts.length > 1 && parts[1].contains('분')) {
+        minutes = int.tryParse(parts[1].replaceAll('분', '').trim()) ?? 0;
+      }
     } else if (timeString.contains('분')) {
-      final minutes = int.tryParse(timeString.replaceAll('분', '').trim()) ?? 0;
-      return Duration(minutes: minutes);
+      minutes = int.tryParse(timeString.replaceAll('분', '').trim()) ?? 0;
+    } else {
+      return const Duration(minutes: 30); // 기본값
     }
-    return const Duration(minutes: 30);
+
+    return Duration(hours: hours, minutes: minutes);
   }
 
   void _toggleSelection(String section) {
@@ -292,15 +305,31 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
           }
 
           final List<Map<String, String>> cardData =
-              widget.analysisResults.entries.map((entry) {
-                final section = entry.key;
-                final status = entry.value;
+          widget.analysisResults.entries.where((entry) {
+            final sectionName = entry.key;
+            final status = entry.value;
+            final bool isCompleted = _completedMissionNames.contains(sectionName);
+            final bool isAnalyzed = (status == '혼잡' || status == '보통' || status == '여유');
+
+            return isCompleted || isAnalyzed;
+
+          }).map((entry) {
+            final section = entry.key;
+            final status = entry.value;
                 return {
                   'status': status,
                   'section': section,
                   'time': _getTimeForStatus(status, _userType),
                 };
               }).toList();
+
+          final allMissionNames = widget.analysisResults.keys.toList();
+          final availableMissionNames =
+              allMissionNames
+                  .where((name) => !_completedMissionNames.contains(name))
+                  .toList();
+
+          final bool showResetButton = availableMissionNames.isEmpty;
 
           return LayoutBuilder(
             builder: (context, constraints) {
@@ -394,76 +423,87 @@ class _EmptyingSchedulePageState extends State<EmptyingSchedulePage> {
                                 ),
                               ),
                             ),
-                            // 버튼
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: ShortButton(
-                                    text: "초기화",
-                                    isYes: false,
-                                    onPressed: () {
-                                      setState(() {
-                                        _selectedOrder.clear();
-                                      });
-                                    },
-                                    height: 64,
-                                    fontSize: 18 * fontScale,
+                            if (showResetButton)
+                              LongButton(
+                                text: '재촬영하기',
+                                onPressed: () async {
+                                  await AppDatabase.instance
+                                      .updateUserMissionIndex(1, 0);
+
+                                  await AppDatabase.instance.updateMissionOrder(
+                                    1,
+                                    [],
+                                  );
+
+                                  setState(() {
+                                    _selectedOrder.clear();
+                                    _completedMissionNames.clear();
+                                    _currentMissionIndex = 0;
+                                  });
+                                },
+                              )
+                            else
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: ShortButton(
+                                      text: "초기화",
+                                      isYes: false,
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedOrder.clear();
+                                        });
+                                      },
+                                      height: 64,
+                                      fontSize: 18 * fontScale,
+                                    ),
                                   ),
-                                ),
-                                SizedBox(width: 20 * widthRatio),
-                                Expanded(
-                                  child: ShortButton(
-                                    text: "미션 시작",
-                                    isYes: _selectedOrder.isNotEmpty,
-                                    onPressed:
-                                        _selectedOrder.isEmpty
-                                            ? null
-                                            : () async {
-                                              final List<String>
-                                              finalMissionOrder = [
-                                                ..._completedMissionNames,
-                                                ..._selectedOrder,
-                                              ];
+                                  SizedBox(width: 20 * widthRatio),
+                                  Expanded(
+                                    child: ShortButton(
+                                      text: "미션 시작",
+                                      isYes: _selectedOrder.isNotEmpty,
+                                      onPressed:
+                                          _selectedOrder.isEmpty
+                                              ? null
+                                              : () async {
+                                                final List<String>
+                                                finalMissionOrderNames = [
+                                                  ..._completedMissionNames,
+                                                  ..._selectedOrder,
+                                                ];
 
-                                              await AppDatabase.instance
-                                                  .updateMissionOrder(
-                                                    1,
-                                                    finalMissionOrder,
-                                                  );
 
-                                              await AppDatabase.instance
-                                                  .updateUserMissionIndex(
-                                                    1,
-                                                    _completedMissionNames
-                                                        .length,
-                                                  );
+                                                await AppDatabase.instance
+                                                    .updateMissionOrder(
+                                                      1,
+                                                  finalMissionOrderNames,
+                                                    );
 
-                                              final firstMissionName =
-                                                  _selectedOrder.first;
-                                              final missionData = cardData
-                                                  .firstWhere(
-                                                    (data) =>
-                                                        data['section'] ==
-                                                        firstMissionName,
-                                                  );
+                                                await AppDatabase.instance
+                                                    .updateUserMissionIndex(
+                                                      1,
+                                                      _completedMissionNames
+                                                          .length,
+                                                    );
 
-                                              if (!mounted) return;
+                                                if (!mounted) return;
 
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder:
-                                                      (context) =>
-                                                          MissionStartPage(),
-                                                ),
-                                              );
-                                            },
-                                    height: 64,
-                                    fontSize: 18 * fontScale,
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder:
+                                                        (context) =>
+                                                            MissionStartPage(),
+                                                  ),
+                                                );
+                                              },
+                                      height: 64,
+                                      fontSize: 18 * fontScale,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
                             SizedBox(height: 80 * heightRatio),
                           ],
                         ),

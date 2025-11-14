@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:mu/space_start.dart';
 import 'package:mu/widgets/shortbutton.dart';
 import 'package:mu/mission_start.dart';
 // import 'package:mu/EmptyingSchedulePage.dart';
@@ -36,7 +37,7 @@ Future<void> showMissionCompleteDialog({
                       '비움 미션 완료',
                       style: TextStyle(fontSize: 32, fontFamily: 'PretendardBold',color: Color(0xFF333333)),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     Text(
                       "비움 미션을 완료했어요!\n다음 미션을 바로 진행할 수 있어요.",
                       textAlign: TextAlign.center,
@@ -53,8 +54,11 @@ Future<void> showMissionCompleteDialog({
                             text: "미션 화면으로 가기",
                             isYes: false,
                             onPressed: () {
-                              Navigator.of(dialogContext).pop();
-                              Navigator.of(context).popUntil((route) => route.isFirst);
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (context) => const SpaceStartScreen(),
+                                ),
+                              );
                             },
                             width: 185,
                             height: 52,
