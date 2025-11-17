@@ -207,21 +207,25 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
     setState(() {
       _impendingItems = items;
       _isLoading = false;
-
-      if (hasImpendingItems) {
-        _showOverlayBanner = true;
-      }
     });
+      if (hasImpendingItems && mounted) {
+        await Future.delayed(const Duration(milliseconds: 50));
 
-    if (hasImpendingItems) {
-      Future.delayed(Duration(seconds: 4), () {
         if (mounted) {
           setState(() {
-            _showOverlayBanner = false;
+            _showOverlayBanner = true;
           });
         }
-      });
-    }
+
+        Future.delayed(const Duration(seconds: 4), () {
+          if (mounted) {
+            setState(() {
+              _showOverlayBanner = false;
+            });
+          }
+        });
+      }
+
   }
 
   String _getMissionTime(Section mission) {
@@ -1292,20 +1296,32 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
               ),
             ),
           ),
-          if (_showOverlayBanner && _impendingItems.isNotEmpty)
-            Positioned(
-              top: 0,
+          if (_impendingItems.isNotEmpty)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeInOutCubic,
+
+              top: _showOverlayBanner
+
+                  ? 0
+                  : -200,
+
               left: 0,
               right: 0,
-              child: SafeArea(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: horizontalPadding,
-                    vertical: 10.0,
-                  ),
-                  child: DDayBanner(
-                    item: _impendingItems.first,
-                    space: _userSpace,
+
+              child: IgnorePointer(
+                ignoring: !_showOverlayBanner,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                      vertical: 10.0,
+                    ),
+                    child: DDayBanner(
+                      item: _impendingItems.first,
+                      space: _userSpace,
+                    ),
                   ),
                 ),
               ),
