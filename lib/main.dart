@@ -45,8 +45,6 @@ class CustomTag extends StatelessWidget {
         break;
     }
 
-
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -74,7 +72,6 @@ Future<void> main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +123,6 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
   void initState() {
     super.initState();
     _loadUserData(showLoading: true);
-
   }
 
   Future<void> _loadUserData({bool showLoading = false}) async {
@@ -170,20 +166,19 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
       final allProgress = await db.getSpaceProgressForUser(1);
       SpaceProgress? currentSpaceProgress;
       try {
-      final currentSpaceProgress = allProgress.firstWhere(
-            (p) => p.spaceName == _userSpace,
-      );
+        final currentSpaceProgress = allProgress.firstWhere(
+          (p) => p.spaceName == _userSpace,
+        );
       } catch (e) {
         currentSpaceProgress = null;
       }
       if (currentSpaceProgress != null) {
         if (currentSpaceProgress.isCompleted) {
           _currentSpaceProgressPercentage = 100;
-        }
-        else if (_orderedMissions.isNotEmpty) {
-          _currentSpaceProgressPercentage = ((_currentMissionIndex / _orderedMissions.length) * 100).toInt();
-        }
-        else {
+        } else if (_orderedMissions.isNotEmpty) {
+          _currentSpaceProgressPercentage =
+              ((_currentMissionIndex / _orderedMissions.length) * 100).toInt();
+        } else {
           _currentSpaceProgressPercentage = 0;
         }
       } else {
@@ -208,50 +203,62 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
       _impendingItems = items;
       _isLoading = false;
     });
-      if (hasImpendingItems && mounted) {
-        await Future.delayed(const Duration(milliseconds: 50));
+    if (hasImpendingItems && mounted) {
+      await Future.delayed(const Duration(milliseconds: 50));
 
-        if (mounted) {
-          setState(() {
-            _showOverlayBanner = true;
-          });
-        }
-
-        Future.delayed(const Duration(seconds: 4), () {
-          if (mounted) {
-            setState(() {
-              _showOverlayBanner = false;
-            });
-          }
+      if (mounted) {
+        setState(() {
+          _showOverlayBanner = true;
         });
       }
 
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted) {
+          setState(() {
+            _showOverlayBanner = false;
+          });
+        }
+      });
+    }
   }
 
   String _getMissionTime(Section mission) {
     final status = mission.clutterLevel;
-    switch (_userTypeString) { // 상태 변수(_userTypeString) 사용
+    switch (_userTypeString) {
+      // 상태 변수(_userTypeString) 사용
       case '감정형':
         switch (status) {
-          case '혼잡': return '1시간 30분';
-          case '보통': return '1시간';
-          case '여유': return '45분';
-          default: return '45분';
+          case '혼잡':
+            return '1시간 30분';
+          case '보통':
+            return '1시간';
+          case '여유':
+            return '45분';
+          default:
+            return '45분';
         }
       case '몰라형':
         switch (status) {
-          case '혼잡': return '1시간';
-          case '보통': return '40분';
-          case '여유': return '20분';
-          default: return '20분';
+          case '혼잡':
+            return '1시간';
+          case '보통':
+            return '40분';
+          case '여유':
+            return '20분';
+          default:
+            return '20분';
         }
       case '방치형':
       default:
         switch (status) {
-          case '혼잡': return '1시간';
-          case '보통': return '45분';
-          case '여유': return '30분';
-          default: return '30분';
+          case '혼잡':
+            return '1시간';
+          case '보통':
+            return '45분';
+          case '여유':
+            return '30분';
+          default:
+            return '30분';
         }
     }
   }
@@ -730,10 +737,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                       const Spacer(),
                       GestureDetector(
                         onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/inven',
-                          );
+                          Navigator.pushNamed(context, '/inven');
                         },
                         child: Container(
                           padding: EdgeInsets.all(12 * overallRatio),
@@ -770,9 +774,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                   decoration: BoxDecoration(
                                     color: UserThemeManager.momBackgroundColor,
                                     // Dynamic background color
-                                    borderRadius: BorderRadius.circular(
-                                      24 * overallRatio,
-                                    ),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Column(
                                     children: [
@@ -788,13 +790,15 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                         flex: 1,
                                         child: Container(
                                           padding: EdgeInsets.symmetric(
-                                            horizontal: 20 * overallRatio,
+                                            horizontal: 40 * overallRatio,
                                             vertical: 10 * overallRatio,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.white,
+                                            color: Colors.white.withOpacity(
+                                              0.6,
+                                            ),
                                             borderRadius: BorderRadius.circular(
-                                              16 * overallRatio,
+                                              10,
                                             ),
                                           ),
                                           child: Row(
@@ -803,7 +807,11 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                             children: [
                                               Padding(
                                                 padding: EdgeInsets.only(
-                                                  top: 10 * overallRatio,
+                                                  top:
+                                                      (_orderedMissions.isEmpty
+                                                          ? 28
+                                                          : 16) *
+                                                      overallRatio,
                                                 ),
                                                 child: Column(
                                                   crossAxisAlignment:
@@ -812,17 +820,25 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                     Text(
                                                       '오늘의 챌린지',
                                                       style: TextStyle(
-                                                        fontSize:
-                                                            20 * overallRatio,
-                                                        fontWeight:
-                                                            FontWeight.bold,
+                                                        fontFamily:
+                                                            'PretendardBold',
+                                                        fontSize: 20,
                                                       ),
                                                     ),
                                                     Text(
-                                                      _challengeMission?.name ?? '모든 미션을 완료했어요!',
+                                                      _challengeMission != null
+                                                          ? '${_challengeMission!.name} 비우기'
+                                                          : (_orderedMissions
+                                                                  .isEmpty
+                                                              ? ''
+                                                              : '모든 미션을 완료했어요!'),
                                                       style: TextStyle(
-                                                        fontSize:
-                                                        16 * overallRatio,
+                                                        fontSize: 16,
+                                                        fontFamily:
+                                                            'PretendardRegular',
+                                                        color: Color(
+                                                          0xFF5D5D5D,
+                                                        ),
                                                       ),
                                                     ),
                                                   ],
@@ -830,19 +846,24 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                               ),
                                               ShortButton(
                                                 text: '시작하기',
-                                                // [수정] 5. 챌린지 없으면 버튼 비활성화
-                                                isYes: _challengeMission != null,
-                                                width: 100 * overallRatio,
-                                                height: 40 * overallRatio,
-                                                onPressed: _challengeMission == null
-                                                    ? null // 미션 없으면 비활성화
-                                                    : () {
-                                                  // [수정] 6. '/congestion'으로 경로 수정
-                                                  Navigator.pushNamed(
-                                                    context,
-                                                    '/congestion',
-                                                  );
-                                                },
+                                                fontSize: 16,
+                                                isYes:
+                                                    _challengeMission != null ||
+                                                    _orderedMissions.isEmpty,
+                                                width: 120,
+                                                height: 50,
+                                                onPressed:
+                                                    (_challengeMission !=
+                                                                null ||
+                                                            _orderedMissions
+                                                                .isEmpty)
+                                                        ? () {
+                                                          Navigator.pushNamed(
+                                                            context,
+                                                            '/congestion',
+                                                          );
+                                                        }
+                                                        : null,
                                               ),
                                             ],
                                           ),
@@ -877,31 +898,51 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           borderRadius: BorderRadius.circular(
                                             24 * overallRatio,
                                           ),
-                                          child: _orderedMissions.isEmpty
-                                              ? Center(
-                                            child: Text(
-                                              "스케줄링된 미션이 없습니다.\n미션을 시작해 분석해주세요!",
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                color: Color(0xFF8D93A1),
-                                                fontSize: 14 * overallRatio,
-                                              ),
-                                            ),
-                                          )
-                                              : ListView(
-                                            padding: EdgeInsets.zero,
-                                            children: _orderedMissions.asMap().entries.map((entry) {
-                                              int index = entry.key;
-                                              Section mission = entry.value;
-                                              bool isCompleted = index < _currentMissionIndex;
+                                          child:
+                                              _orderedMissions.isEmpty
+                                                  ? Center(
+                                                    child: Text(
+                                                      "스케줄링된 미션이 없습니다.\n미션을 시작해 분석해주세요!",
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: TextStyle(
+                                                        color: Color(
+                                                          0xFF8D93A1,
+                                                        ),
+                                                        fontSize:
+                                                            14 * overallRatio,
+                                                      ),
+                                                    ),
+                                                  )
+                                                  : ListView(
+                                                    padding: EdgeInsets.zero,
+                                                    children:
+                                                        _orderedMissions
+                                                            .asMap()
+                                                            .entries
+                                                            .map((entry) {
+                                                              int index =
+                                                                  entry.key;
+                                                              Section mission =
+                                                                  entry.value;
+                                                              bool isCompleted =
+                                                                  index <
+                                                                  _currentMissionIndex;
 
-                                              return ScheduleItem(
-                                                title: mission.name,
-                                                time: _getMissionTime(mission),
-                                                isCompleted: isCompleted,
-                                              );
-                                            }).toList(),
-                                          ),
+                                                              return ScheduleItem(
+                                                                title:
+                                                                    mission
+                                                                        .name,
+                                                                time:
+                                                                    _getMissionTime(
+                                                                      mission,
+                                                                    ),
+                                                                isCompleted:
+                                                                    isCompleted,
+                                                              );
+                                                            })
+                                                            .toList(),
+                                                  ),
                                         ),
                                       ),
                                     ),
@@ -1025,7 +1066,9 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                               height: 20,
                                                               // Set a fixed height for the progress bar
                                                               child: LinearProgressIndicator(
-                                                                value: _currentSpaceProgressPercentage / 100.0,
+                                                                value:
+                                                                    _currentSpaceProgressPercentage /
+                                                                    100.0,
                                                                 backgroundColor:
                                                                     Colors
                                                                         .grey[300],
@@ -1046,15 +1089,17 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                         // 진행바와 텍스트 사이 간격
                                                         Text(
                                                           '$_currentSpaceProgressPercentage%',
-                                                          style: const TextStyle(
-                                                            fontSize: 16,
-                                                            // 적절한 크기로 설정
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            color: Color(
-                                                              0xFF8D93A1,
-                                                            ),
-                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 16,
+                                                                // 적절한 크기로 설정
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color: Color(
+                                                                  0xFF8D93A1,
+                                                                ),
+                                                              ),
                                                         ),
                                                       ],
                                                     ),
@@ -1186,15 +1231,19 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                             ],
                                                           )
                                                           : const Center(
-                                                        child: Text(
-                                                          '아직 보관된 물품이 없어요.',
-                                                          textAlign: TextAlign.center,
-                                                          style: TextStyle(
-                                                            fontSize: 14,
-                                                            color: Color(0xFF8D93A1),
+                                                            child: Text(
+                                                              '아직 보관된 물품이 없어요.',
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              style: TextStyle(
+                                                                fontSize: 14,
+                                                                color: Color(
+                                                                  0xFF8D93A1,
+                                                                ),
+                                                              ),
+                                                            ),
                                                           ),
-                                                        ),
-                                                      ),
                                                 ),
                                               ),
                                               Expanded(
@@ -1301,10 +1350,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
               duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOutCubic,
 
-              top: _showOverlayBanner
-
-                  ? 0
-                  : -200,
+              top: _showOverlayBanner ? 0 : -200,
 
               left: 0,
               right: 0,
