@@ -166,7 +166,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
       final allProgress = await db.getSpaceProgressForUser(1);
       SpaceProgress? currentSpaceProgress;
       try {
-        final currentSpaceProgress = allProgress.firstWhere(
+        currentSpaceProgress = allProgress.firstWhere(
           (p) => p.spaceName == _userSpace,
         );
       } catch (e) {
@@ -977,7 +977,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           '비움 현황',
                                           style: TextStyle(
                                             fontSize: 20,
-                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'PretendardBold'
                                           ),
                                         ),
                                         SizedBox(height: spacing / 4),
@@ -993,7 +993,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFF3F5FF),
                                             borderRadius: BorderRadius.circular(
-                                              24 * overallRatio,
+                                              10
                                             ),
                                           ),
                                           child: Row(
@@ -1001,13 +1001,13 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                 CrossAxisAlignment.stretch,
                                             children: [
                                               Container(
-                                                width: 120 * overallRatio,
-                                                height: 120 * overallRatio,
+                                                width: 100,
+                                                height: 100,
                                                 decoration: BoxDecoration(
-                                                  color: Colors.white,
+                                                  color: Color(0xFFFAFBFF),
                                                   borderRadius:
                                                       BorderRadius.circular(
-                                                        12 * overallRatio,
+                                                       6,
                                                       ),
                                                 ),
                                                 child: Padding(
@@ -1029,7 +1029,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                 ),
                                               ),
                                               SizedBox(
-                                                width: 40 * overallRatio,
+                                                width: 25 * overallRatio,
                                               ),
                                               Expanded(
                                                 child: Column(
@@ -1042,14 +1042,14 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                       _userSpace,
                                                       style: TextStyle(
                                                         fontSize:
-                                                            20 * overallRatio,
-                                                        color: Colors.black,
+                                                           18,
+                                                        fontFamily: 'PretendardMedium',
+                                                        color: Color(0xFF5D5D5D),
                                                       ),
                                                     ),
                                                     SizedBox(
-                                                      height: 40 * overallRatio,
+                                                      height: 10 * overallRatio,
                                                     ),
-                                                    // 👇 요청하신 'LinearProgressIndicator'와 '30%' 텍스트를 포함하는 Row가 이 자리에 들어갑니다.
                                                     Row(
                                                       mainAxisAlignment:
                                                           MainAxisAlignment
@@ -1059,19 +1059,16 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                           child: ClipRRect(
                                                             borderRadius:
                                                                 BorderRadius.circular(
-                                                                  20,
+                                                                  2
                                                                 ),
-                                                            // Adjust to match desired corner radius
                                                             child: SizedBox(
-                                                              height: 20,
-                                                              // Set a fixed height for the progress bar
+                                                              height: 10,
                                                               child: LinearProgressIndicator(
                                                                 value:
                                                                     _currentSpaceProgressPercentage /
                                                                     100.0,
                                                                 backgroundColor:
-                                                                    Colors
-                                                                        .grey[300],
+                                                                    Color(0xFFDBDEE7),
                                                                 // Gray background
                                                                 valueColor:
                                                                     const AlwaysStoppedAnimation<
@@ -1079,23 +1076,19 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                                     >(
                                                                       Color(
                                                                         0xFF6AC992,
-                                                                      ), // Green fill color
+                                                                      ),
                                                                     ),
                                                               ),
                                                             ),
                                                           ),
                                                         ),
-                                                        SizedBox(width: 10),
-                                                        // 진행바와 텍스트 사이 간격
+                                                        SizedBox(width: 13),
                                                         Text(
                                                           '$_currentSpaceProgressPercentage%',
                                                           style:
                                                               const TextStyle(
-                                                                fontSize: 16,
-                                                                // 적절한 크기로 설정
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
+                                                                fontSize: 14,
+                                                                fontFamily: 'PretendardRegular',
                                                                 color: Color(
                                                                   0xFF8D93A1,
                                                                 ),
