@@ -225,7 +225,6 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
   String _getMissionTime(Section mission) {
     final status = mission.clutterLevel;
     switch (_userTypeString) {
-      // 상태 변수(_userTypeString) 사용
       case '감정형':
         switch (status) {
           case '혼잡':
@@ -260,6 +259,20 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
           default:
             return '30분';
         }
+    }
+  }
+
+  List<String> _getDummyMissions() {
+    switch (_userTypeString) {
+      case '감정형': // 옷장
+        return ["선반", "행거 구역", "옷장 바닥 공간", "서랍"];
+
+      case '몰라형': // 서랍장
+        return ["1단", "2단", "3단"];
+
+      case '방치형': // 냉장고
+      default:
+        return ["냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"];
     }
   }
 
@@ -881,39 +894,36 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                     Text(
                                       '비움 스케줄',
                                       style: TextStyle(
-                                        fontSize: 20 * overallRatio,
-                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20,
+                                        fontFamily: 'PretendardBold'
                                       ),
                                     ),
-                                    SizedBox(height: 5 * overallRatio),
+                                    SizedBox(height: 7 * overallRatio),
                                     Expanded(
                                       child: Container(
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFF3F5FF),
+                                          color: const Color(0xFFFAFBFF),
                                           borderRadius: BorderRadius.circular(
-                                            24 * overallRatio,
+                                            10
                                           ),
                                         ),
                                         child: ClipRRect(
                                           borderRadius: BorderRadius.circular(
-                                            24 * overallRatio,
+                                            10
                                           ),
                                           child:
                                               _orderedMissions.isEmpty
-                                                  ? Center(
-                                                    child: Text(
-                                                      "스케줄링된 미션이 없습니다.\n미션을 시작해 분석해주세요!",
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      style: TextStyle(
-                                                        color: Color(
-                                                          0xFF8D93A1,
-                                                        ),
-                                                        fontSize:
-                                                            14 * overallRatio,
-                                                      ),
-                                                    ),
-                                                  )
+                                                  ? ListView(
+                                                padding: EdgeInsets.zero,
+                                                children: _getDummyMissions()
+                                                    .map((title) {
+                                                  return ScheduleItem(
+                                                    title: title,
+                                                    time: '',
+                                                    isCompleted: true,
+                                                  );
+                                                }).toList(),
+                                              )
                                                   : ListView(
                                                     padding: EdgeInsets.zero,
                                                     children:
