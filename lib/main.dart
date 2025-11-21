@@ -16,6 +16,7 @@ import 'user_theme_manager.dart';
 import 'package:mu/data/sampledata.dart';
 import 'package:mu/notification_service.dart';
 import 'widgets/schedule_item.dart';
+import 'package:mu/mission_start.dart';
 
 enum TagType { bang, gam, mol }
 
@@ -93,6 +94,7 @@ class MyApp extends StatelessWidget {
         '/my': (context) => const MyPage(),
         '/keepbox': (context) => const keepbox(),
         '/inven': (context) => const InventoryPage(),
+        '/mission_start': (context) => const MissionStartPage(),
       },
     );
   }
@@ -873,8 +875,13 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                         ? () {
                                                           Navigator.pushNamed(
                                                             context,
-                                                            '/congestion',
-                                                          );
+                                                            '/mission_start',
+                                                          ).then((_) {
+                                                            _loadUserData(
+                                                              showLoading:
+                                                                  false,
+                                                            );
+                                                          });
                                                         }
                                                         : null,
                                               ),
@@ -895,7 +902,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                       '비움 스케줄',
                                       style: TextStyle(
                                         fontSize: 20,
-                                        fontFamily: 'PretendardBold'
+                                        fontFamily: 'PretendardBold',
                                       ),
                                     ),
                                     SizedBox(height: 7 * overallRatio),
@@ -904,26 +911,28 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFFAFBFF),
                                           borderRadius: BorderRadius.circular(
-                                            10
+                                            10,
                                           ),
                                         ),
                                         child: ClipRRect(
                                           borderRadius: BorderRadius.circular(
-                                            10
+                                            10,
                                           ),
                                           child:
                                               _orderedMissions.isEmpty
                                                   ? ListView(
-                                                padding: EdgeInsets.zero,
-                                                children: _getDummyMissions()
-                                                    .map((title) {
-                                                  return ScheduleItem(
-                                                    title: title,
-                                                    time: '',
-                                                    isCompleted: true,
-                                                  );
-                                                }).toList(),
-                                              )
+                                                    padding: EdgeInsets.zero,
+                                                    children:
+                                                        _getDummyMissions().map(
+                                                          (title) {
+                                                            return ScheduleItem(
+                                                              title: title,
+                                                              time: '',
+                                                              isCompleted: true,
+                                                            );
+                                                          },
+                                                        ).toList(),
+                                                  )
                                                   : ListView(
                                                     padding: EdgeInsets.zero,
                                                     children:
@@ -987,7 +996,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           '비움 현황',
                                           style: TextStyle(
                                             fontSize: 20,
-                                            fontFamily: 'PretendardBold'
+                                            fontFamily: 'PretendardBold',
                                           ),
                                         ),
                                         SizedBox(height: spacing / 4),
@@ -1003,7 +1012,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFF3F5FF),
                                             borderRadius: BorderRadius.circular(
-                                              10
+                                              10,
                                             ),
                                           ),
                                           child: Row(
@@ -1016,9 +1025,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                 decoration: BoxDecoration(
                                                   color: Color(0xFFFAFBFF),
                                                   borderRadius:
-                                                      BorderRadius.circular(
-                                                       6,
-                                                      ),
+                                                      BorderRadius.circular(6),
                                                 ),
                                                 child: Padding(
                                                   padding: EdgeInsets.all(
@@ -1051,10 +1058,12 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                     Text(
                                                       _userSpace,
                                                       style: TextStyle(
-                                                        fontSize:
-                                                           18,
-                                                        fontFamily: 'PretendardMedium',
-                                                        color: Color(0xFF5D5D5D),
+                                                        fontSize: 18,
+                                                        fontFamily:
+                                                            'PretendardMedium',
+                                                        color: Color(
+                                                          0xFF5D5D5D,
+                                                        ),
                                                       ),
                                                     ),
                                                     SizedBox(
@@ -1069,7 +1078,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                           child: ClipRRect(
                                                             borderRadius:
                                                                 BorderRadius.circular(
-                                                                  2
+                                                                  2,
                                                                 ),
                                                             child: SizedBox(
                                                               height: 10,
@@ -1078,7 +1087,9 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                                     _currentSpaceProgressPercentage /
                                                                     100.0,
                                                                 backgroundColor:
-                                                                    Color(0xFFDBDEE7),
+                                                                    Color(
+                                                                      0xFFDBDEE7,
+                                                                    ),
                                                                 // Gray background
                                                                 valueColor:
                                                                     const AlwaysStoppedAnimation<
@@ -1095,14 +1106,14 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                         SizedBox(width: 13),
                                                         Text(
                                                           '$_currentSpaceProgressPercentage%',
-                                                          style:
-                                                              const TextStyle(
-                                                                fontSize: 14,
-                                                                fontFamily: 'PretendardRegular',
-                                                                color: Color(
-                                                                  0xFF8D93A1,
-                                                                ),
-                                                              ),
+                                                          style: const TextStyle(
+                                                            fontSize: 14,
+                                                            fontFamily:
+                                                                'PretendardRegular',
+                                                            color: Color(
+                                                              0xFF8D93A1,
+                                                            ),
+                                                          ),
                                                         ),
                                                       ],
                                                     ),
