@@ -177,7 +177,7 @@ class _ClockPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5;
 
-    final handLength = (outerRadius - strokeWidth) * 0.5;
+    final handLength = (outerRadius - strokeWidth) * 0.6;
 
     canvas.drawLine(
       center,
@@ -190,7 +190,7 @@ class _ClockPainter extends CustomPainter {
         Paint()
           ..color = handColor
           ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 3, centerDotPaint);
+    canvas.drawCircle(center, 2, centerDotPaint);
   }
 
   @override

@@ -1136,7 +1136,8 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           '보관 잔여일',
                                           style: TextStyle(
                                             fontSize: 20,
-                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'PretendardBold',
+                                            color: Color(0xFF333333),
                                           ),
                                         ),
                                         SizedBox(height: spacing / 4),
