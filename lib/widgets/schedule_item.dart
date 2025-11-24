@@ -31,30 +31,38 @@ class ScheduleItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color itemBackgroundColor = isCompleted ? const Color(0xFFFAFBFF) : Colors.transparent;
+    final Color itemBackgroundColor =
+        isCompleted ? const Color(0xFFFAFBFF) : Color(0xFFF3F5FF);
 
     final Color activeGreenFill = const Color(0xFF6AC992);
     final Color activeGreenBorder = const Color(0xFF30AE65);
     final Color activeGreenHand = const Color(0xFF0F6131);
-    final Color completedGray = const Color(0xFFB0B8C1);
+    final Color completedGray = const Color(0xFFDBDEE7);
 
-    final Color progressFillColor = isCompleted ? Colors.transparent : activeGreenFill;
-    final Color borderColor = isCompleted ? completedGray : activeGreenBorder;
+    final Color clockFaceColor =
+       const Color(0xFFF5F5F5);
+
+    final Color progressFillColor =
+        isCompleted ? Color(0xFFF5F5F5) : activeGreenFill;
+    final Color borderColor =
+        isCompleted ? Color(0xFFDBDEE7) : activeGreenBorder;
     final Color handColor = isCompleted ? completedGray : activeGreenHand;
 
-
-    final Color titleColor = isCompleted ? const Color(0xFFB0B8C1) : Colors.black87;
-    final Color timeColor = isCompleted ? const Color(0xFFB0B8C1) : Colors.black54;
+    final Color titleColor =
+        isCompleted ? const Color(0xFFB0B8C1) : Color(0xFF5D5D5D);
+    final Color timeColor =
+        isCompleted ? const Color(0xFFB0B8C1) : Color(0xFF8D93A1);
 
     final double progress = _calculateProgress();
-    final double strokeWidth = 5.0;
+    final double strokeWidth = 3.0;
 
     return Container(
       color: itemBackgroundColor,
       child: Column(
         children: [
+          SizedBox(height: 15),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 17),
             child: Row(
               children: [
                 Expanded(
@@ -64,28 +72,26 @@ class ScheduleItem extends StatelessWidget {
                       Text(
                         title,
                         style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontFamily: 'PretendardMedium',
                           color: titleColor,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         time,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: timeColor,
-                        ),
+                        style: TextStyle(fontSize: 14, color: timeColor),
                       ),
                     ],
                   ),
                 ),
                 SizedBox(
-                  width: 38,
-                  height: 38,
+                  width: 27,
+                  height: 27,
                   child: CustomPaint(
                     painter: _ClockPainter(
                       progress: progress,
+                      clockFaceColor: clockFaceColor,
                       progressFillColor: progressFillColor,
                       borderColor: borderColor,
                       handColor: handColor,
@@ -100,7 +106,7 @@ class ScheduleItem extends StatelessWidget {
           if (!isCompleted)
             const Divider(
               height: 1,
-              color: Color(0xFFEEEEEE),
+              color: Color(0xFFF5F5F5),
               indent: 0,
               endIndent: 0,
             ),
@@ -112,6 +118,7 @@ class ScheduleItem extends StatelessWidget {
 
 class _ClockPainter extends CustomPainter {
   final double progress;
+  final Color clockFaceColor;
   final Color progressFillColor;
   final Color borderColor;
   final Color handColor;
@@ -120,6 +127,7 @@ class _ClockPainter extends CustomPainter {
 
   _ClockPainter({
     required this.progress,
+    required this.clockFaceColor,
     required this.progressFillColor,
     required this.borderColor,
     required this.handColor,
@@ -129,23 +137,29 @@ class _ClockPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
+    final center = Offset(size.width / 2, size.height / 10);
     final outerRadius = math.min(size.width, size.height) / 2;
     final innerRadius = outerRadius - strokeWidth;
 
-    // 원 테두리
-    final borderPaint = Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth;
+    final facePaint = Paint()
+      ..color = clockFaceColor
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, innerRadius, facePaint);
+
+    final borderPaint =
+        Paint()
+          ..color = borderColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth;
     canvas.drawCircle(center, outerRadius - strokeWidth / 2, borderPaint);
 
     // 완료된 항목은 진행도 채움을 그리지 않음
     if (!isCompleted) {
       // 진행도 채움 (pie-slice)
-      final progressFillPaint = Paint()
-        ..color = progressFillColor
-        ..style = PaintingStyle.fill;
+      final progressFillPaint =
+          Paint()
+            ..color = progressFillColor
+            ..style = PaintingStyle.fill;
 
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: innerRadius),
@@ -157,12 +171,13 @@ class _ClockPainter extends CustomPainter {
     }
 
     // 시계 바늘
-    final handPaint = Paint()
-      ..color = handColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+    final handPaint =
+        Paint()
+          ..color = handColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5;
 
-    final handLength = (outerRadius - strokeWidth) * 0.5;
+    final handLength = (outerRadius - strokeWidth) * 0.6;
 
     canvas.drawLine(
       center,
@@ -171,15 +186,17 @@ class _ClockPainter extends CustomPainter {
     );
 
     // 원형 중심의 작은 원
-    final centerDotPaint = Paint()
-      ..color = handColor
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 3, centerDotPaint);
+    final centerDotPaint =
+        Paint()
+          ..color = handColor
+          ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, 2, centerDotPaint);
   }
 
   @override
   bool shouldRepaint(covariant _ClockPainter oldDelegate) {
     return oldDelegate.progress != progress ||
+        oldDelegate.clockFaceColor != clockFaceColor ||
         oldDelegate.progressFillColor != progressFillColor ||
         oldDelegate.borderColor != borderColor ||
         oldDelegate.isCompleted != isCompleted ||
