@@ -642,14 +642,45 @@ class _MissionStepPageState extends State<MissionStepPage> {
             _isLoading
                 ? Center(
                   key: const ValueKey('loading'),
-                  child: SizedBox(
-                    width:
-                        MediaQuery.of(context).size.width > 1000
-                            ? 1000
-                            : MediaQuery.of(context).size.width,
+              child: Column( //세로로 배치
+                mainAxisAlignment: MainAxisAlignment.center, // Column 내용을 중앙 정렬
+                mainAxisSize: MainAxisSize.min, // 필요한 공간만 차지하도록 설정
+                children: [
+                  // 1. 첫 번째 문구
+                  Text(
+                    'AI가 맞춤형 가이드를 생성중입니다',
+                    style: const TextStyle(
+                      fontFamily: 'PretendardBold',
+                      fontSize: 32,
+                      color: Colors.black,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8), // 두 줄 사이 간격
+                  // 2. 두 번째 문구
+                  Text(
+                    '잠시만 기다려주세요',
+                    style: TextStyle(
+                      fontFamily: 'PretendardRegular',
+                      fontSize: 20,
+                      color: Colors.black54,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32), // 텍스트와 비디오 사이 간격 추가
+
+                  // 3. 로딩 비디오
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width > 1000
+                        ? 1000
+                        : MediaQuery.of(context).size.width,
+                    // 비디오가 너무 커지는 것을 방지하기 위해 최대 높이 제한을 추가할 수도 있습니다.
+                    // height: 400,
                     child: LoadingVideo(videoPath: loadingVideoPath),
                   ),
-                )
+                ],
+              ),
+            )
                 : SafeArea(
                   key: const ValueKey('mission_content'),
                   child: SizedBox.expand(

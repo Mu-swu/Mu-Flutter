@@ -13,6 +13,63 @@ import 'package:mu/data/database.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:mu/notification_service.dart';
 
+// 사용자 유형별 스타일 정의
+class TutorialStyle {
+  final Color balloonColor;
+  final Color arrowColor;
+  final String imagePath;
+  final List<String> texts;
+
+  const TutorialStyle({
+    required this.balloonColor,
+    required this.arrowColor,
+    required this.imagePath,
+    required this.texts,
+  });
+}
+
+// 스타일 맵
+const Map<String, TutorialStyle> tutorialStyles = {
+  '방치형': TutorialStyle(
+    balloonColor: Color(0xFFFBF4FF),
+    arrowColor: Color(0xFFDB84EF),
+    imagePath: 'assets/home/mom_bang.png',
+    texts: [
+      '작은 물건부터 분류하면, 큰 물건은 쉬워져! 기준을 배우기 딱 좋은 공간이야.',
+      '보관할 물건이 없다면 완료 버튼을 눌러 비움 미션을 마칠 수 있어.',
+    ],
+  ),
+  '감정형': TutorialStyle(
+    balloonColor: Color(0xFFFFF6EF),
+    arrowColor: Color(0xFFFFB172),
+    imagePath: 'assets/home/mom_gam.png',
+    texts: [
+      '작은 물건부터 분류하면, 큰 물건은 쉬워져! 기준을 배우기 딱 좋은 공간이야.',
+      '보관할 물건이 없다면 완료 버튼을 눌러 비움 미션을 마칠 수 있어.',
+    ],
+  ),
+  '몰라형': TutorialStyle(
+    balloonColor: Color(0xFFF3FBF0),
+    arrowColor: Color(0xFFA1C68D),
+    imagePath: 'assets/home/mom_mol.png',
+    texts: [
+      '작은 물건부터 분류하면, 큰 물건은 쉬워져! 기준을 배우기 딱 좋은 공간이야.',
+      '보관할 물건이 없다면 완료 버튼을 눌러 비움 미션을 마칠 수 있어.',
+    ],
+  ),
+};
+
+// 왼쪽 마이크 영역 (Positioned.fill)
+const Rect LEFT_MIC_AREA = Rect.fromLTWH(0, 0, 0.15, 1.0); // widthRatio * 0.15
+
+// 오른쪽 상자 본체 (ItemSaveSection) 영역
+// (37 + 50 + 20) / screenHeight 만큼 상단 여백 (약 107px)
+// ItemSaveSection은 오른쪽 85% 영역 전체를 Expanded(child: ItemSaveSection)로 사용합니다.
+const double RIGHT_CONTENT_START_Y_RATIO = 107 / 832; // 대략적인 비율
+const Rect RIGHT_CONTENT_AREA = Rect.fromLTWH(0.15, 0.13, 0.85, 0.65); // 대략적인 위치
+
+// 저장 버튼 영역 (LongButton)
+const Rect SAVE_BUTTON_AREA = Rect.fromLTWH(0.15, 0.88, 0.85, 0.12); // 대략적인 위치
 class keepbox extends StatefulWidget {
   final int? nextMissionIndex;
   final int? totalMissionCount;
@@ -23,11 +80,312 @@ class keepbox extends StatefulWidget {
   State<keepbox> createState() => _keepboxState();
 }
 
+class MaskingPainter extends CustomPainter {
+  final Rect? cutoutRect;
+
+  MaskingPainter({this.cutoutRect});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. 어둡고 투명한 배경 색상
+    final backgroundPaint = Paint()
+      ..color = Colors.black.withOpacity(0.6)
+      ..style = PaintingStyle.fill;
+
+    // 2. 전체 화면을 어둡게 칠합니다.
+    canvas.drawRect(Offset.zero & size, backgroundPaint);
+
+    if (cutoutRect != null) {
+      // 3. 뚫어줄 영역을 위한 Paint 설정
+      // BlendMode.clear를 사용하여 해당 영역을 투명하게 만듭니다.
+      final cutoutPaint = Paint()
+        ..blendMode = BlendMode.clear
+        ..color = Colors.white; // 색상은 중요하지 않습니다.
+
+      // 4. 뚫어줄 영역 그리기 (말풍선의 둥근 모서리와 동일한 반지름 사용)
+      final r = 10.0;
+      // 5. 뚫어준 영역을 투명하게 만들기 위해 canvas의 블렌딩 모드를 조정
+      canvas.saveLayer(Offset.zero & size, Paint());
+      canvas.drawPath(Path()..addRect(Offset.zero & size), backgroundPaint);
+      canvas.drawRRect(RRect.fromRectAndRadius(cutoutRect!, Radius.circular(r)), cutoutPaint);
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant MaskingPainter oldDelegate) {
+    return oldDelegate.cutoutRect != cutoutRect;
+  }
+}
+// TutorialOverlayWithMasking
+
+class TutorialOverlayWithMasking extends StatefulWidget {
+  final String userType;
+  final int currentStep;
+  final VoidCallback onNext;
+  final VoidCallback onExit;
+  final double widthRatio; // 원본의 scaleFactor 역할을 함
+  final double heightRatio;
+  final double screenWidth;
+
+  const TutorialOverlayWithMasking({
+    super.key,
+    required this.userType,
+    required this.currentStep,
+    required this.onNext,
+    required this.onExit,
+    required this.widthRatio,
+    required this.heightRatio,
+    required this.screenWidth,
+  });
+
+  @override
+  State<TutorialOverlayWithMasking> createState() =>
+      _TutorialOverlayWithMaskingState();
+}
+
+class _TutorialOverlayWithMaskingState
+    extends State<TutorialOverlayWithMasking> {
+  late TutorialStyle _style;
+  late int _currentTextIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _style = tutorialStyles[widget.userType] ?? tutorialStyles['몰라형']!;
+    _currentTextIndex = widget.currentStep;
+  }
+
+  @override
+  void didUpdateWidget(covariant TutorialOverlayWithMasking oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.currentStep != oldWidget.currentStep) {
+      _currentTextIndex = widget.currentStep;
+    }
+  }
+
+  void _next() {
+    setState(() {
+      if (_currentTextIndex < _style.texts.length - 1) {
+        _currentTextIndex++;
+        widget.onNext(); // 상위 위젯의 _tutorialStep 업데이트
+      } else {
+        widget.onExit();
+      }
+    });
+  }
+
+  // ⚠️ _getBalloonOffset 함수를 제거하고, build 메서드에서 고정 오프셋을 사용합니다.
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final scaleFactor = widget.widthRatio; // 원본의 scaleFactor를 widthRatio로 사용
+
+    // 단계별로 밝게 뚫어줄 영역을 계산합니다.
+    Rect? cutoutRect;
+    final double leftMicWidth = widget.screenWidth * 0.15;
+    final double longButtonBottom = 24; // 대략적인 여백 (픽셀 기준)
+    final double longButtonHeight = 50; // LongButton 내부에서 설정된 높이
+
+    switch (_currentTextIndex) {
+      case 0:
+      // 첫 번째 문구: 왼쪽 마이크 영역 (전체 높이)
+        cutoutRect = Rect.fromLTWH(0, 0, leftMicWidth, screenHeight);
+        break;
+      case 1:
+      // 두 번째 문구: 저장 버튼 영역
+      // LongButton의 위치: screenHeight - longButtonBottom - longButtonHeight
+        final buttonTop = screenHeight -
+            (longButtonBottom * widget.heightRatio) -
+            (longButtonHeight * widget.heightRatio);
+        final buttonLeft = leftMicWidth + 40 * widget.widthRatio; // 오른쪽 영역 padding
+        final buttonRight = widget.screenWidth - 40 * widget.widthRatio;
+        cutoutRect = Rect.fromLTWH(
+          buttonLeft,
+          buttonTop,
+          buttonRight - buttonLeft,
+          longButtonHeight * widget.heightRatio,
+        );
+        break;
+    }
+
+    return Stack(
+      children: [
+        // 1. 마스킹을 위한 CustomPainter (전체 배경)
+        Positioned.fill(
+          child: CustomPaint(
+            painter: MaskingPainter(cutoutRect: cutoutRect),
+          ),
+        ),
+
+        // 2. 닫기 버튼 (우측 상단, 닫기 텍스트 포함)
+        Positioned(
+          // 원본 TutorialOverlay의 위치 로직을 참고하여 대략적으로 배치합니다.
+          // right: paddingH + 10 (이 값이 없으므로 50px 정도로 가정)
+          top: 110 * scaleFactor, // keepbox의 상단 여백
+          right: 100 * scaleFactor, // 오른쪽 padding
+          child: GestureDetector(
+            onTap: widget.onExit,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '닫기',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18 * scaleFactor,
+                    fontFamily: 'PretendardRegular',
+                  ),
+                ),
+                SizedBox(width: 5 * scaleFactor),
+                const Icon(Icons.close, color: Colors.white, size: 28),
+              ],
+            ),
+          ),
+        ),
+
+        // 3. 말풍선 및 캐릭터 (원본 TutorialOverlay의 크기와 위치 사용)
+        Center(
+          child: Transform.translate(
+            // ⚠️ 원본 TutorialOverlay의 고정 오프셋을 사용 (크기/위치 문제 해결)
+            offset: Offset(100 * scaleFactor, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 캐릭터 이미지 (왼쪽)
+                Image.asset(
+                  _style.imagePath,
+                  width: 150 * scaleFactor,
+                  height: 150 * scaleFactor,
+                ),
+                SizedBox(width: 16 * scaleFactor),
+                // 말풍선 (오른쪽)
+                GestureDetector(
+                  onTap: _next,
+                  child: CustomPaint(
+                    painter: SpeechBubblePainter(
+                      balloonColor: _style.balloonColor,
+                      arrowColor: _style.arrowColor,
+                      scaleFactor: scaleFactor,
+                    ),
+                    child: Container(
+                      width: 372 * scaleFactor * 0.8, // ⬅️ 축소된 크기 유지
+                      height: 168 * scaleFactor * 0.8, // ⬅️ 축소된 크기 유지
+                      alignment: Alignment.topLeft,
+                      padding: EdgeInsets.all(30 * scaleFactor * 0.8), // ⬅️ Padding 보정
+                      child: Stack(
+                        children: [
+                          // 1. 텍스트 (Positioned로 감싸 화살표 영역을 침범하지 않게 함)
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            // 💡 텍스트가 오른쪽 화살표 영역을 침범하지 않도록 제약
+                            right: 30 * scaleFactor * 0.8,
+                            child: Text(
+                              _style.texts[_currentTextIndex],
+                              style: TextStyle(
+                                color: const Color(0xFF333333),
+                                fontSize: 18 * scaleFactor * 0.8,
+                                fontFamily: 'PretendardMedium',
+                              ),
+                              textAlign: TextAlign.left,
+                            ),
+                          ),
+
+                          // 2. 다음 텍스트로 이동 화살표 (오른쪽 아래 끝에 고정)
+                          if (_currentTextIndex < _style.texts.length - 1)
+                            Positioned(
+                              // 🌟 bottom을 0으로 설정하여 무조건 맨 아래에 고정
+                              right: 0,
+                              bottom: 0,
+                              child: Padding(
+                                padding: EdgeInsets.only(right: 5 * scaleFactor * 0.8),
+                                child: Icon(
+                                  Icons.arrow_drop_down,
+                                  color: _style.arrowColor,
+                                  size: 30 * scaleFactor * 0.8,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// 둥근 모서리 삼각형 모양의 말풍선을 그리는 CustomPainter
+class SpeechBubblePainter extends CustomPainter {
+  final Color balloonColor;
+  final Color arrowColor;
+  final double scaleFactor;
+
+  const SpeechBubblePainter({
+    required this.balloonColor,
+    required this.arrowColor,
+    required this.scaleFactor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. 말풍선 본체 (채우기 Paint)
+    final paint = Paint()..color = balloonColor;
+    final r = 10.0 * scaleFactor; // 둥근 모서리 반지름
+
+    // 2. 말풍선 본체 (둥근 사각형)
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(r),
+    );
+    canvas.drawRRect(rect, paint);
+
+    // 3. 말풍선 꼬리 (왼쪽 아래 위치, 말풍선 배경 색상 사용)
+    final arrowSize = 15.0 * scaleFactor;
+    final arrowTop = size.height / 2; // 말풍선 높이의 중앙
+
+
+    final newTailPath = Path();
+
+    // 왼쪽 중앙 (0, arrowTop)에서 시작
+    newTailPath.moveTo(0, arrowTop - arrowSize / 2);
+    newTailPath.lineTo(0, arrowTop + arrowSize / 2);
+    // 꼬리 끝점 (말풍선 밖, 왼쪽으로)
+    newTailPath.lineTo(-arrowSize, arrowTop);
+
+    newTailPath.close();
+
+    // 꼬리 채우기 Paint (말풍선 배경색 사용)
+    final tailPaint = Paint()..color = balloonColor;
+
+    // 꼬리 부분 채우기
+    canvas.drawPath(newTailPath, tailPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
+  }
+}
+
 class _keepboxState extends State<keepbox> {
   final SpeechToText _speechToText = SpeechToText();
   bool _speechEnabled = false;
   double _currentLevel = 0.0;
   String _lastWords = '';
+  bool _isTutorialActive = true; // 튜토리얼 시작을 위해 true로 설정
+  int _tutorialStep = 0;
+  final String _userType = '방치형';
+
 
   List<Map<String, dynamic>> items = [];
   List<Map<String, dynamic>> categories = [];
@@ -49,6 +407,30 @@ class _keepboxState extends State<keepbox> {
     _initSpeech();
     NotificationService.instance.init();
     _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startTutorial());
+  }
+  void _startTutorial() {
+    setState(() {
+      _isTutorialActive = true;
+      _tutorialStep = 0;
+    });
+  }
+  void _nextTutorialStep() {
+    setState(() {
+      if (_tutorialStep < 1) { // 튜토리얼 텍스트가 3개라고 가정 (0, 1, 2)
+        _tutorialStep++;
+      } else {
+        _isTutorialActive = false;
+        _tutorialStep = 0;
+      }
+    });
+  }
+  // 튜토리얼 종료 함수
+  void _exitTutorial() {
+    setState(() {
+      _isTutorialActive = false;
+      _tutorialStep = 0;
+    });
   }
 
   @override
@@ -189,6 +571,7 @@ class _keepboxState extends State<keepbox> {
       }
     }
   }
+
 
   Future<void> _initGemini() async {
     final apiKey = dotenv.env['GEMINI_API_KEY'];
@@ -384,6 +767,7 @@ class _keepboxState extends State<keepbox> {
     });
   }
 
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -405,7 +789,9 @@ class _keepboxState extends State<keepbox> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: Colors.white,
-      body: Row(
+      body: Stack(
+        children: [
+        Row(
         children: [
           // 왼쪽 15% 영역
           Container(
@@ -506,7 +892,7 @@ class _keepboxState extends State<keepbox> {
               ],
             ),
           ),
-          // 오른쪽 90% 영역
+          // 오른쪽 영역
           Container(
             width: screenWidth * 0.85,
             padding: EdgeInsets.symmetric(horizontal: 40 * widthRatio),
@@ -568,8 +954,25 @@ class _keepboxState extends State<keepbox> {
             ),
           ),
         ],
-      ),
-    );
+        ), // ⬅️ Row의 닫는 괄호
+
+          // 튜토리얼 오버레이는 Row 밖에, Stack의 자식으로 배치됩니다.
+          if (_isTutorialActive)
+            TutorialOverlayWithMasking(
+              userType: _userType,
+              currentStep: _tutorialStep,
+              onNext: _nextTutorialStep,
+              onExit: _exitTutorial,
+              // 화면 크기 비율 전달
+              widthRatio: widthRatio,
+              heightRatio: heightRatio,
+              screenWidth: screenWidth,
+            ),
+
+
+        ], // ⬅️ Stack의 자식 리스트 끝 (추가된 부분)
+      ), // ⬅️ Stack의 닫는 괄호
+    ); // ⬅️ Scaffold의 닫는 괄호
   }
 
   // _keepboxState 클래스 내부에 추가
