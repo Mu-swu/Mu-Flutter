@@ -15,7 +15,6 @@ import 'keepbox.dart';
 import 'user_theme_manager.dart';
 import 'package:mu/data/sampledata.dart';
 import 'package:mu/notification_service.dart';
-import 'widgets/schedule_item.dart';
 import 'package:mu/mission_start.dart';
 
 enum TagType { bang, gam, mol }
@@ -820,13 +819,14 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           child: Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.center,
                                             children: [
                                               Padding(
                                                 padding: EdgeInsets.only(
                                                   top:
                                                       (_orderedMissions.isEmpty
-                                                          ? 28
-                                                          : 16) *
+                                                          ? 19
+                                                         : 16) *
                                                       overallRatio,
                                                 ),
                                                 child: Column(
@@ -1293,6 +1293,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                   // ------------------------------------------------
                                                   // [오른쪽 박스 : item2]
                                                   // ------------------------------------------------
+                                                  if (item2 != null)
                                                   Expanded(
                                                     child: Container(
                                                       margin: EdgeInsets.only(right: spacing / 2),

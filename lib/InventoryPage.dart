@@ -5,6 +5,7 @@ import 'widgets/longbutton.dart';
 import 'widgets/shortbutton.dart';
 import 'package:intl/intl.dart';
 import 'widgets/category_edit_popup.dart';
+import 'keepbox.dart';
 
 
 // ───────────── ItemEditPopup 정의 ─────────────
@@ -596,14 +597,13 @@ class _InventoryPageState extends State<InventoryPage> {
 
   final List<String> _categories = ['식품', '학용품', '잡동사니', '악세서리', '기타'];
   final List<Map<String, String>> _items = [
-    {'category': '식품', 'title': '딸기잼', 'date': '2025.05.26 ~ 2025.08.26'},
-    {'category': '식품', 'title': '피마산 치즈', 'date': '2025.05.14 ~ 2025.05.21'},
-    {'category': '식품', 'title': '샐러드', 'date': '2025.05.26'},
-    {'category': '식품', 'title': '냉동피자', 'date': '2025. 05. 26 ~ 2025. 08. 26'},
-    {'category': '식품', 'title': '딸기잼', 'date': '2025. 05. 26 ~ 2025. 08. 26'},
-    {'category': '식품', 'title': '피마산 치즈', 'date': '2025.05.14 ~ 2025.05.21'},
-    {'category': '식품', 'title': '샐러드', 'date': '2025.05.26'},
-    {'category': '식품', 'title': '냉동피자', 'date': '2025. 05. 26 ~ 2025. 08. 26'},
+    {'category': '식품', 'title': '딸기잼', 'date': '2025.11.26 ~ 2025.12.26'},
+    {'category': '식품', 'title': '피마산 치즈', 'date': '2025.11.14 ~ 2025.12.21'},
+    {'category': '식품', 'title': '샐러드', 'date': '2025.11.26 ~ 2025.11.29'},
+    {'category': '식품', 'title': '냉동피자', 'date': '2025.11. 26 ~ 2025.12. 26'},
+    {'category': '식품', 'title': '딸기잼', 'date': '2025. 11. 26 ~ 2025.12. 26'},
+    {'category': '식품', 'title': '피마산 치즈', 'date': '2025.11.14 ~ 2025.12.21'},
+    {'category': '식품', 'title': '냉동피자', 'date': '2025.11. 26 ~ 2025.12. 26'},
   ];
 
   // 카테고리 수정 핸들러
@@ -894,7 +894,12 @@ class _InventoryPageState extends State<InventoryPage> {
                   padding: const EdgeInsets.all(28),
                   child: LongButton(
                     text: '물품 추가하러 가기',
-                    onPressed: () {},
+                    onPressed: () {Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const keepbox(),
+                      ),
+                    );},
                     fontSize: 18,
                   ),
                 ),
