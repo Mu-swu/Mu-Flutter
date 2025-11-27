@@ -21,44 +21,41 @@ class MissionStartPage extends StatelessWidget {
       'currentMissionIndex': currentMissionIndex,
     };
   }
-
   String _getTimeForStatus(String status, String? userType) {
     switch (userType) {
       case '감정형':
         switch (status) {
           case '혼잡':
-            return '1시간 30분';
+            return '30분';
           case '보통':
-            return '1시간';
+            return '20분';
           case '여유':
-            return '45분';
+            return '10분';
           default:
-            return '45분';
+            return '10분';
         }
-
       case '몰라형':
         switch (status) {
           case '혼잡':
-            return '1시간';
+            return '30분';
           case '보통':
-            return '40분';
+            return '15분';
           case '여유':
-            return '20분';
+            return '10분';
           default:
-            return '20분';
+            return '10분';
         }
-
       case '방치형':
       default:
         switch (status) {
           case '혼잡':
-            return '1시간';
+            return '30분';
           case '보통':
-            return '45분';
+            return '15분';
           case '여유':
-            return '30분';
+            return '5분';
           default:
-            return '30분';
+            return '5분';
         }
     }
   }

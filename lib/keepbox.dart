@@ -66,10 +66,16 @@ const Rect LEFT_MIC_AREA = Rect.fromLTWH(0, 0, 0.15, 1.0); // widthRatio * 0.15
 // (37 + 50 + 20) / screenHeight 만큼 상단 여백 (약 107px)
 // ItemSaveSection은 오른쪽 85% 영역 전체를 Expanded(child: ItemSaveSection)로 사용합니다.
 const double RIGHT_CONTENT_START_Y_RATIO = 107 / 832; // 대략적인 비율
-const Rect RIGHT_CONTENT_AREA = Rect.fromLTWH(0.15, 0.13, 0.85, 0.65); // 대략적인 위치
+const Rect RIGHT_CONTENT_AREA = Rect.fromLTWH(
+  0.15,
+  0.13,
+  0.85,
+  0.65,
+); // 대략적인 위치
 
 // 저장 버튼 영역 (LongButton)
 const Rect SAVE_BUTTON_AREA = Rect.fromLTWH(0.15, 0.88, 0.85, 0.12); // 대략적인 위치
+
 class keepbox extends StatefulWidget {
   final int? nextMissionIndex;
   final int? totalMissionCount;
@@ -88,9 +94,10 @@ class MaskingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // 1. 어둡고 투명한 배경 색상
-    final backgroundPaint = Paint()
-      ..color = Colors.black.withOpacity(0.6)
-      ..style = PaintingStyle.fill;
+    final backgroundPaint =
+        Paint()
+          ..color = Colors.black.withOpacity(0.6)
+          ..style = PaintingStyle.fill;
 
     // 2. 전체 화면을 어둡게 칠합니다.
     canvas.drawRect(Offset.zero & size, backgroundPaint);
@@ -98,16 +105,20 @@ class MaskingPainter extends CustomPainter {
     if (cutoutRect != null) {
       // 3. 뚫어줄 영역을 위한 Paint 설정
       // BlendMode.clear를 사용하여 해당 영역을 투명하게 만듭니다.
-      final cutoutPaint = Paint()
-        ..blendMode = BlendMode.clear
-        ..color = Colors.white; // 색상은 중요하지 않습니다.
+      final cutoutPaint =
+          Paint()
+            ..blendMode = BlendMode.clear
+            ..color = Colors.white; // 색상은 중요하지 않습니다.
 
       // 4. 뚫어줄 영역 그리기 (말풍선의 둥근 모서리와 동일한 반지름 사용)
       final r = 10.0;
       // 5. 뚫어준 영역을 투명하게 만들기 위해 canvas의 블렌딩 모드를 조정
       canvas.saveLayer(Offset.zero & size, Paint());
       canvas.drawPath(Path()..addRect(Offset.zero & size), backgroundPaint);
-      canvas.drawRRect(RRect.fromRectAndRadius(cutoutRect!, Radius.circular(r)), cutoutPaint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(cutoutRect!, Radius.circular(r)),
+        cutoutPaint,
+      );
       canvas.restore();
     }
   }
@@ -190,16 +201,18 @@ class _TutorialOverlayWithMaskingState
 
     switch (_currentTextIndex) {
       case 0:
-      // 첫 번째 문구: 왼쪽 마이크 영역 (전체 높이)
+        // 첫 번째 문구: 왼쪽 마이크 영역 (전체 높이)
         cutoutRect = Rect.fromLTWH(0, 0, leftMicWidth, screenHeight);
         break;
       case 1:
-      // 두 번째 문구: 저장 버튼 영역
-      // LongButton의 위치: screenHeight - longButtonBottom - longButtonHeight
-        final buttonTop = screenHeight -
+        // 두 번째 문구: 저장 버튼 영역
+        // LongButton의 위치: screenHeight - longButtonBottom - longButtonHeight
+        final buttonTop =
+            screenHeight -
             (longButtonBottom * widget.heightRatio) -
             (longButtonHeight * widget.heightRatio);
-        final buttonLeft = leftMicWidth + 40 * widget.widthRatio; // 오른쪽 영역 padding
+        final buttonLeft =
+            leftMicWidth + 40 * widget.widthRatio; // 오른쪽 영역 padding
         final buttonRight = widget.screenWidth - 40 * widget.widthRatio;
         cutoutRect = Rect.fromLTWH(
           buttonLeft,
@@ -214,9 +227,7 @@ class _TutorialOverlayWithMaskingState
       children: [
         // 1. 마스킹을 위한 CustomPainter (전체 배경)
         Positioned.fill(
-          child: CustomPaint(
-            painter: MaskingPainter(cutoutRect: cutoutRect),
-          ),
+          child: CustomPaint(painter: MaskingPainter(cutoutRect: cutoutRect)),
         ),
 
         // 2. 닫기 버튼 (우측 상단, 닫기 텍스트 포함)
@@ -272,10 +283,13 @@ class _TutorialOverlayWithMaskingState
                       scaleFactor: scaleFactor,
                     ),
                     child: Container(
-                      width: 372 * scaleFactor * 0.8, // ⬅️ 축소된 크기 유지
-                      height: 168 * scaleFactor * 0.8, // ⬅️ 축소된 크기 유지
+                      width: 372 * scaleFactor * 0.8,
+                      // ⬅️ 축소된 크기 유지
+                      height: 168 * scaleFactor * 0.8,
+                      // ⬅️ 축소된 크기 유지
                       alignment: Alignment.topLeft,
-                      padding: EdgeInsets.all(30 * scaleFactor * 0.8), // ⬅️ Padding 보정
+                      padding: EdgeInsets.all(30 * scaleFactor * 0.8),
+                      // ⬅️ Padding 보정
                       child: Stack(
                         children: [
                           // 1. 텍스트 (Positioned로 감싸 화살표 영역을 침범하지 않게 함)
@@ -302,7 +316,9 @@ class _TutorialOverlayWithMaskingState
                               right: 0,
                               bottom: 0,
                               child: Padding(
-                                padding: EdgeInsets.only(right: 5 * scaleFactor * 0.8),
+                                padding: EdgeInsets.only(
+                                  right: 5 * scaleFactor * 0.8,
+                                ),
                                 child: Icon(
                                   Icons.arrow_drop_down,
                                   color: _style.arrowColor,
@@ -353,7 +369,6 @@ class SpeechBubblePainter extends CustomPainter {
     final arrowSize = 15.0 * scaleFactor;
     final arrowTop = size.height / 2; // 말풍선 높이의 중앙
 
-
     final newTailPath = Path();
 
     // 왼쪽 중앙 (0, arrowTop)에서 시작
@@ -386,7 +401,6 @@ class _keepboxState extends State<keepbox> {
   int _tutorialStep = 0;
   final String _userType = '방치형';
 
-
   List<Map<String, dynamic>> items = [];
   List<Map<String, dynamic>> categories = [];
   int? selectedIndex;
@@ -409,15 +423,18 @@ class _keepboxState extends State<keepbox> {
     _loadData();
     WidgetsBinding.instance.addPostFrameCallback((_) => _startTutorial());
   }
+
   void _startTutorial() {
     setState(() {
       _isTutorialActive = true;
       _tutorialStep = 0;
     });
   }
+
   void _nextTutorialStep() {
     setState(() {
-      if (_tutorialStep < 1) { // 튜토리얼 텍스트가 3개라고 가정 (0, 1, 2)
+      if (_tutorialStep < 1) {
+        // 튜토리얼 텍스트가 3개라고 가정 (0, 1, 2)
         _tutorialStep++;
       } else {
         _isTutorialActive = false;
@@ -425,6 +442,7 @@ class _keepboxState extends State<keepbox> {
       }
     });
   }
+
   // 튜토리얼 종료 함수
   void _exitTutorial() {
     setState(() {
@@ -488,7 +506,6 @@ class _keepboxState extends State<keepbox> {
 
     final List<KeepBoxesCompanion> itemsToSave = [];
     final DateFormat formatter = DateFormat("yyyy.MM.dd");
-
     int notificationId = 0;
 
     for (final categoryMap in categories) {
@@ -499,7 +516,6 @@ class _keepboxState extends State<keepbox> {
         try {
           final addedAt = formatter.parse(itemMap['startDate']!);
           final expirationAt = formatter.parse(itemMap['endDate']!);
-
           itemsToSave.add(
             KeepBoxesCompanion.insert(
               name: itemMap['name']!,
@@ -542,12 +558,25 @@ class _keepboxState extends State<keepbox> {
         widget.nextMissionIndex != null && widget.totalMissionCount != null;
 
     if (isMissionFlow) {
+      final int finishedIndex = widget.nextMissionIndex! - 1;
+
+      if (finishedIndex >= 0) {
+        final orderedSections = await _database.getOrderedMissions(1);
+        if (finishedIndex < orderedSections.length) {
+          final finishedSection = orderedSections[finishedIndex];
+
+          await _database.updateSectionProgress(finishedSection.id, 100);
+          print(
+            "미션 완료 처리: ${finishedSection.name} (ID: ${finishedSection.id}) -> 100%",
+          );
+        }
+      }
       final bool allMissionsCompleted =
           widget.nextMissionIndex! >= widget.totalMissionCount!;
 
       if (allMissionsCompleted) {
-        final String? completedSpaceName =
-        await _database.inferCurrentSpaceName(1);
+        final String? completedSpaceName = await _database
+            .inferCurrentSpaceName(1);
 
         if (completedSpaceName != null) {
           print("'$completedSpaceName' 미션 완료! 모든 가구 잠금 해제.");
@@ -571,7 +600,6 @@ class _keepboxState extends State<keepbox> {
       }
     }
   }
-
 
   Future<void> _initGemini() async {
     final apiKey = dotenv.env['GEMINI_API_KEY'];
@@ -767,7 +795,6 @@ class _keepboxState extends State<keepbox> {
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -791,172 +818,173 @@ class _keepboxState extends State<keepbox> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-        Row(
-        children: [
-          // 왼쪽 15% 영역
-          Container(
-            width: screenWidth * 0.15,
-            decoration: BoxDecoration(
-              // Dynamically set the gradient based on user type
-              gradient:
-                  _speechToText.isListening
-                      ? LinearGradient(
-                        colors: [
-                          UserThemeManager.keepboxGradientStartColor,
-                          const Color(0xFFD7DCFA),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      )
-                      : null,
-              color: _speechToText.isListening ? null : const Color(0xFFF3F5FF),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(height: 30),
-                // 🔙 뒤로가기 버튼
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back, size: 28),
-                  ),
-                ),
-
-                const Spacer(),
-
-                // 🎙 마이크 또는 정지 아이콘 (동그란 배경 포함)
-                GestureDetector(
-                  onTap: () {
-                    if (!_speechToText.isListening) {
-                      _startListening();
-                    } else {
-                      _stopListening();
-                    }
-                    setState(() {});
-                  },
-                  child: Container(
-                    width: 80 * widthRatio,
-                    height: 80 * widthRatio,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color:
-                          _speechToText.isListening
-                              ? Colors.white
-                              : const Color(0xFF7F91FF),
-                    ),
-                    child: Icon(
-                      _speechToText.isListening ? Icons.stop : Icons.mic,
-                      size: 36 * widthRatio,
-                      color:
-                          _speechToText.isListening
-                              ? const Color(0xFF7F91FF)
-                              : Colors.white,
-                    ),
-                  ),
-                ),
-
-                SizedBox(height: 16 * heightRatio),
-
-                // 🗣 텍스트 상태 표시
-                Text(
-                  _speechToText.isListening ? '눌러서 멈추기' : '눌러서 말하기',
-                  style: TextStyle(
-                    fontSize: 14 * widthRatio,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black,
-                  ),
-                ),
-
-                SizedBox(height: 24 * heightRatio),
-
-                // 📝 마지막 음성 텍스트
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Text(
-                    _lastWords.isNotEmpty ? _lastWords : '',
-                    style: TextStyle(
-                      fontSize: 12 * widthRatio,
-                      color:
-                          _lastWords.isNotEmpty
-                              ? Colors.blue
-                              : Colors.transparent,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
-                const Spacer(),
-              ],
-            ),
-          ),
-          // 오른쪽 영역
-          Container(
-            width: screenWidth * 0.85,
-            padding: EdgeInsets.symmetric(horizontal: 40 * widthRatio),
-            color: Colors.white,
-            child: Column(
-              children: [
-                SizedBox(height: 37),
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/');
-                    },
-                    icon: const Icon(Icons.home, size: 28),
-                  ),
-                ),
-                SizedBox(height: 50 * heightRatio),
-                Center(
-                  child: Text(
-                    '버릴까말까 상자',
-                    style: TextStyle(
-                      fontSize: 28 * widthRatio,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                SizedBox(height: 20 * heightRatio),
-                Expanded(
-                  child:
-                      _isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // 아이템 리스트 영역
-                              Expanded(
-                                child: ItemSaveSection(
-                                  categories: categories,
-                                  widthRatio: widthRatio,
-                                  heightRatio: heightRatio,
-                                  itemName: _currentItemName,
-                                  itemCategory: currentItemCategory,
-                                  onExit: () {
-                                    _lastWords = '';
-                                    selectedIndex = null;
-                                  },
-                                  onDateChanged: _handleDateChange,
-                                  onCategoryUpdated: _updateCategoryName,
-                                  onCategoryDeleted: _deleteCategory,
-                                ),
-                              ),
+          Row(
+            children: [
+              // 왼쪽 15% 영역
+              Container(
+                width: screenWidth * 0.15,
+                decoration: BoxDecoration(
+                  // Dynamically set the gradient based on user type
+                  gradient:
+                      _speechToText.isListening
+                          ? LinearGradient(
+                            colors: [
+                              UserThemeManager.keepboxGradientStartColor,
+                              const Color(0xFFD7DCFA),
                             ],
-                          ),
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          )
+                          : null,
+                  color:
+                      _speechToText.isListening
+                          ? null
+                          : const Color(0xFFF3F5FF),
                 ),
-                SizedBox(height: 10 * heightRatio),
-                LongButton(text: '저장', onPressed: _saveData),
-                SizedBox(height: 24 * heightRatio),
-              ],
-            ),
-          ),
-        ],
-        ), // ⬅️ Row의 닫는 괄호
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(height: 30),
+                    // 🔙 뒤로가기 버튼
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back, size: 28),
+                      ),
+                    ),
 
-          // 튜토리얼 오버레이는 Row 밖에, Stack의 자식으로 배치됩니다.
+                    const Spacer(),
+
+                    // 🎙 마이크 또는 정지 아이콘 (동그란 배경 포함)
+                    GestureDetector(
+                      onTap: () {
+                        if (!_speechToText.isListening) {
+                          _startListening();
+                        } else {
+                          _stopListening();
+                        }
+                        setState(() {});
+                      },
+                      child: Container(
+                        width: 80 * widthRatio,
+                        height: 80 * widthRatio,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color:
+                              _speechToText.isListening
+                                  ? Colors.white
+                                  : const Color(0xFF7F91FF),
+                        ),
+                        child: Icon(
+                          _speechToText.isListening ? Icons.stop : Icons.mic,
+                          size: 36 * widthRatio,
+                          color:
+                              _speechToText.isListening
+                                  ? const Color(0xFF7F91FF)
+                                  : Colors.white,
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 16 * heightRatio),
+
+                    // 🗣 텍스트 상태 표시
+                    Text(
+                      _speechToText.isListening ? '눌러서 멈추기' : '눌러서 말하기',
+                      style: TextStyle(
+                        fontSize: 14 * widthRatio,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
+                      ),
+                    ),
+
+                    SizedBox(height: 24 * heightRatio),
+
+                    // 📝 마지막 음성 텍스트
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        _lastWords.isNotEmpty ? _lastWords : '',
+                        style: TextStyle(
+                          fontSize: 12 * widthRatio,
+                          color:
+                              _lastWords.isNotEmpty
+                                  ? Colors.blue
+                                  : Colors.transparent,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+
+                    const Spacer(),
+                  ],
+                ),
+              ),
+              // 오른쪽 90% 영역
+              Container(
+                width: screenWidth * 0.85,
+                padding: EdgeInsets.symmetric(horizontal: 40 * widthRatio),
+                color: Colors.white,
+                child: Column(
+                  children: [
+                    SizedBox(height: 37),
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/');
+                        },
+                        icon: const Icon(Icons.home, size: 28),
+                      ),
+                    ),
+                    SizedBox(height: 50 * heightRatio),
+                    Center(
+                      child: Text(
+                        '버릴까말까 상자',
+                        style: TextStyle(
+                          fontSize: 28 * widthRatio,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20 * heightRatio),
+                    Expanded(
+                      child:
+                          _isLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // 아이템 리스트 영역
+                                  Expanded(
+                                    child: ItemSaveSection(
+                                      categories: categories,
+                                      widthRatio: widthRatio,
+                                      heightRatio: heightRatio,
+                                      itemName: _currentItemName,
+                                      itemCategory: currentItemCategory,
+                                      onExit: () {
+                                        _lastWords = '';
+                                        selectedIndex = null;
+                                      },
+                                      onDateChanged: _handleDateChange,
+                                      onCategoryUpdated: _updateCategoryName,
+                                      onCategoryDeleted: _deleteCategory,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                    ),
+                    SizedBox(height: 10 * heightRatio),
+                    LongButton(text: '저장', onPressed: _saveData),
+                    SizedBox(height: 24 * heightRatio),
+                  ],
+                ),
+              ),
+            ],
+          ),
           if (_isTutorialActive)
             TutorialOverlayWithMasking(
               userType: _userType,
@@ -968,11 +996,9 @@ class _keepboxState extends State<keepbox> {
               heightRatio: heightRatio,
               screenWidth: screenWidth,
             ),
-
-
-        ], // ⬅️ Stack의 자식 리스트 끝 (추가된 부분)
-      ), // ⬅️ Stack의 닫는 괄호
-    ); // ⬅️ Scaffold의 닫는 괄호
+        ],
+      ),
+    );
   }
 
   // _keepboxState 클래스 내부에 추가

@@ -15,6 +15,7 @@ import 'keepbox.dart';
 import 'user_theme_manager.dart';
 import 'package:mu/data/sampledata.dart';
 import 'package:mu/notification_service.dart';
+import 'widgets/schedule_item.dart';
 import 'package:mu/mission_start.dart';
 
 enum TagType { bang, gam, mol }
@@ -185,8 +186,9 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
       } else {
         _currentSpaceProgressPercentage = 0;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print("사용자 데이터 로드 실패 : $e");
+      print("상세 위치 : $stackTrace");
       UserThemeManager.currentUserType = UserType.bang;
       _urgentItems = [];
       _userSpace = "냉장고";
@@ -229,36 +231,36 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
       case '감정형':
         switch (status) {
           case '혼잡':
-            return '1시간 30분';
+            return '30분';
           case '보통':
-            return '1시간';
+            return '20분';
           case '여유':
-            return '45분';
+            return '10분';
           default:
-            return '45분';
+            return '10분';
         }
       case '몰라형':
         switch (status) {
           case '혼잡':
-            return '1시간';
+            return '30분';
           case '보통':
-            return '40분';
+            return '15분';
           case '여유':
-            return '20분';
+            return '10분';
           default:
-            return '20분';
+            return '10분';
         }
       case '방치형':
       default:
         switch (status) {
           case '혼잡':
-            return '1시간';
+            return '30분';
           case '보통':
-            return '45분';
+            return '15분';
           case '여유':
-            return '30분';
+            return '5분';
           default:
-            return '30분';
+            return '5분';
         }
     }
   }
@@ -702,10 +704,42 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(context, '/surveyq').then((_) {
-                            _loadUserData(showLoading: false);
-                          });
+                        onTap: () async {
+                          final returnedType = await Navigator.pushNamed(context, '/surveyq');
+
+                          if (returnedType != null && returnedType is String) {
+                            setState(() {
+                              _isLoading = true;
+                            });
+
+                            final db = AppDatabase.instance;
+                            List<String> newMissions = [];
+                            String newUserTypeStr = '방치형';
+
+                            switch (returnedType) {
+                              case '감정형':
+                                UserThemeManager.currentUserType = UserType.gam;
+                                newMissions = ["선반", "행거 구역", "옷장 바닥 공간", "서랍"];
+                                newUserTypeStr = '감정형';
+                                break;
+                              case '몰라형':
+                                UserThemeManager.currentUserType = UserType.mol;
+                                newMissions = ["1단", "2단", "3단"];
+                                newUserTypeStr = '몰라형';
+                                break;
+                              case '방치형':
+                                UserThemeManager.currentUserType = UserType.bang;
+                                newMissions = ["냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"];
+                                newUserTypeStr = '방치형';
+                                break;
+                            }
+
+                            await db.updateUserType(1, newUserTypeStr);
+                            await db.deleteAllSectionsForUser(1);
+                            await db.batchInsertSections(1, newMissions);
+
+                            await _loadUserData(showLoading: false);
+                          }
                         },
                         child: Container(
                           padding: EdgeInsets.all(12 * overallRatio),
@@ -819,14 +853,13 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           child: Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
-                                            crossAxisAlignment: CrossAxisAlignment.center,
                                             children: [
                                               Padding(
                                                 padding: EdgeInsets.only(
                                                   top:
                                                       (_orderedMissions.isEmpty
-                                                          ? 19
-                                                         : 16) *
+                                                          ? 28
+                                                          : 16) *
                                                       overallRatio,
                                                 ),
                                                 child: Column(
@@ -1199,189 +1232,331 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                     ),
                                                   )
                                                   : Row(
-                                                children: [
-                                                  // ------------------------------------------------
-                                                  // [왼쪽 박스 : item1]
-                                                  // ------------------------------------------------
-                                                  Expanded(
-                                                    child: Container(
-                                                      margin: EdgeInsets.only(right: spacing / 2),
-                                                      padding: EdgeInsets.symmetric(
-                                                        horizontal: 24 * overallRatio,
-                                                      ),
-                                                      decoration: BoxDecoration(
-                                                        color: item1RemainingDays! <= 3
-                                                            ? const Color(0xFFFFF3F3)
-                                                            : const Color(0xFFF3F5FF),
-                                                        borderRadius: BorderRadius.circular(10),
-                                                      ),
-                                                      child: item1RemainingDays <= 3
-                                                          ? Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        mainAxisAlignment: MainAxisAlignment.center,
-                                                        children: [
-                                                          Container(
-                                                            padding: const EdgeInsets.symmetric(
-                                                              horizontal: 6,
-                                                              vertical: 3,
-                                                            ),
-                                                            decoration: BoxDecoration(
-                                                              color: const Color(0xFFFFD7D7),
-                                                              borderRadius: BorderRadius.circular(2),
-                                                            ),
-                                                            child: const Text(
-                                                              '임박',
-                                                              style: TextStyle(
-                                                                color: Color(0xFFEC5353),
-                                                                fontSize: 12,
-                                                                fontFamily: 'PretendardMedium'
+                                                    children: [
+                                                      // ------------------------------------------------
+                                                      // [왼쪽 박스 : item1]
+                                                      // ------------------------------------------------
+                                                      Expanded(
+                                                        child: Container(
+                                                          margin:
+                                                              EdgeInsets.only(
+                                                                right:
+                                                                    spacing / 2,
                                                               ),
-                                                            ),
-                                                          ),
-                                                          SizedBox(height: 5 * overallRatio),
-                                                          Text(
-                                                            item1!.name,
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow.ellipsis,
-                                                            style: TextStyle(
-                                                              fontSize: 16,
-                                                             fontFamily:'PretendardMedium',
-                                                              color: const Color(0xFF5D5D5D),
-                                                            ),
-                                                          ),
-                                                          Text(
-                                                            'D-${item1RemainingDays}',
-                                                            style: TextStyle(
-                                                              fontSize: 32,
-                                                              fontFamily:'PretendardMedium',
-                                                              color: Color(0xFF333333),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      )
-                                                          : Padding(
-                                                        padding: EdgeInsets.only(top: 53 * overallRatio),
-                                                        child: Column(
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          mainAxisAlignment: MainAxisAlignment.start,
-                                                          children: [
-                                                            Text(
-                                                              item1!.name,
-                                                              maxLines: 1,
-                                                              overflow: TextOverflow.ellipsis,
-                                                              style: TextStyle(
-                                                                fontSize: 16,
-                                                                fontFamily :'PretendardMedium',
-                                                                color: const Color(0xFF5D5D5D),
+                                                          padding:
+                                                              EdgeInsets.symmetric(
+                                                                horizontal:
+                                                                    24 *
+                                                                    overallRatio,
                                                               ),
-                                                            ),
-                                                            SizedBox(height: 5 * overallRatio),
-                                                            Text(
-                                                              'D-${item1RemainingDays}',
-                                                              style: TextStyle(
-                                                                fontSize: 32,
-                                                                fontFamily:'PretendardMedium',
-                                                                color: Color(0xFF333333),
-                                                              ),
-                                                            ),
-                                                          ],
+                                                          decoration: BoxDecoration(
+                                                            color:
+                                                                item1RemainingDays! <=
+                                                                        3
+                                                                    ? const Color(
+                                                                      0xFFFFF3F3,
+                                                                    )
+                                                                    : const Color(
+                                                                      0xFFF3F5FF,
+                                                                    ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  10,
+                                                                ),
+                                                          ),
+                                                          child:
+                                                              item1RemainingDays <=
+                                                                      3
+                                                                  ? Column(
+                                                                    crossAxisAlignment:
+                                                                        CrossAxisAlignment
+                                                                            .start,
+                                                                    mainAxisAlignment:
+                                                                        MainAxisAlignment
+                                                                            .center,
+                                                                    children: [
+                                                                      Container(
+                                                                        padding: const EdgeInsets.symmetric(
+                                                                          horizontal:
+                                                                              6,
+                                                                          vertical:
+                                                                              3,
+                                                                        ),
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color(
+                                                                            0xFFFFD7D7,
+                                                                          ),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(
+                                                                                2,
+                                                                              ),
+                                                                        ),
+                                                                        child: const Text(
+                                                                          '임박',
+                                                                          style: TextStyle(
+                                                                            color: Color(
+                                                                              0xFFEC5353,
+                                                                            ),
+                                                                            fontSize:
+                                                                                12,
+                                                                            fontFamily:
+                                                                                'PretendardMedium',
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                      SizedBox(
+                                                                        height:
+                                                                            5 *
+                                                                            overallRatio,
+                                                                      ),
+                                                                      Text(
+                                                                        item1!
+                                                                            .name,
+                                                                        maxLines:
+                                                                            1,
+                                                                        overflow:
+                                                                            TextOverflow.ellipsis,
+                                                                        style: TextStyle(
+                                                                          fontSize:
+                                                                              16,
+                                                                          fontFamily:
+                                                                              'PretendardMedium',
+                                                                          color: const Color(
+                                                                            0xFF5D5D5D,
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                      Text(
+                                                                        'D-${item1RemainingDays}',
+                                                                        style: TextStyle(
+                                                                          fontSize:
+                                                                              32,
+                                                                          fontFamily:
+                                                                              'PretendardMedium',
+                                                                          color: Color(
+                                                                            0xFF333333,
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  )
+                                                                  : Padding(
+                                                                    padding: EdgeInsets.only(
+                                                                      top:
+                                                                          53 *
+                                                                          overallRatio,
+                                                                    ),
+                                                                    child: Column(
+                                                                      crossAxisAlignment:
+                                                                          CrossAxisAlignment
+                                                                              .start,
+                                                                      mainAxisAlignment:
+                                                                          MainAxisAlignment
+                                                                              .start,
+                                                                      children: [
+                                                                        Text(
+                                                                          item1!
+                                                                              .name,
+                                                                          maxLines:
+                                                                              1,
+                                                                          overflow:
+                                                                              TextOverflow.ellipsis,
+                                                                          style: TextStyle(
+                                                                            fontSize:
+                                                                                16,
+                                                                            fontFamily:
+                                                                                'PretendardMedium',
+                                                                            color: const Color(
+                                                                              0xFF5D5D5D,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        SizedBox(
+                                                                          height:
+                                                                              5 *
+                                                                              overallRatio,
+                                                                        ),
+                                                                        Text(
+                                                                          'D-${item1RemainingDays}',
+                                                                          style: TextStyle(
+                                                                            fontSize:
+                                                                                32,
+                                                                            fontFamily:
+                                                                                'PretendardMedium',
+                                                                            color: Color(
+                                                                              0xFF333333,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
                                                         ),
                                                       ),
-                                                    ),
-                                                  ),
 
-                                                  // ------------------------------------------------
-                                                  // [오른쪽 박스 : item2]
-                                                  // ------------------------------------------------
-                                                  if (item2 != null)
-                                                  Expanded(
-                                                    child: Container(
-                                                      margin: EdgeInsets.only(right: spacing / 2),
-                                                      padding: EdgeInsets.symmetric(
-                                                        horizontal: 24 * overallRatio,
+                                                      // ------------------------------------------------
+                                                      // [오른쪽 박스 : item2]
+                                                      // ------------------------------------------------
+                                                      Expanded(
+                                                        child:
+                                                            item2 == null
+                                                                ? Container(
+                                                                  margin: EdgeInsets.only(
+                                                                    right:
+                                                                        spacing /
+                                                                        2,
+                                                                  ),
+                                                                )
+                                                                : Container(
+                                                                  margin: EdgeInsets.only(
+                                                                    right:
+                                                                        spacing /
+                                                                        2,
+                                                                  ),
+                                                                  padding: EdgeInsets.symmetric(
+                                                                    horizontal:
+                                                                        24 *
+                                                                        overallRatio,
+                                                                  ),
+                                                                  decoration: BoxDecoration(
+                                                                    color:
+                                                                        item2RemainingDays! <=
+                                                                                3
+                                                                            ? const Color(
+                                                                              0xFFFFF3F3,
+                                                                            )
+                                                                            : const Color(
+                                                                              0xFFF3F5FF,
+                                                                            ),
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                          10,
+                                                                        ),
+                                                                  ),
+                                                                  child:
+                                                                      item2RemainingDays <=
+                                                                              3
+                                                                          ? Column(
+                                                                            crossAxisAlignment:
+                                                                                CrossAxisAlignment.start,
+                                                                            mainAxisAlignment:
+                                                                                MainAxisAlignment.center,
+                                                                            children: [
+                                                                              Container(
+                                                                                padding: const EdgeInsets.symmetric(
+                                                                                  horizontal:
+                                                                                      6,
+                                                                                  vertical:
+                                                                                      3,
+                                                                                ),
+                                                                                decoration: BoxDecoration(
+                                                                                  color: const Color(
+                                                                                    0xFFFFD7D7,
+                                                                                  ),
+                                                                                  borderRadius: BorderRadius.circular(
+                                                                                    2,
+                                                                                  ),
+                                                                                ),
+                                                                                child: const Text(
+                                                                                  '임박',
+                                                                                  style: TextStyle(
+                                                                                    color: Color(
+                                                                                      0xFFEC5353,
+                                                                                    ),
+                                                                                    fontSize:
+                                                                                        12,
+                                                                                    fontFamily:
+                                                                                        'PretendardMedium',
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                              SizedBox(
+                                                                                height:
+                                                                                    5 *
+                                                                                    overallRatio,
+                                                                              ),
+                                                                              Text(
+                                                                                item2!.name,
+                                                                                maxLines:
+                                                                                    1,
+                                                                                overflow:
+                                                                                    TextOverflow.ellipsis,
+                                                                                style: TextStyle(
+                                                                                  fontSize:
+                                                                                      16,
+                                                                                  fontFamily:
+                                                                                      'PretendardMedium',
+                                                                                  color: const Color(
+                                                                                    0xFF5D5D5D,
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                              Text(
+                                                                                'D-${item2RemainingDays}',
+                                                                                style: TextStyle(
+                                                                                  fontSize:
+                                                                                      32,
+                                                                                  fontFamily:
+                                                                                      'PretendardMedium',
+                                                                                  color: Color(
+                                                                                    0xFF333333,
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                            ],
+                                                                          )
+                                                                          : Padding(
+                                                                            padding: EdgeInsets.only(
+                                                                              top:
+                                                                                  53 *
+                                                                                  overallRatio,
+                                                                            ),
+                                                                            child: Column(
+                                                                              crossAxisAlignment:
+                                                                                  CrossAxisAlignment.start,
+                                                                              mainAxisAlignment:
+                                                                                  MainAxisAlignment.start,
+                                                                              children: [
+                                                                                Text(
+                                                                                  item2!.name,
+                                                                                  maxLines:
+                                                                                      1,
+                                                                                  overflow:
+                                                                                      TextOverflow.ellipsis,
+                                                                                  style: TextStyle(
+                                                                                    fontSize:
+                                                                                        16,
+                                                                                    fontFamily:
+                                                                                        'PretendardMedium',
+                                                                                    color: const Color(
+                                                                                      0xFF5D5D5D,
+                                                                                    ),
+                                                                                  ),
+                                                                                ),
+                                                                                SizedBox(
+                                                                                  height:
+                                                                                      5 *
+                                                                                      overallRatio,
+                                                                                ),
+                                                                                Text(
+                                                                                  'D-${item2RemainingDays}',
+                                                                                  style: TextStyle(
+                                                                                    fontSize:
+                                                                                        32,
+                                                                                    fontFamily:
+                                                                                        'PretendardMedium',
+                                                                                    color: Color(
+                                                                                      0xFF333333,
+                                                                                    ),
+                                                                                  ),
+                                                                                ),
+                                                                              ],
+                                                                            ),
+                                                                          ),
+                                                                ),
                                                       ),
-                                                      decoration: BoxDecoration(
-                                                        color: item2RemainingDays! <= 3
-                                                            ? const Color(0xFFFFF3F3)
-                                                            : const Color(0xFFF3F5FF),
-                                                        borderRadius: BorderRadius.circular(10),
-                                                      ),
-                                                      child: item2RemainingDays <= 3
-                                                          ? Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        mainAxisAlignment: MainAxisAlignment.center,
-                                                        children: [
-                                                          Container(
-                                                            padding: const EdgeInsets.symmetric(
-                                                              horizontal: 6,
-                                                              vertical: 3,
-                                                            ),
-                                                            decoration: BoxDecoration(
-                                                              color: const Color(0xFFFFD7D7),
-                                                              borderRadius: BorderRadius.circular(2),
-                                                            ),
-                                                            child: const Text(
-                                                              '임박',
-                                                              style: TextStyle(
-                                                                  color: Color(0xFFEC5353),
-                                                                  fontSize: 12,
-                                                                  fontFamily: 'PretendardMedium'
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          SizedBox(height: 5 * overallRatio),
-                                                          Text(
-                                                            item2!.name,
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow.ellipsis,
-                                                            style: TextStyle(
-                                                              fontSize: 16,
-                                                              fontFamily:'PretendardMedium',
-                                                              color: const Color(0xFF5D5D5D),
-                                                            ),
-                                                          ),
-                                                          Text(
-                                                            'D-${item2RemainingDays}',
-                                                            style: TextStyle(
-                                                              fontSize: 32,
-                                                              fontFamily:'PretendardMedium',
-                                                              color: Color(0xFF333333),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      )
-                                                          : Padding(
-                                                        padding: EdgeInsets.only(top: 53* overallRatio),
-                                                        child: Column(
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          mainAxisAlignment: MainAxisAlignment.start,
-                                                          children: [
-                                                            Text(
-                                                              item2!.name,
-                                                              maxLines: 1,
-                                                              overflow: TextOverflow.ellipsis,
-                                                              style: TextStyle(
-                                                                fontSize: 16,
-                                                                fontFamily :'PretendardMedium',
-                                                                color: const Color(0xFF5D5D5D),
-                                                              ),
-                                                            ),
-                                                            SizedBox(height: 5 * overallRatio),
-                                                            Text(
-                                                              'D-${item2RemainingDays}',
-                                                              style: TextStyle(
-                                                                fontSize: 32,
-                                                                fontFamily:'PretendardMedium',
-                                                                color: Color(0xFF333333),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ),
+                                                    ],
                                                   ),
-                                                ],
-                                              )
                                         ),
                                       ],
                                     ),

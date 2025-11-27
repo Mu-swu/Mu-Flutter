@@ -10,24 +10,6 @@ Widget tts_text_box({
       (currentLineIndex >= 0 && currentLineIndex < lines.length)
           ? currentLineIndex
           : -1;
-  String missionImage;
-  Offset imageOffset;
-
-  switch (spaceCode) {
-    case 're':
-      imageOffset = Offset(460, 166);
-      missionImage = 'assets/mission/mission_re.png';
-      break;
-    case 'cl':
-      missionImage = 'assets/mission/mission_cl.png';
-      imageOffset = Offset(215, 210);
-      break;
-    case 'dr':
-    default:
-      missionImage = 'assets/mission/mission_dr.png';
-      imageOffset = Offset(510, 166);
-      break;
-  }
 
   return Container(
     width: double.infinity,
@@ -67,19 +49,6 @@ Widget tts_text_box({
                 ),
               );
             },
-          ),
-        ),
-
-        Transform.translate(
-          offset: imageOffset,
-          child: SizedBox(
-            width: 202,
-            height: 86,
-            child: Image.asset(
-              missionImage,
-              fit: BoxFit.cover,
-              opacity: const AlwaysStoppedAnimation<double>(1),
-            ),
           ),
         ),
       ],

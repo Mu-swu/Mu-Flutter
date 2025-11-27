@@ -8,7 +8,7 @@ import 'tables.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [Users, Sections, Missions, KeepBoxes,SpaceProgresses])
+@DriftDatabase(tables: [Users, Sections, Missions, KeepBoxes, SpaceProgresses])
 class AppDatabase extends _$AppDatabase {
   AppDatabase._internal() : super(_openConnection());
 
@@ -167,6 +167,25 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
+  Future<Map<String, dynamic>> getMyPageStatistics(int userId) async {
+    final allSections =
+        await (select(sections)..where((s) => s.userId.equals(userId))).get();
+
+    final completedCount = allSections.where((s) => s.progress == 100).length;
+    final totalCount = allSections.length;
+
+    int achievementRate = 0;
+    if (totalCount > 0) {
+      achievementRate = ((completedCount / totalCount * 100).toInt());
+    }
+    return {
+      'total': totalCount,
+      'completed': completedCount,
+      'rate': achievementRate,
+      'sections': allSections,
+    };
+  }
+
   Future<void> replaceAllKeepBoxes(List<KeepBoxesCompanion> items) async {
     await transaction(() async {
       await delete(keepBoxes).go();
@@ -202,8 +221,8 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> initializeSpaceProgress(int userId, String userType) async {
     final existing =
-    await (select(spaceProgresses)
-      ..where((s) => s.userId.equals(userId))).get();
+        await (select(spaceProgresses)
+          ..where((s) => s.userId.equals(userId))).get();
 
     if (existing.isNotEmpty) {
       return;
@@ -228,7 +247,6 @@ class AppDatabase extends _$AppDatabase {
         break;
     }
 
-
     await batch((batch) {
       for (var entry in initialUnlockStatus.entries) {
         batch.insert(
@@ -245,13 +263,12 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<List<SpaceProgress>> getSpaceProgressForUser(int userId) {
-    return (select(spaceProgresses)..where((s) => s.userId.equals(userId))).get();
+    return (select(spaceProgresses)
+      ..where((s) => s.userId.equals(userId))).get();
   }
 
   String getSpaceNameForSection(String sectionName) {
-    final Set<String> fridgeSections = {
-      "냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"
-    };
+    final Set<String> fridgeSections = {"냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"};
     final Set<String> closetSections = {"선반", "행거 구역", "옷장 바닥 공간", "서랍"};
     final Set<String> drawerSections = {"1단", "2단", "3단"};
 
@@ -266,9 +283,7 @@ class AppDatabase extends _$AppDatabase {
     final userSections = await getSectionsForUser(userId);
     if (userSections.isEmpty) return null;
 
-    final Set<String> fridgeSections = {
-      "냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"
-    };
+    final Set<String> fridgeSections = {"냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"};
     final Set<String> closetSections = {"선반", "행거 구역", "옷장 바닥 공간", "서랍"};
     final Set<String> drawerSections = {"1단", "2단", "3단"};
 
@@ -282,17 +297,18 @@ class AppDatabase extends _$AppDatabase {
 
     return null;
   }
+
   Future<void> completeSpaceAndUnlockAll(
-      int userId,
-      String completedSpaceName,
-      ) async {
+    int userId,
+    String completedSpaceName,
+  ) async {
     await transaction(() async {
       await (update(spaceProgresses)..where(
-            (s) => s.userId.equals(userId) & s.spaceName.equals(completedSpaceName),
+        (s) => s.userId.equals(userId) & s.spaceName.equals(completedSpaceName),
       )).write(const SpaceProgressesCompanion(isCompleted: Value(true)));
 
       await (update(spaceProgresses)..where(
-            (s) => s.userId.equals(userId),
+        (s) => s.userId.equals(userId),
       )).write(const SpaceProgressesCompanion(isUnlocked: Value(true)));
     });
   }

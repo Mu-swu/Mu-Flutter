@@ -100,15 +100,6 @@ flutter:
     - assets/my/re1.png
     - assets/my/re2.png
     - assets/my/re3.png
-    - assets/my/dr0.png
-    - assets/my/dr1.png
-    - assets/my/dr2.png
-    - assets/my/dr3.png
-    - assets/my/cl0.png
-    - assets/my/cl1.png
-    - assets/my/cl2.png
-    - assets/my/cl3.png
-    - assets/my/cl4.png
     - assets/my/idea.png
     - assets/home/lock.png
     - assets/bottom_icons/home_unselected.svg
@@ -138,6 +129,8 @@ flutter:
     - assets/mu.png
     - assets/mission/done.png
     - assets/mission/undone.png
+    - assets/my/done.png
+    - assets/my/undone.png
 
 
   fonts:
