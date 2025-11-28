@@ -47,7 +47,7 @@ Future<void> CategoryEditPopup({
                       ),
                     ),
                     const Text(
-                      '카테고리 수정',
+                      '카테고리 이름 변경',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     GestureDetector(
@@ -98,7 +98,7 @@ Future<void> CategoryEditPopup({
               Padding(
                 padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 24.0),
                 child: ShortButton(
-                  text: "삭제하기",
+                  text: "저장",
 
                   isYes: true,
 

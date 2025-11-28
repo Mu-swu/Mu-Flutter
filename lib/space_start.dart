@@ -382,12 +382,41 @@ class _SpaceStartScreenState extends State<SpaceStartScreen> {
   bool _isLoading = true;
   List<SpaceProgress> _spaceProgress = [];
   String _userType = '방치형';
-  bool _showTutorial = true;
+  // 💡 DB 인스턴스 및 사용자 ID 정의
+  final AppDatabase db = AppDatabase.instance;
+  final int userId = 1;
+
+  // 💡 초기값은 DB에서 로드할 때까지 임시로 false로 설정
+  bool _showTutorial = false;
 
   @override
   void initState() {
     super.initState();
     _loadProgress();
+    _checkAndLoadTutorialStatus(); // DB에서 미션 인덱스 기반으로 튜토리얼 상태 확인
+  }
+
+  // 💡 [추가된 로직]: 미션 인덱스가 0일 때만 튜토리얼 표시
+  Future<void> _checkAndLoadTutorialStatus() async {
+    try {
+      final missionIndex = await db.getUserMissionIndex(userId);
+
+      // 미션 인덱스가 0 (가장 처음)일 때만 튜토리얼을 보여줍니다.
+      const int initialIndex = 0;
+
+      if (mounted) {
+        setState(() {
+          _showTutorial = (missionIndex == initialIndex);
+        });
+      }
+    } catch (e) {
+      print("튜토리얼 상태 로드 에러: $e");
+      if (mounted) {
+        setState(() {
+          _showTutorial = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadProgress() async {
@@ -424,9 +453,12 @@ class _SpaceStartScreenState extends State<SpaceStartScreen> {
     }
   }
   void _endTutorial() {
-    setState(() {
-      _showTutorial = false;
-    });
+    if (mounted) {
+      setState(() {
+        _showTutorial = false;
+      });
+    }
+    // 미션 인덱스가 올라가면 자동으로 튜토리얼은 다시 나타나지 않습니다.
   }
 
   List<SpaceProgress> _sortProgressByUserType(
@@ -502,6 +534,8 @@ class _SpaceStartScreenState extends State<SpaceStartScreen> {
     }
 
     final List<Widget> spaceCards = _buildSpaceCards();
+
+
 
     return Scaffold(
       backgroundColor: Colors.white,

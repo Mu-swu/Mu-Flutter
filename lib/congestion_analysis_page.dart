@@ -460,7 +460,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                 ),
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 160 * widthRatio),
+                    padding: EdgeInsets.symmetric(horizontal: 180 * widthRatio),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -490,7 +490,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                flex: 4,
+                                flex:3,
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: Colors.grey[200],
@@ -509,19 +509,16 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                               child:
                                                   CircularProgressIndicator(),
                                             )
-                                            : Align(
-                                              alignment: Alignment.topCenter,
-                                              child: AspectRatio(
-                                                aspectRatio:
-                                                    2.57 /
-                                                    _cameraController!
-                                                        .value
-                                                        .aspectRatio,
-                                                child: CameraPreview(
-                                                  _cameraController!,
-                                                ),
-                                              ),
+                                            : Positioned.fill(
+                                          child: FittedBox(
+                                            fit: BoxFit.cover,
+                                            child: SizedBox(
+                                              width: _cameraController!.value.previewSize!.height,
+                                              height: _cameraController!.value.previewSize!.width,
+                                              child: CameraPreview(_cameraController!),
                                             ),
+                                          ),
+                                        ),
                                         // 코너 가이드 라인
                                         Positioned(
                                           top: 40 * heightRatio,
@@ -661,7 +658,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                   ),
                                 ),
                               ),
-                              SizedBox(width: 20 * widthRatio),
+                              SizedBox(width: 40 * widthRatio),
                               Expanded(
                                 flex: 2,
                                 child: ClipRRect(
@@ -947,7 +944,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                             ],
                           ),
                         ),
-                        SizedBox(height: 100 * heightRatio),
+                        SizedBox(height: 80 * heightRatio),
                         LongButton(
                           text: "다음",
 
@@ -968,7 +965,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                           },
                           isEnabled: true,
                         ),
-                        SizedBox(height: 100 * heightRatio),
+                        SizedBox(height: 90 * heightRatio),
                       ],
                     ),
                   ),

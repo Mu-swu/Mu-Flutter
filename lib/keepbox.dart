@@ -93,34 +93,40 @@ class MaskingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 1. 어둡고 투명한 배경 색상
+    // 1. 어둡고 투명한 배경 색상 Paint
     final backgroundPaint =
-        Paint()
-          ..color = Colors.black.withOpacity(0.6)
-          ..style = PaintingStyle.fill;
+    Paint()
+      ..color = Colors.black.withOpacity(0.6)
+      ..style = PaintingStyle.fill;
 
-    // 2. 전체 화면을 어둡게 칠합니다.
+    // 2. 뚫어줄 영역을 위한 Paint 설정
+    // 💡 핵심: BlendMode.clear를 사용하여 해당 영역을 투명하게 만듭니다.
+    final cutoutPaint =
+    Paint()
+      ..blendMode = BlendMode.clear
+      ..color = Colors.white; // 색상은 중요하지 않음
+
+    // 3. 뚫어줄 영역의 둥근 모서리 반지름
+    final r = 10.0;
+
+    // 4. saveLayer를 호출하여 새로운 레이어를 시작하고,
+    //    이 레이어에 모든 작업을 수행합니다.
+    canvas.saveLayer(Rect.fromLTWH(0, 0, size.width, size.height), Paint());
+
+    // 5. 전체 화면을 어둡게 칠합니다.
     canvas.drawRect(Offset.zero & size, backgroundPaint);
 
     if (cutoutRect != null) {
-      // 3. 뚫어줄 영역을 위한 Paint 설정
-      // BlendMode.clear를 사용하여 해당 영역을 투명하게 만듭니다.
-      final cutoutPaint =
-          Paint()
-            ..blendMode = BlendMode.clear
-            ..color = Colors.white; // 색상은 중요하지 않습니다.
+      // 6. 뚫어줄 영역을 clear 모드로 그립니다.
+      // 뚫어줄 Path/RRect 생성
+      final cutoutRRect = RRect.fromRectAndRadius(cutoutRect!, Radius.circular(r));
 
-      // 4. 뚫어줄 영역 그리기 (말풍선의 둥근 모서리와 동일한 반지름 사용)
-      final r = 10.0;
-      // 5. 뚫어준 영역을 투명하게 만들기 위해 canvas의 블렌딩 모드를 조정
-      canvas.saveLayer(Offset.zero & size, Paint());
-      canvas.drawPath(Path()..addRect(Offset.zero & size), backgroundPaint);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(cutoutRect!, Radius.circular(r)),
-        cutoutPaint,
-      );
-      canvas.restore();
+      // clear 모드로 뚫어주기
+      canvas.drawRRect(cutoutRRect, cutoutPaint);
     }
+
+    // 7. 레이어를 복원하여 최종 결과를 화면에 반영합니다.
+    canvas.restore();
   }
 
   @override
@@ -260,7 +266,10 @@ class _TutorialOverlayWithMaskingState
         Center(
           child: Transform.translate(
             // ⚠️ 원본 TutorialOverlay의 고정 오프셋을 사용 (크기/위치 문제 해결)
-            offset: Offset(100 * scaleFactor, 0),
+            offset: Offset(
+            5 * scaleFactor,
+            100 * scaleFactor,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,9 +406,13 @@ class _keepboxState extends State<keepbox> {
   bool _speechEnabled = false;
   double _currentLevel = 0.0;
   String _lastWords = '';
-  bool _isTutorialActive = true; // 튜토리얼 시작을 위해 true로 설정
+
+  // 💡 [수정] userId 정의 및 초기 튜토리얼 상태 변경
+  final int userId = 1; // 사용자 ID 고정 (AppDatabase.getUserMissionIndex 사용을 위함)
+  bool _isTutorialActive = false; // 초기값을 false로 설정, DB 로드 후 결정
+
   int _tutorialStep = 0;
-  final String _userType = '방치형';
+  String _userType = '방치형';
 
   List<Map<String, dynamic>> items = [];
   List<Map<String, dynamic>> categories = [];
@@ -416,19 +429,63 @@ class _keepboxState extends State<keepbox> {
 
   @override
   void initState() {
+    _loadInitialData();
     super.initState();
     _initGemini();
     _initSpeech();
     NotificationService.instance.init();
     _loadData();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startTutorial());
+    // 💡 [수정] DB 기반으로 튜토리얼 상태를 확인하는 함수 호출
+    _checkAndLoadTutorialStatus();
   }
 
-  void _startTutorial() {
-    setState(() {
-      _isTutorialActive = true;
-      _tutorialStep = 0;
-    });
+  // 💡 [추가] 사용자 유형 로드 및 주요 데이터 로드를 통합 관리
+  Future<void> _loadInitialData() async {
+    try {
+      // 1. 사용자 유형 로드
+      final loadedUserType = await _database.getUserType(userId) ?? '방치형';
+
+      if (mounted) {
+        setState(() {
+          _userType = loadedUserType;
+        });
+      }
+
+      // 2. 사용자 유형 로드 후 나머지 데이터 및 튜토리얼 상태 확인
+      await _loadData(); // _userType을 사용할 수 있는 상태에서 데이터 로드
+      _checkAndLoadTutorialStatus();
+
+    } catch (e) {
+      print("Keepbox 초기 데이터 로드 중 오류 발생: $e");
+      if (mounted) {
+        setState(() {
+          _userType = '방치형';
+        });
+      }
+    }
+  }
+
+  // 💡 [추가된 로직]: 미션 인덱스가 0일 때만 튜토리얼 표시
+  Future<void> _checkAndLoadTutorialStatus() async {
+    try {
+      final missionIndex = await _database.getUserMissionIndex(userId);
+
+      // 미션 인덱스가 0 (가장 처음)일 때만 튜토리얼을 보여줍니다.
+      const int initialIndex = 0;
+
+      if (mounted) {
+        setState(() {
+          _isTutorialActive = (missionIndex == initialIndex);
+        });
+      }
+    } catch (e) {
+      print("Keepbox 튜토리얼 상태 로드 에러: $e");
+      if (mounted) {
+        setState(() {
+          _isTutorialActive = false;
+        });
+      }
+    }
   }
 
   void _nextTutorialStep() {

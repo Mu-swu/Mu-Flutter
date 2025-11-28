@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'ItemListSection.dart';
-import 'category_edit_popup.dart';
+import 'package:mu/InventoryPage.dart';
 
 class ItemSaveSection extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
@@ -14,6 +14,7 @@ class ItemSaveSection extends StatefulWidget {
   final Function(String itemName, String newEndDate) onDateChanged;
   final Function(String oldName, String newName) onCategoryUpdated;
   final Function(String categoryName) onCategoryDeleted;
+
 
   const ItemSaveSection({
     required this.categories,
@@ -36,6 +37,7 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
   late DateTime todayDate;
   late DateTime oneWeekLaterDate;
   String? _selectedCategory;
+  late TextEditingController _itemNameController;
 
   @override
   void initState() {
@@ -43,8 +45,8 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
     todayDate = DateTime.now();
     oneWeekLaterDate = todayDate.add(const Duration(days: 7));
     _selectedCategory = widget.itemCategory;
+    _itemNameController = TextEditingController(text: widget.itemName);
   }
-
   Future<void> _pickDate({
     required DateTime initialDate,
     required Function(DateTime) onSelected,
@@ -128,9 +130,11 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
                     ),
                     SizedBox(height: 24 * h),
 
-                    _labelTextField('이름', widget.itemName),
+                    _editableTextField(
+                      label: '이름',
+                      controller: _itemNameController,
+                    ),
                     SizedBox(height: 16 * h),
-
                     Text(
                       '오늘 날짜',
                       style: TextStyle(
@@ -219,22 +223,16 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
                       child: ItemListSection(
                         categories: widget.categories,
                         onAddPressed: (category) {
-                          print('$category 추가');
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              // InventoryPage로 이동
+                              builder: (context) => const InventoryPage(),
+                            ),
+                          );
                         },
                         onItemTapped: (String categoryName) {
-                          CategoryEditPopup(
-                            context: context,
-                            initialCategoryName: categoryName,
-                            onSave: (String newCategoryName) {
-                              widget.onCategoryUpdated(
-                                categoryName,
-                                newCategoryName,
-                              );
-                            },
-                            onDelete: () {
-                              widget.onCategoryDeleted(categoryName);
-                            },
-                          );
+
                         },
                       ),
                     ),
@@ -248,7 +246,12 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
     );
   }
 
-  Widget _labelTextField(String label, String value) {
+
+  // **수정 가능한 텍스트 필드 위젯**
+  Widget _editableTextField({
+    required String label,
+    required TextEditingController controller,
+  }) {
     final w = widget.widthRatio;
     final h = widget.heightRatio;
 
@@ -264,17 +267,24 @@ class _ItemSaveSectionState extends State<ItemSaveSection> {
           ),
         ),
         SizedBox(height: 8 * h),
-        Container(
-          height: 48 * h,
-          padding: EdgeInsets.symmetric(horizontal: 16 * w),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5F5F5),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          alignment: Alignment.centerLeft,
-          child: Text(
-            value,
-            style: TextStyle(fontSize: 16 * w, color: Colors.black),
+        TextFormField(
+          controller: controller,
+          // onFieldSubmitted 제거하여 단순화
+          style: TextStyle(fontSize: 16 * w, color: Colors.black),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding:
+            EdgeInsets.symmetric(horizontal: 16 * w, vertical: 14 * h),
+            fillColor: Colors.white,
+            filled: true,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey.shade300, width: 1.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF463EC6), width: 1.5),
+            ),
           ),
         ),
       ],

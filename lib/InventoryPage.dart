@@ -129,11 +129,11 @@ Future<void> ItemEditPopup({
                         ),
                         GestureDetector(
                           onTap: () {
-                            onSave(nameController.text, endDate);
+                            onDelete();
                             Navigator.pop(context);
                           },
                           child: const Text(
-                            '완료',
+                            '삭제',
                             style: TextStyle(fontSize: 18, color: Colors.black),
                           ),
                         ),
@@ -203,15 +203,15 @@ Future<void> ItemEditPopup({
 
                   const SizedBox(height: 100),
 
-                  // 3. 삭제하기 버튼
+                  // 3. 저장 버튼
                   Padding(
                     padding: const EdgeInsets.only(left: 50.0, right:50.0, bottom: 24.0),
                     child: ShortButton(
-                      text: "삭제하기",
+                      text: "저장",
                       isYes: true, // 삭제는 보통 'No' 스타일 버튼
 
                       onPressed: () {
-                        onDelete();
+                        onSave(nameController.text, endDate);
                         Navigator.pop(context);
                       },
                       width: double.infinity,
@@ -603,7 +603,7 @@ class _InventoryPageState extends State<InventoryPage> {
     {'category': '식품', 'title': '냉동피자', 'date': '2025.11. 26 ~ 2025.12. 26'},
     {'category': '식품', 'title': '딸기잼', 'date': '2025. 11. 26 ~ 2025.12. 26'},
     {'category': '식품', 'title': '피마산 치즈', 'date': '2025.11.14 ~ 2025.12.21'},
-    {'category': '식품', 'title': '냉동피자', 'date': '2025.11. 26 ~ 2025.12. 26'},
+    {'category': '식품', 'title': '냉동피자', 'date': '2025.11.26 ~ 2025.12.26'},
   ];
 
   // 카테고리 수정 핸들러

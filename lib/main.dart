@@ -1,4 +1,4 @@
-import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mu/data/database.dart';
@@ -63,6 +63,32 @@ class CustomTag extends StatelessWidget {
     );
   }
 }
+
+final PageController _pageController = PageController();
+int _currentPage = 0;
+
+// 나중에 DB에서 불러올 값
+final List<Map<String, dynamic>> _dataList = [
+  {
+    "title": "냉장고",
+    "image": "assets/home/refr.png",
+    "space": "냉장고",
+    "progress": 0,
+  },
+  {
+    "title": "옷장",
+    "image": "assets/home/closet.png",
+    "space": "옷장",
+    "progress": 0,
+  },
+  {
+    "title": "서랍장",
+    "image": "assets/home/drawer.png",
+    "space": "서랍장",
+    "progress": 0,
+  },
+];
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -858,7 +884,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                 padding: EdgeInsets.only(
                                                   top:
                                                       (_orderedMissions.isEmpty
-                                                          ? 28
+                                                          ? 19
                                                           : 16) *
                                                       overallRatio,
                                                 ),
@@ -1023,140 +1049,166 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                               return Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // 왼쪽: 비움 현황
+                                  // 왼쪽: 비움 현황 (Expanded 유지하고, child만 변경)
                                   Expanded(
                                     flex: 18,
+                                    // ⬇️ 이 자리에 PageView와 인디케이터가 포함된 Column 코드가 들어갑니다.
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
-                                          '비움 현황',
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            fontFamily: 'PretendardBold',
-                                          ),
-                                        ),
-                                        SizedBox(height: spacing / 4),
-                                        Container(
-                                          height: proportionalHeight,
-                                          margin: EdgeInsets.only(
-                                            right: spacing,
-                                          ),
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 40 * overallRatio,
-                                            vertical: 20 * overallRatio,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFF3F5FF),
-                                            borderRadius: BorderRadius.circular(
-                                              10,
+                                        // 1. 헤더: 타이틀 및 페이지 이동 버튼 (< >)
+                                        Transform.translate(
+                                          offset: const Offset(0, -8.0), // 👈 7.0만큼 위로 이동하여 높이를 맞춥니다.
+                                          child: Padding(
+                                            padding: EdgeInsets.only(right: spacing),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.start,
+                                              children: [
+                                                const Text(
+                                                  '비움 현황', // 고정된 타이틀
+                                                  style: TextStyle(
+                                                    fontSize: 20,
+                                                    fontFamily: 'PretendardBold',
+                                                  ),
+                                                ),
+
+                                                const Spacer(),
+
+                                                // 이전 페이지 버튼
+                                                IconButton(
+                                                  icon: const Icon(Icons.arrow_back_ios, size: 14),
+                                                  onPressed: () {
+                                                    if (_currentPage > 0) {
+                                                      _pageController.previousPage(
+                                                        duration: const Duration(milliseconds: 300),
+                                                        curve: Curves.easeOut,
+                                                      );
+                                                    }
+                                                  },
+                                                ),
+                                                // 다음 페이지 버튼
+                                                IconButton(
+                                                  icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                                                  onPressed: () {
+                                                    if (_currentPage < _dataList.length - 1) {
+                                                      _pageController.nextPage(
+                                                        duration: const Duration(milliseconds: 300),
+                                                        curve: Curves.easeOut,
+                                                      );
+                                                    }
+                                                  },
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.stretch,
-                                            children: [
-                                              Container(
-                                                width: 100,
-                                                height: 100,
+                                        ),
+
+                                        SizedBox(height: spacing / 4- 5.5),
+
+                                        // 2. PageView (페이지 전환 가능한 본문) - 높이 고정 (2번 문제 해결)
+                                        Container(
+                                          height: proportionalHeight, // 👈 Expanded 제거, 원래 높이 유지
+                                          margin: EdgeInsets.only(right: spacing),
+                                          child: PageView.builder(
+                                            controller: _pageController,
+                                            itemCount: _dataList.length,
+                                            // 페이지가 바뀔 때마다 상태 업데이트 (1번 문제 해결)
+                                            onPageChanged: (int index) {
+                                              setState(() {
+                                                _currentPage = index;
+                                              });
+                                            },
+                                            itemBuilder: (context, index) {
+                                              final data = _dataList[index];
+
+                                              // **********************************************
+                                              // PageView의 각 페이지 (상태 카드)
+                                              // **********************************************
+                                              return Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 40 * overallRatio,
+                                                  vertical: 20 * overallRatio,
+                                                ),
                                                 decoration: BoxDecoration(
-                                                  color: Color(0xFFFAFBFF),
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
+                                                  color: Color(0xFFF3F5FF),
+                                                  borderRadius: BorderRadius.circular(10),
                                                 ),
-                                                child: Padding(
-                                                  padding: EdgeInsets.all(
-                                                    18.0 * overallRatio,
-                                                  ),
-                                                  child: ClipRRect(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          16 * overallRatio,
-                                                        ),
-                                                    child: Image.asset(
-                                                      UserThemeManager
-                                                          .statusImage,
-                                                      fit: BoxFit.contain,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              SizedBox(
-                                                width: 25 * overallRatio,
-                                              ),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
+                                                child: Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.stretch,
                                                   children: [
-                                                    Text(
-                                                      _userSpace,
-                                                      style: TextStyle(
-                                                        fontSize: 18,
-                                                        fontFamily:
-                                                            'PretendardMedium',
-                                                        color: Color(
-                                                          0xFF5D5D5D,
+                                                    // 이미지 영역
+                                                    Container(
+                                                      width: 100,
+                                                      height: 100,
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFFFAFBFF),
+                                                        borderRadius: BorderRadius.circular(6),
+                                                      ),
+                                                      child: Padding(
+                                                        padding: EdgeInsets.all(18.0 * overallRatio),
+                                                        child: ClipRRect(
+                                                          borderRadius: BorderRadius.circular(16 * overallRatio),
+                                                          child: Image.asset(
+                                                            data['image'],
+                                                            fit: BoxFit.contain,
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
-                                                    SizedBox(
-                                                      height: 10 * overallRatio,
-                                                    ),
-                                                    Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Expanded(
-                                                          child: ClipRRect(
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  2,
-                                                                ),
-                                                            child: SizedBox(
-                                                              height: 10,
-                                                              child: LinearProgressIndicator(
-                                                                value:
-                                                                    _currentSpaceProgressPercentage /
-                                                                    100.0,
-                                                                backgroundColor:
-                                                                    Color(
-                                                                      0xFFDBDEE7,
-                                                                    ),
-                                                                valueColor:
-                                                                    const AlwaysStoppedAnimation<
-                                                                      Color
-                                                                    >(
-                                                                      Color(
-                                                                        0xFF6AC992,
+                                                    SizedBox(width: 25 * overallRatio),
+
+                                                    // 텍스트 및 진행률 영역
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        children: [
+                                                          Text(
+                                                            data['space'],
+                                                            style: const TextStyle(
+                                                              fontSize: 18,
+                                                              fontFamily: 'PretendardMedium',
+                                                              color: Color(0xFF5D5D5D),
+                                                            ),
+                                                          ),
+                                                          SizedBox(height: 10 * overallRatio),
+                                                          Row(
+                                                            mainAxisAlignment: MainAxisAlignment.start,
+                                                            children: [
+                                                              Expanded(
+                                                                child: ClipRRect(
+                                                                  borderRadius: BorderRadius.circular(2),
+                                                                  child: SizedBox(
+                                                                    height: 10,
+                                                                    child: LinearProgressIndicator(
+                                                                      value: data['progress'] / 100.0,
+                                                                      backgroundColor: const Color(0xFFDBDEE7),
+                                                                      valueColor:
+                                                                      const AlwaysStoppedAnimation<Color>(
+                                                                        Color(0xFF6AC992),
                                                                       ),
                                                                     ),
+                                                                  ),
+                                                                ),
                                                               ),
-                                                            ),
+                                                              SizedBox(width: 13),
+                                                              Text(
+                                                                '${data['progress'].round()}%',
+                                                                style: const TextStyle(
+                                                                  fontSize: 14,
+                                                                  fontFamily: 'PretendardRegular',
+                                                                  color: Color(0xFF8D93A1),
+                                                                ),
+                                                              ),
+                                                            ],
                                                           ),
-                                                        ),
-                                                        SizedBox(width: 13),
-                                                        Text(
-                                                          '$_currentSpaceProgressPercentage%',
-                                                          style: const TextStyle(
-                                                            fontSize: 14,
-                                                            fontFamily:
-                                                                'PretendardRegular',
-                                                            color: Color(
-                                                              0xFF8D93A1,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
+                                                        ],
+                                                      ),
                                                     ),
                                                   ],
                                                 ),
-                                              ),
-                                            ],
+                                              );
+                                            },
                                           ),
                                         ),
                                       ],
@@ -1178,7 +1230,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                             color: Color(0xFF333333),
                                           ),
                                         ),
-                                        SizedBox(height: spacing / 4),
+                                        SizedBox(height: spacing / 4+7.0),
                                         SizedBox(
                                           height: proportionalHeight,
                                           child:

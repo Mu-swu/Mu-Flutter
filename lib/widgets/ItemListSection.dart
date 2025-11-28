@@ -119,26 +119,27 @@ class ItemListSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          name,
-                          style: const TextStyle(fontSize: 18.0),
-                          overflow: TextOverflow.ellipsis,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10.0),
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            name,
+                            style: const TextStyle(fontSize: 18.0),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        icon: SvgPicture.asset(
-                          'assets/mission/edit.svg',
+                        SizedBox(width: 4 * scale), // 이름과 아이콘 사이 간격
+                        Icon(
+                          Icons.arrow_forward_ios, // >> 모양 아이콘
+                          size: 14 * scale,
+                          color: Colors.black54,
                         ),
-                        iconSize: 20,
-                        onPressed: () => onItemTapped(name),
-                        padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  // 아이템 박스를 탭하는 부분 (GestureDetector)
                   GestureDetector(
                     onTap: () => onAddPressed(name),
                     child: contentBox,
