@@ -374,9 +374,6 @@ class _MyPageState extends State<MyPage> {
               }
 
               String displayName = name;
-              if (displayName.length > 5) {
-                displayName = '${displayName.substring(0, 4)}...';
-              }
 
               return Expanded(
                 child: Stack(
@@ -460,6 +457,9 @@ class _MyPageState extends State<MyPage> {
                           child: Text(
                             displayName,
                             textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: true,
                             style: TextStyle(
                               fontSize: 14,
                               color: const Color(0xFF5D5D5D),
@@ -535,7 +535,7 @@ class _MyPageState extends State<MyPage> {
                 child: Container(
                   padding: EdgeInsets.symmetric(
                     vertical: 24 * widthRatio,
-                    horizontal: 16 * widthRatio,
+                    horizontal: 30 * widthRatio,
                   ),
                   decoration: BoxDecoration(
                     color: Color(0xFFFAFBFF),
@@ -575,6 +575,7 @@ class _MyPageState extends State<MyPage> {
   }
 
   Widget _buildProgressSection(double widthRatio) {
+    final db = AppDatabase.instance;
     return Container(
       height: 302,
       padding: EdgeInsets.all(30 * widthRatio),
@@ -587,87 +588,102 @@ class _MyPageState extends State<MyPage> {
         children: [
           SizedBox(height: 16 * widthRatio),
           Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: 20,
-                  getDrawingHorizontalLine: (value) {
-                    return const FlLine(
-                      color: Color(0xffdbdee7),
-                      strokeWidth: 1,
-                    );
-                  },
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 21,
-                      interval: 1,
-                      getTitlesWidget: bottomTitleWidgets,
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 10,
-                      getTitlesWidget: leftTitleWidgets,
-                      reservedSize: 42,
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: const Border(
-                    bottom: BorderSide(color: Color(0xffdbdee7), width: 4),
-                    left: BorderSide(color: Color(0xffdbdee7), width: 4),
-                    top: BorderSide(color: Color(0xffdbdee7)),
-                    right: BorderSide(color: Colors.transparent),
-                  ),
-                ),
-                minX: 0,
-                maxX: 6,
-                minY: 0,
-                maxY: 100,
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 30),
-                      FlSpot(1, 80),
-                      FlSpot(2, 20),
-                      FlSpot(3, 100),
-                      FlSpot(4, 60),
-                      FlSpot(5, 60),
-                      FlSpot(6, 40),
-                    ],
-                    isCurved: false,
-                    color: Color(0xff7f91ff),
-                    barWidth: 2,
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: db.getWeeklyMissionStats(1),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError ||
+                    !snapshot.hasData ||
+                    snapshot.data!.isEmpty) {}
+                final data = snapshot.data ?? [];
+
+                bool isAllZero = data.every((d) => (d['y'] as double) == 0);
+
+                List<FlSpot> spots = [];
+
+                if (!isAllZero) {
+                  spots =
+                      data.map((d) {
+                        return FlSpot(d['x'] as double, d['y'] as double);
+                      }).toList();
+                }
+                return LineChart(
+                  LineChartData(
+                    gridData: FlGridData(
                       show: true,
-                      getDotPainter: (spot, percent, barData, index) {
-                        return FlDotCirclePainter(
-                          radius: 2,
-                          color: Color(0xffd7dcfa),
-                          strokeWidth: 2,
-                          strokeColor: Color(0xff7f91ff),
+                      drawVerticalLine: false,
+                      horizontalInterval: 20,
+                      getDrawingHorizontalLine: (value) {
+                        return const FlLine(
+                          color: Color(0xffdbdee7),
+                          strokeWidth: 1,
                         );
                       },
                     ),
-                    belowBarData: BarAreaData(show: false),
+                    titlesData: FlTitlesData(
+                      show: true,
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 21,
+                          interval: 1,
+                          getTitlesWidget: bottomTitleWidgets,
+                        ),
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          interval: 10,
+                          getTitlesWidget: leftTitleWidgets,
+                          reservedSize: 42,
+                        ),
+                      ),
+                    ),
+                    borderData: FlBorderData(
+                      show: true,
+                      border: const Border(
+                        bottom: BorderSide(color: Color(0xffdbdee7), width: 4),
+                        left: BorderSide(color: Color(0xffdbdee7), width: 4),
+                        top: BorderSide(color: Color(0xffdbdee7)),
+                        right: BorderSide(color: Colors.transparent),
+                      ),
+                    ),
+                    minX: 0,
+                    maxX: 6,
+                    minY: 0,
+                    maxY: 100,
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: spots,
+                        isCurved: false,
+                        color: Color(0xff7f91ff),
+                        barWidth: 2,
+                        isStrokeCapRound: true,
+                        dotData: FlDotData(
+                          show: true,
+                          getDotPainter: (spot, percent, barData, index) {
+                            return FlDotCirclePainter(
+                              radius: 2,
+                              color: Color(0xffd7dcfa),
+                              strokeWidth: 2,
+                              strokeColor: Color(0xff7f91ff),
+                            );
+                          },
+                        ),
+                        belowBarData: BarAreaData(show: false),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],

@@ -8,7 +8,9 @@ import 'tables.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [Users, Sections, Missions, KeepBoxes, SpaceProgresses])
+@DriftDatabase(
+  tables: [Users, Sections, Missions, KeepBoxes, SpaceProgresses, MissionLogs],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase._internal() : super(_openConnection());
 
@@ -145,6 +147,43 @@ class AppDatabase extends _$AppDatabase {
     return (update(sections)..where(
       (s) => s.id.equals(sectionId),
     )).write(SectionsCompanion(progress: Value(progress)));
+  }
+
+  Future<void> logMissionCompletion(int userId) async {
+    await into(missionLogs).insert(
+      MissionLogsCompanion.insert(userId: userId, completedAt: DateTime.now()),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getWeeklyMissionStats(int userId) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final startOfWeek = today.subtract(Duration(days: now.weekday - 1));
+
+    final totalMissions = (await getSectionsForUser(userId)).length;
+    final int maxMissions = totalMissions > 0 ? totalMissions : 1;
+
+    List<Map<String, dynamic>> weeklyData = [];
+
+    for (int i = 0; i < 7; i++) {
+      final targetDate = startOfWeek.add(Duration(days: i));
+      final nextDate = targetDate.add(const Duration(days: 1));
+
+      final countResult =
+          await (select(missionLogs)..where(
+            (tbl) =>
+                tbl.userId.equals(userId) &
+                tbl.completedAt.isBetweenValues(targetDate, nextDate),
+          )).get();
+      int completedCount = countResult.length;
+
+      double percentage = (completedCount / maxMissions) * 100;
+      if (percentage > 100) percentage = 100;
+
+      weeklyData.add({"x": i.toDouble(), "y": percentage, "date": targetDate});
+    }
+    return weeklyData;
   }
 
   Future<List<KeepBox>> getAllKeepBoxes() {

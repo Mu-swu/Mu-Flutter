@@ -626,6 +626,7 @@ class _keepboxState extends State<keepbox> {
           print(
             "미션 완료 처리: ${finishedSection.name} (ID: ${finishedSection.id}) -> 100%",
           );
+          await _database.logMissionCompletion(userId);
         }
       }
       final bool allMissionsCompleted =
