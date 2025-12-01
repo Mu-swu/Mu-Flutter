@@ -1103,7 +1103,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           ),
                                         ),
 
-                                        SizedBox(height: spacing / 4- 5.5),
+                                        SizedBox(height: 5.0),
 
                                         // 2. PageView (페이지 전환 가능한 본문) - 높이 고정 (2번 문제 해결)
                                         Container(
