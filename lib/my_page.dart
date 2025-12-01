@@ -12,11 +12,15 @@ class MyPage extends StatefulWidget {
 }
 
 class _MyPageState extends State<MyPage> {
+  List<Map<String, dynamic>> _spaceStats = [];
+  bool _isLoading = true;
+
+  int _currentMissionPageIndex = 0;
+  final PageController _missionPageController = PageController();
+
   int _totalMissions = 0;
   int _completedMissions = 0;
   int _achievementRate = 0;
-  List<Section> _recentSections = [];
-  bool _isLoading = true;
 
   @override
   void initState() {
@@ -39,22 +43,88 @@ class _MyPageState extends State<MyPage> {
     }
 
     final status = await db.getMyPageStatistics(1);
-    List<Section> sections = status['sections'];
+    List<Section> allSections = status['sections'];
 
-    sections.sort((a, b) {
-      if (a.missionOrder != null && b.missionOrder != null) {
-        return a.missionOrder!.compareTo(b.missionOrder!);
+    final spaceProgressList = await db.getSpaceProgressForUser(1);
+
+    if (spaceProgressList.isEmpty) {
+      await db.initializeSpaceProgress(1, dbUserType ?? '방치형');
+      final newProgressList = await db.getSpaceProgressForUser(1);
+      spaceProgressList.clear();
+      spaceProgressList.addAll(newProgressList);
+    }
+
+    final unlockedSpaces =
+        spaceProgressList.where((sp) => sp.isUnlocked).toList();
+
+    List<Map<String, dynamic>> tempStats = [];
+
+    for (var spaceProgress in unlockedSpaces) {
+      String spaceName = spaceProgress.spaceName;
+
+      List<Section> spaceSections =
+          allSections.where((s) {
+            return db.getSpaceNameForSection(s.name) == spaceName;
+          }).toList();
+
+      spaceSections.sort((a, b) {
+        if (a.missionOrder != null && b.missionOrder != null) {
+          return a.missionOrder!.compareTo(b.missionOrder!);
+        }
+        return a.id.compareTo(b.id);
+      });
+
+      int completedCount = spaceSections.where((s) => s.progress == 100).length;
+      int totalCount = spaceSections.length;
+      int rate =
+          totalCount > 0 ? ((completedCount / totalCount) * 100).toInt() : 0;
+
+      if (spaceSections.isEmpty) {
+        List<String> dummyNames;
+        if (spaceName == '냉장고')
+          dummyNames = ["냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"];
+        else if (spaceName == '옷장')
+          dummyNames = ["선반", "행거 구역", "옷장 바닥 공간"];
+        else
+          dummyNames = ["1단", "2단", "3단"];
+
+        spaceSections =
+            dummyNames
+                .map(
+                  (name) => Section(
+                    id: -1,
+                    userId: 1,
+                    name: name,
+                    clutterLevel: '',
+                    progress: 0,
+                  ),
+                )
+                .toList();
+        totalCount = 0;
       }
-      return a.id.compareTo(b.id);
-    });
+
+      tempStats.add({
+        'spaceName': spaceName,
+        'sections': spaceSections,
+        'completed': completedCount,
+        'total': totalCount,
+        'rate': rate,
+      });
+    }
 
     if (mounted) {
       setState(() {
+        _spaceStats = tempStats;
+
         _totalMissions = status['total'];
         _completedMissions = status['completed'];
         _achievementRate = status['rate'];
-        _recentSections = sections;
+
         _isLoading = false;
+
+        if (_currentMissionPageIndex >= _spaceStats.length) {
+          _currentMissionPageIndex = 0;
+        }
       });
     }
   }
@@ -103,7 +173,7 @@ class _MyPageState extends State<MyPage> {
                                   ),
                                 ),
                                 SizedBox(height: 10 * heightRatio),
-                                _buildMissionSection(widthRatio, heightRatio),
+                                _buildMissionCarousel(widthRatio),
                               ],
                             ),
                           ),
@@ -143,6 +213,330 @@ class _MyPageState extends State<MyPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMissionCarousel(double widthRatio) {
+    if (_isLoading) {
+      return Container(
+        height: 310 * widthRatio,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F5FF),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_spaceStats.isEmpty) {
+      return Container(
+        height: 310 * widthRatio,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F5FF),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Center(child: Text("진행 중인 미션이 없습니다.")),
+      );
+    }
+
+    bool showIndicator = _spaceStats.length > 1;
+
+    return Container(
+      height: 365 * widthRatio,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F5FF),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: PageView.builder(
+              controller: _missionPageController,
+              itemCount: _spaceStats.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentMissionPageIndex = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                final stat = _spaceStats[index];
+                return _buildSingleMissionCard(stat, widthRatio);
+              },
+            ),
+          ),
+
+          if (showIndicator)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 15),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(_spaceStats.length, (index) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color:
+                          _currentMissionPageIndex == index
+                              ? const Color(0xFFB0B8C1)
+                              : const Color(0xFFDBDEE7),
+                    ),
+                  );
+                }),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSingleMissionCard(Map<String, dynamic> stat, double widthRatio) {
+    List<Section> sections = stat['sections'];
+    String spaceName = stat['spaceName'];
+    int completedMissions = stat['completed'];
+    int totalMissions = stat['total'];
+    int achievementRate = stat['rate'];
+
+    List<Map<String, dynamic>> displayItems =
+        sections.take(4).map((section) {
+          return {'name': section.name, 'isCompleted': section.progress == 100};
+        }).toList();
+
+    return Padding(
+      padding: EdgeInsets.all(14 * widthRatio),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(height: 10 * widthRatio),
+
+          _buildTimelineUI(displayItems, spaceName, widthRatio),
+
+          SizedBox(height: 30 * widthRatio),
+          Row(
+            children: [
+              SizedBox(width: 27),
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    vertical: 24 * widthRatio,
+                    horizontal: 30 * widthRatio,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFAFBFF),
+                    borderRadius: BorderRadius.circular(8 * widthRatio),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '완료한 미션',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: const Color(0xFF5D5D5D),
+                          fontFamily: 'PretendardRegular',
+                        ),
+                      ),
+                      SizedBox(height: 13 * widthRatio),
+                      Text(
+                        '$completedMissions/$totalMissions',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontFamily: 'PretendardMedium',
+                          color: const Color(0xFF333333),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(width: 15 * widthRatio),
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    vertical: 24 * widthRatio,
+                    horizontal: 16 * widthRatio,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFAFBFF),
+                    borderRadius: BorderRadius.circular(8 * widthRatio),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '달성률',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: const Color(0xFF5D5D5D),
+                          fontFamily: 'PretendardRegular',
+                        ),
+                      ),
+                      SizedBox(height: 13 * widthRatio),
+                      Text(
+                        '$achievementRate%',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontFamily: 'PretendardMedium',
+                          color: const Color(0xFF333333),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(width: 27),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineUI(
+    List<Map<String, dynamic>> displayItems,
+    String spaceName,
+    double widthRatio,
+  ) {
+    const Color activeColor = Color(0xFF6AC992);
+    const Color inactiveColor = Color(0xFFDBDEE7);
+    const Color activeBgColor = Color(0xFFC0F1D0);
+    const Color inactiveBgColor = Color(0xFFDBDEE7);
+    const Color activeTextColor = Color(0xFF30AE65);
+    const Color inactiveTextColor = Color(0xFF8D93A1);
+
+    return SizedBox(
+      height: 120 * widthRatio,
+      child: Row(
+        children:
+            displayItems.asMap().entries.map((entry) {
+              int index = entry.key;
+              var item = entry.value;
+
+              final String name = item['name'];
+              final bool isCompleted = item['isCompleted'];
+
+              Color leftLineColor = Colors.transparent;
+              Color rightLineColor = Colors.transparent;
+
+              if (index > 0) {
+                bool prevCompleted = displayItems[index - 1]['isCompleted'];
+                leftLineColor =
+                    (prevCompleted && isCompleted)
+                        ? activeColor
+                        : inactiveColor;
+              }
+
+              if (index < displayItems.length - 1) {
+                bool nextCompleted = displayItems[index + 1]['isCompleted'];
+                rightLineColor =
+                    (isCompleted && nextCompleted)
+                        ? activeColor
+                        : inactiveColor;
+              }
+
+              String displayName = name;
+
+              return Expanded(
+                child: Stack(
+                  alignment: Alignment.topCenter,
+                  children: [
+                    Positioned(
+                      top: 22 * widthRatio,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 5,
+                              color:
+                                  index == 0
+                                      ? Colors.transparent
+                                      : leftLineColor,
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              height: 5,
+                              color:
+                                  index == displayItems.length - 1
+                                      ? Colors.transparent
+                                      : rightLineColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                          ),
+                          child: Center(
+                            child: Image.asset(
+                              isCompleted
+                                  ? 'assets/my/done.png'
+                                  : 'assets/my/undone.png',
+                              width: 42,
+                              height: 42,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8 * widthRatio),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8 * widthRatio,
+                            vertical: 4 * widthRatio,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                isCompleted ? activeBgColor : inactiveBgColor,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            spaceName,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color:
+                                  isCompleted
+                                      ? activeTextColor
+                                      : inactiveTextColor,
+                              fontFamily: 'PretendardMedium',
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 6 * widthRatio),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Text(
+                            displayName,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: true,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: const Color(0xFF5D5D5D),
+                              fontFamily: 'PretendardRegular',
+                              height: 1.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
       ),
     );
   }
@@ -231,7 +625,7 @@ class _MyPageState extends State<MyPage> {
               break;
           }
           setState(() {
-            _recentSections = [];
+            _spaceStats = [];
             _isLoading = true;
           });
 
@@ -295,289 +689,10 @@ class _MyPageState extends State<MyPage> {
     );
   }
 
-  Widget _buildMissionTimeline(double widthRatio) {
-    List<Map<String, dynamic>> displayItems;
-
-    String spaceName;
-    switch (UserThemeManager.currentUserType) {
-      case UserType.gam:
-        spaceName = "옷장";
-        break;
-      case UserType.mol:
-        spaceName = "서랍장";
-        break;
-      case UserType.bang:
-      default:
-        spaceName = "냉장고";
-        break;
-    }
-
-    if (_recentSections.isNotEmpty) {
-      displayItems =
-          _recentSections.take(4).map((section) {
-            return {
-              'name': section.name,
-              'isCompleted': section.progress == 100,
-            };
-          }).toList();
-    } else {
-      List<String> dummyNames;
-      switch (UserThemeManager.currentUserType) {
-        case UserType.gam:
-          dummyNames = ["선반", "행거 구역", "옷장 바닥 공간"];
-          break;
-        case UserType.mol:
-          dummyNames = ["1단", "2단", "3단"];
-          break;
-        case UserType.bang:
-        default:
-          dummyNames = ["냉동식품 칸", "냉장실 한 칸", "얼음/얼린 식재료 칸"];
-          break;
-      }
-      displayItems =
-          dummyNames
-              .map((name) => {'name': name, 'isCompleted': false})
-              .toList();
-    }
-
-    const Color activeColor = Color(0xFF6AC992);
-    const Color inactiveColor = Color(0xFFDBDEE7);
-
-    return SizedBox(
-      height: 120 * widthRatio,
-      child: Row(
-        children:
-            displayItems.asMap().entries.map((entry) {
-              int index = entry.key;
-              var item = entry.value;
-
-              final String name = item['name'];
-              final bool isCompleted = item['isCompleted'];
-
-              Color leftLineColor = Colors.transparent;
-              Color rightLineColor = Colors.transparent;
-
-              if (index > 0) {
-                bool prevCompleted = displayItems[index - 1]['isCompleted'];
-                leftLineColor =
-                    (prevCompleted && isCompleted)
-                        ? activeColor
-                        : inactiveColor;
-              }
-
-              if (index < displayItems.length - 1) {
-                bool nextCompleted = displayItems[index + 1]['isCompleted'];
-                rightLineColor =
-                    (isCompleted && nextCompleted)
-                        ? activeColor
-                        : inactiveColor;
-              }
-
-              String displayName = name;
-
-              return Expanded(
-                child: Stack(
-                  alignment: Alignment.topCenter,
-                  children: [
-                    Positioned(
-                      top: 22 * widthRatio,
-                      left: 0,
-                      right: 0,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              height: 5,
-                              color:
-                                  index == 0
-                                      ? Colors.transparent
-                                      : leftLineColor,
-                            ),
-                          ),
-                          Expanded(
-                            child: Container(
-                              height: 5,
-                              color:
-                                  index == displayItems.length - 1
-                                      ? Colors.transparent
-                                      : rightLineColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(shape: BoxShape.circle),
-                          child: Center(
-                            child: Image.asset(
-                              isCompleted
-                                  ? 'assets/my/done.png'
-                                  : 'assets/my/undone.png',
-                              width: 42,
-                              height: 42,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 8 * widthRatio),
-
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8 * widthRatio,
-                            vertical: 4 * widthRatio,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                isCompleted
-                                    ? const Color(0xFFC0F1D0)
-                                    : const Color(0xFFDBDEE7),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                          child: Text(
-                            spaceName,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color:
-                                  isCompleted
-                                      ? const Color(0xFF30AE65)
-                                      : const Color(0xFF8D93A1),
-                              fontFamily: 'PretendardMedium',
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 6 * widthRatio),
-
-                        Container(
-                          width: double.infinity,
-                          child: Text(
-                            displayName,
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            softWrap: true,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: const Color(0xFF5D5D5D),
-                              fontFamily: 'PretendardRegular',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildMissionSection(double widthRatio, double heightRatio) {
-    return Container(
-      padding: EdgeInsets.all(14 * widthRatio),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F5FF),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(height: 10 * widthRatio),
-
-          _buildMissionTimeline(widthRatio),
-
-          SizedBox(height: 30 * widthRatio),
-          Row(
-            children: [
-              SizedBox(width: 27),
-              Expanded(
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    vertical: 24 * widthRatio,
-                    horizontal: 30 * widthRatio,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Color(0xFFFAFBFF),
-                    borderRadius: BorderRadius.circular(8 * widthRatio),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '완료한 미션',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: const Color(0xFF5D5D5D),
-                          fontFamily: 'PretendardRegular',
-                        ),
-                      ),
-                      SizedBox(height: 13 * widthRatio),
-                      Text(
-                        '$_completedMissions/$_totalMissions',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontFamily: 'PretendardMedium',
-                          color: const Color(0xFF333333),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(width: 15 * widthRatio),
-
-              Expanded(
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    vertical: 24 * widthRatio,
-                    horizontal: 30 * widthRatio,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Color(0xFFFAFBFF),
-                    borderRadius: BorderRadius.circular(8 * widthRatio),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '달성률',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: const Color(0xFF5D5D5D),
-                          fontFamily: 'PretendardRegular',
-                        ),
-                      ),
-                      SizedBox(height: 13 * widthRatio),
-                      Text(
-                        '$_achievementRate%',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontFamily: 'PretendardMedium',
-                          color: const Color(0xFF333333),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(width: 27),
-            ],
-          ),
-          SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
   Widget _buildProgressSection(double widthRatio) {
     final db = AppDatabase.instance;
     return Container(
-      height: 302,
+      height: 318,
       padding: EdgeInsets.all(30 * widthRatio),
       decoration: BoxDecoration(
         color: const Color(0xFFF3F5FF),
