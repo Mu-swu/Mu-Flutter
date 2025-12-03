@@ -1,9 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:mu/space_start.dart';
 import 'package:mu/widgets/shortbutton.dart';
 import 'package:mu/mission_start.dart';
-// import 'package:mu/EmptyingSchedulePage.dart';
 
 Future<void> showMissionCompleteDialog({
   required BuildContext context,
@@ -13,7 +11,6 @@ Future<void> showMissionCompleteDialog({
     context: context,
     barrierDismissible: false,
     builder: (BuildContext dialogContext) {
-
       return LayoutBuilder(
         builder: (context, constraints) {
           final double dialogWidth = 543;
@@ -35,13 +32,21 @@ Future<void> showMissionCompleteDialog({
                   children: [
                     Text(
                       '비움 미션 완료',
-                      style: TextStyle(fontSize: 32, fontFamily: 'PretendardBold',color: Color(0xFF333333)),
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontFamily: 'PretendardBold',
+                        color: Color(0xFF333333),
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       "비움 미션을 완료했어요!\n다음 미션을 바로 진행할 수 있어요.",
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 20,fontFamily: 'PretendardRegular',color: Color(0xFF5D5D5D)),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontFamily: 'PretendardRegular',
+                        color: Color(0xFF5D5D5D),
+                      ),
                     ),
                     const SizedBox(height: 100),
 
@@ -51,30 +56,48 @@ Future<void> showMissionCompleteDialog({
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           ShortButton(
-                            text: "미션 화면으로 가기",
+                            text:
+                                allMissionsCompleted
+                                    ? "홈화면으로 가기"
+                                    : "미션 화면으로 가기",
                             isYes: false,
                             onPressed: () {
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                  builder: (context) => const SpaceStartScreen(),
-                                ),
-                              );
+                              if (allMissionsCompleted) {
+                                Navigator.of(context).pushNamedAndRemoveUntil(
+                                  '/',
+                                  (route) => false,
+                                );
+                              } else {
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => const SpaceStartScreen(),
+                                  ),
+                                );
+                              }
                             },
+
                             width: 185,
                             height: 52,
                             fontSize: 16,
                           ),
                           ShortButton(
-                            text: "다음 미션 진행하기",
+                            text:allMissionsCompleted
+                                ? "미션 화면으로 가기"
+                                : "다음 미션 진행하기",
                             isYes: true,
                             onPressed: () {
                               Navigator.of(dialogContext).pop();
                               if (allMissionsCompleted) {
-                                Navigator.of(context).popUntil((route) => route.isFirst);
+                                Navigator.pushNamed(
+                                  context,
+                                  '/congestion',
+                                );
                               } else {
                                 Navigator.of(context).pushReplacement(
                                   MaterialPageRoute(
-                                    builder: (context) => const MissionStartPage(),
+                                    builder:
+                                        (context) => const MissionStartPage(),
                                   ),
                                 );
                               }
