@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mu/data/database.dart';
@@ -17,6 +16,7 @@ import 'package:mu/data/sampledata.dart';
 import 'package:mu/notification_service.dart';
 import 'widgets/schedule_item.dart';
 import 'package:mu/mission_start.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 enum TagType { bang, gam, mol }
 
@@ -67,7 +67,6 @@ class CustomTag extends StatelessWidget {
 final PageController _pageController = PageController();
 int _currentPage = 0;
 
-// 나중에 DB에서 불러올 값
 final List<Map<String, dynamic>> _dataList = [
   {
     "title": "냉장고",
@@ -88,7 +87,6 @@ final List<Map<String, dynamic>> _dataList = [
     "progress": 0,
   },
 ];
-
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -147,6 +145,10 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
   Section? _challengeMission;
   int _currentSpaceProgressPercentage = 0;
 
+  List<Map<String, dynamic>> _dashboardItems = [];
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
   @override
   void initState() {
     super.initState();
@@ -190,51 +192,75 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
       } else {
         _challengeMission = null;
       }
+      final status = await db.getMyPageStatistics(1);
+      List<Section> allSections = status['sections'];
 
-      final allProgress = await db.getSpaceProgressForUser(1);
-      SpaceProgress? currentSpaceProgress;
-      try {
-        currentSpaceProgress = allProgress.firstWhere(
-          (p) => p.spaceName == _userSpace,
-        );
-      } catch (e) {
-        currentSpaceProgress = null;
-      }
-      if (currentSpaceProgress != null) {
-        if (currentSpaceProgress.isCompleted) {
-          _currentSpaceProgressPercentage = 100;
-        } else if (_orderedMissions.isNotEmpty) {
-          _currentSpaceProgressPercentage =
-              ((_currentMissionIndex / _orderedMissions.length) * 100).toInt();
-        } else {
-          _currentSpaceProgressPercentage = 0;
-        }
-      } else {
-        _currentSpaceProgressPercentage = 0;
-      }
+      final List<Map<String, dynamic>> allFurnitureData = [
+        {
+          "title": "냉장고",
+          "image": "assets/home/refr.png",
+          "space": "냉장고",
+          "progress": 0,
+        },
+        {
+          "title": "서랍장",
+          "image": "assets/home/drawer.png",
+          "space": "서랍장",
+          "progress": 0,
+        },
+        {
+          "title": "옷장",
+          "image": "assets/home/closet.png",
+          "space": "옷장",
+          "progress": 0,
+        },
+      ];
+
+      _dashboardItems =
+          allFurnitureData.map((item) {
+            String spaceName = item['space'];
+
+            List<Section> spaceSections =
+                allSections.where((s) {
+                  return db.getSpaceNameForSection(s.name) == spaceName;
+                }).toList();
+
+            if (spaceSections.isEmpty) {
+              return {...item, "progress": 0};
+            }
+
+            int completedCount =
+                spaceSections.where((s) => s.progress == 100).length;
+            int totalCount = spaceSections.length;
+            int rate =
+                totalCount > 0
+                    ? ((completedCount / totalCount) * 100).toInt()
+                    : 0;
+
+            return {...item, "progress": rate};
+          }).toList();
     } catch (e, stackTrace) {
       print("사용자 데이터 로드 실패 : $e");
       print("상세 위치 : $stackTrace");
       UserThemeManager.currentUserType = UserType.bang;
-      _urgentItems = [];
-      _userSpace = "냉장고";
-      _orderedMissions = [];
-      _currentMissionIndex = 0;
-      _challengeMission = null;
-      _currentSpaceProgressPercentage = 0;
+      _dashboardItems = [];
     }
 
     final items = await db.getImpendingDDayItems();
-
     final bool hasImpendingItems = items.isNotEmpty;
 
     setState(() {
       _impendingItems = items;
       _isLoading = false;
+      _currentPage = 0;
     });
+
+    if (_pageController.hasClients) {
+      _pageController.jumpToPage(0);
+    }
+
     if (hasImpendingItems && mounted) {
       await Future.delayed(const Duration(milliseconds: 50));
-
       if (mounted) {
         setState(() {
           _showOverlayBanner = true;
@@ -305,362 +331,23 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
     }
   }
 
-  void _showKeepBoxDialog(BuildContext context) {
-    Map<String, int>? _editingItem;
+  Widget _buildPageIndicator() {
+    if (_dashboardItems.length <= 1) return const SizedBox.shrink();
 
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Dialog(
-              insetPadding: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Container(
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.height,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 200),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 30, bottom: 10),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const SizedBox(width: 40),
-                            const Text(
-                              '버릴까말까 상자 목록',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF333333),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, size: 28),
-                              onPressed: () => Navigator.pop(context),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            child: LayoutBuilder(
-                              builder: (context, constraints) {
-                                double availableWidth = constraints.maxWidth;
-                                double itemWidth = (availableWidth - 20) / 2;
-
-                                return Wrap(
-                                  spacing: 20,
-                                  runSpacing: 20,
-                                  children:
-                                      sampleCategories.map((category) {
-                                        int categoryIndex = sampleCategories
-                                            .indexOf(category);
-
-                                        return SizedBox(
-                                          width: itemWidth.clamp(
-                                            120.0,
-                                            double.infinity,
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Text(
-                                                    category['name'],
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize:
-                                                          18, // 👈 글자 크기 키움
-                                                      color: Color(0xFF333333),
-                                                    ),
-                                                  ),
-                                                  const Icon(
-                                                    Icons.add,
-                                                    size: 20,
-                                                    color: Color(0xFF8D93A1),
-                                                  ),
-                                                  // 아이콘 크기 키움
-                                                ],
-                                              ),
-                                              const SizedBox(
-                                                height: 12,
-                                              ), // 간격 증가
-                                              // 카테고리 항목 리스트
-                                              ...category['items'].asMap().entries.map((
-                                                entry,
-                                              ) {
-                                                int itemIndex = entry.key;
-                                                var item = entry.value;
-
-                                                String dateString =
-                                                    item['startDate'] ?? '';
-                                                String formattedDate = '';
-                                                try {
-                                                  List<String> parts =
-                                                      dateString.split('.');
-                                                  if (parts.length >= 3) {
-                                                    formattedDate =
-                                                        '${parts[1].padLeft(2, '0')}월 ${parts[2].padLeft(2, '0')}일';
-                                                  }
-                                                } catch (_) {
-                                                  formattedDate = dateString;
-                                                }
-
-                                                bool isEditing =
-                                                    _editingItem?['categoryIndex'] ==
-                                                        categoryIndex &&
-                                                    _editingItem?['itemIndex'] ==
-                                                        itemIndex;
-
-                                                return Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        bottom: 10.0,
-                                                      ), // 하단 여백 증가
-                                                  child: Stack(
-                                                    children: [
-                                                      // 실제 아이템 카드
-                                                      GestureDetector(
-                                                        onTap: () {
-                                                          if (isEditing) {
-                                                            setState(
-                                                              () =>
-                                                                  _editingItem =
-                                                                      null,
-                                                            );
-                                                          }
-                                                        },
-                                                        onLongPress: () {
-                                                          setState(() {
-                                                            _editingItem =
-                                                                isEditing
-                                                                    ? null
-                                                                    : {
-                                                                      'categoryIndex':
-                                                                          categoryIndex,
-                                                                      'itemIndex':
-                                                                          itemIndex,
-                                                                    };
-                                                          });
-                                                        },
-                                                        child: Container(
-                                                          width:
-                                                              double.infinity,
-                                                          padding:
-                                                              const EdgeInsets.all(
-                                                                15,
-                                                              ), // 패딩 증가
-                                                          decoration: BoxDecoration(
-                                                            color: const Color(
-                                                              0xFFF3F5FF,
-                                                            ),
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  10,
-                                                                ), // 아이템 모서리 둥글게
-                                                          ),
-                                                          child: Column(
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .start,
-                                                            children: [
-                                                              Row(
-                                                                mainAxisAlignment:
-                                                                    MainAxisAlignment
-                                                                        .spaceBetween,
-                                                                children: [
-                                                                  Text(
-                                                                    item['name'],
-                                                                    style: const TextStyle(
-                                                                      fontSize:
-                                                                          17,
-                                                                      color: Color(
-                                                                        0xFF333333,
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                  // 👈 글자 크기 키움
-                                                                  IconButton(
-                                                                    icon: const Icon(
-                                                                      Icons
-                                                                          .more_vert,
-                                                                      size: 24,
-                                                                      color: Color(
-                                                                        0xFF8D93A1,
-                                                                      ),
-                                                                    ),
-                                                                    // 아이콘 크기 키움
-                                                                    onPressed: () {
-                                                                      setState(() {
-                                                                        _editingItem =
-                                                                            isEditing
-                                                                                ? null
-                                                                                : {
-                                                                                  'categoryIndex':
-                                                                                      categoryIndex,
-                                                                                  'itemIndex':
-                                                                                      itemIndex,
-                                                                                };
-                                                                      });
-                                                                    },
-                                                                    padding:
-                                                                        EdgeInsets
-                                                                            .zero,
-                                                                    constraints:
-                                                                        const BoxConstraints(),
-                                                                  ),
-                                                                ],
-                                                              ),
-                                                              const SizedBox(
-                                                                height: 4,
-                                                              ),
-                                                              // 간격 증가
-                                                              Text(
-                                                                formattedDate,
-                                                                style: TextStyle(
-                                                                  fontSize: 14,
-                                                                  // 👈 글자 크기 키움
-                                                                  color:
-                                                                      Colors
-                                                                          .grey
-                                                                          .shade600,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ),
-
-                                                      // 편집/삭제 메뉴 (두 줄로, 아이콘 포함)
-                                                      if (isEditing)
-                                                        Positioned(
-                                                          top: 0,
-                                                          bottom: 0,
-                                                          right: 5,
-                                                          child: Container(
-                                                            width:
-                                                                130, // 메뉴 너비 증가
-                                                            decoration: BoxDecoration(
-                                                              color:
-                                                                  Colors.white,
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    8,
-                                                                  ),
-                                                              // 메뉴 모서리 둥글게
-                                                              boxShadow: [
-                                                                BoxShadow(
-                                                                  color: Colors
-                                                                      .black
-                                                                      .withOpacity(
-                                                                        0.1,
-                                                                      ),
-                                                                  blurRadius: 6,
-                                                                  offset:
-                                                                      const Offset(
-                                                                        0,
-                                                                        3,
-                                                                      ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                            child: Column(
-                                                              mainAxisAlignment:
-                                                                  MainAxisAlignment
-                                                                      .center,
-                                                              crossAxisAlignment:
-                                                                  CrossAxisAlignment
-                                                                      .stretch,
-                                                              children: [
-                                                                _buildMenuButton(
-                                                                  '수정하기',
-                                                                  Icons.edit,
-                                                                  () {
-                                                                    setState(
-                                                                      () =>
-                                                                          _editingItem =
-                                                                              null,
-                                                                    );
-                                                                  },
-                                                                ),
-                                                                const Divider(
-                                                                  height: 1,
-                                                                  thickness: 1,
-                                                                  color: Color(
-                                                                    0xFFF3F5FF,
-                                                                  ),
-                                                                ),
-                                                                _buildMenuButton(
-                                                                  '삭제하기',
-                                                                  Icons.delete,
-                                                                  () {
-                                                                    setState(
-                                                                      () =>
-                                                                          _editingItem =
-                                                                              null,
-                                                                    );
-                                                                  },
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ),
-                                                    ],
-                                                  ),
-                                                );
-                                              }).toList(),
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(_dashboardItems.length, (index) {
+        final bool isActive = index == _currentPage;
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isActive ? const Color(0xFFB0B8C1) : const Color(0xFFDBDEE7),
+          ),
         );
-      },
-    );
-  }
-
-  Widget _buildMenuButton(String text, IconData icon, VoidCallback onPressed) {
-    const Color textColor = Color(0xFF333333);
-
-    return InkWell(
-      onTap: onPressed,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(
-          children: [
-            Icon(icon, size: 16, color: textColor),
-            const SizedBox(width: 4),
-            Text(text, style: const TextStyle(fontSize: 14, color: textColor)),
-          ],
-        ),
-      ),
+      }),
     );
   }
 
@@ -731,7 +418,10 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                     children: [
                       GestureDetector(
                         onTap: () async {
-                          final returnedType = await Navigator.pushNamed(context, '/surveyq');
+                          final returnedType = await Navigator.pushNamed(
+                            context,
+                            '/surveyq',
+                          );
 
                           if (returnedType != null && returnedType is String) {
                             setState(() {
@@ -754,8 +444,13 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                 newUserTypeStr = '몰라형';
                                 break;
                               case '방치형':
-                                UserThemeManager.currentUserType = UserType.bang;
-                                newMissions = ["냉장실 한 칸", "얼음/얼린 식재료 칸", "냉동식품 칸"];
+                                UserThemeManager.currentUserType =
+                                    UserType.bang;
+                                newMissions = [
+                                  "냉장실 한 칸",
+                                  "얼음/얼린 식재료 칸",
+                                  "냉동식품 칸",
+                                ];
                                 newUserTypeStr = '방치형';
                                 break;
                             }
@@ -847,7 +542,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                 flex: 18,
                                 child: Container(
                                   margin: EdgeInsets.only(right: spacing),
-                                  padding: EdgeInsets.all(20 * overallRatio),
+                                  padding: EdgeInsets.all(40 * overallRatio),
                                   decoration: BoxDecoration(
                                     color: UserThemeManager.momBackgroundColor,
                                     borderRadius: BorderRadius.circular(12),
@@ -859,6 +554,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                         child: Image.asset(
                                           UserThemeManager.momImage,
                                           fit: BoxFit.contain,
+                                          width: 130,
                                         ),
                                       ),
                                       Expanded(
@@ -879,16 +575,13 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                           child: Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
                                             children: [
-                                              Padding(
-                                                padding: EdgeInsets.only(
-                                                  top:
-                                                      (_orderedMissions.isEmpty
-                                                          ? 19
-                                                          : 16) *
-                                                      overallRatio,
-                                                ),
+                                              Expanded(
                                                 child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.start,
                                                   children: [
@@ -898,27 +591,40 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                         fontFamily:
                                                             'PretendardBold',
                                                         fontSize: 20,
+                                                        height: 1.2,
                                                       ),
                                                     ),
-                                                    Text(
-                                                      _challengeMission != null
-                                                          ? '${_challengeMission!.name} 비우기'
-                                                          : (_orderedMissions
-                                                                  .isEmpty
-                                                              ? ''
-                                                              : '모든 미션을 완료했어요!'),
-                                                      style: TextStyle(
-                                                        fontSize: 16,
-                                                        fontFamily:
-                                                            'PretendardRegular',
-                                                        color: Color(
-                                                          0xFF5D5D5D,
+                                                    if (_challengeMission !=
+                                                            null ||
+                                                        !_orderedMissions
+                                                            .isEmpty) ...[
+                                                      SizedBox(height: 6),
+                                                      // ★ 제목과 내용 사이의 적절한 간격
+                                                      Text(
+                                                        _challengeMission !=
+                                                                null
+                                                            ? '${_challengeMission!.name} 비우기'
+                                                            : '모든 미션을 완료했어요!',
+                                                        style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontFamily:
+                                                              'PretendardRegular',
+                                                          color: Color(
+                                                            0xFF5D5D5D,
+                                                          ),
+                                                          height: 1.0,
                                                         ),
+                                                        maxLines: 1,
+                                                        overflow:
+                                                            TextOverflow
+                                                                .ellipsis,
                                                       ),
-                                                    ),
+                                                    ],
                                                   ],
                                                 ),
                                               ),
+                                              SizedBox(width: 10),
+                                              // 텍스트와 버튼 사이 간격
                                               ShortButton(
                                                 text: '시작하기',
                                                 fontSize: 16,
@@ -935,7 +641,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                         ? () {
                                                           Navigator.pushNamed(
                                                             context,
-                                                            '/mission_start',
+                                                            '/congestion',
                                                           ).then((_) {
                                                             _loadUserData(
                                                               showLoading:
@@ -1049,167 +755,300 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                               return Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // 왼쪽: 비움 현황 (Expanded 유지하고, child만 변경)
                                   Expanded(
                                     flex: 18,
-                                    // ⬇️ 이 자리에 PageView와 인디케이터가 포함된 Column 코드가 들어갑니다.
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        // 1. 헤더: 타이틀 및 페이지 이동 버튼 (< >)
-                                        Transform.translate(
-                                          offset: const Offset(0, -8.0), // 👈 7.0만큼 위로 이동하여 높이를 맞춥니다.
-                                          child: Padding(
-                                            padding: EdgeInsets.only(right: spacing),
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.start,
-                                              children: [
-                                                const Text(
-                                                  '비움 현황', // 고정된 타이틀
-                                                  style: TextStyle(
-                                                    fontSize: 20,
-                                                    fontFamily: 'PretendardBold',
+                                        Padding(
+                                          padding: EdgeInsets.only(
+                                            right: spacing,
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              const Text(
+                                                '비움 현황',
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontFamily: 'PretendardBold',
+                                                  height: 2.0,
+                                                ),
+                                              ),
+
+                                              const Spacer(),
+                                              if (_dashboardItems.length >
+                                                  1) ...[
+                                                InkWell(
+                                                  onTap: () {
+                                                    if (_currentPage > 0) {
+                                                      _pageController
+                                                          .previousPage(
+                                                            duration:
+                                                                const Duration(
+                                                                  milliseconds:
+                                                                      300,
+                                                                ),
+                                                            curve:
+                                                                Curves.easeOut,
+                                                          );
+                                                    }
+                                                  },
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                          4.0,
+                                                        ),
+                                                    child: SvgPicture.asset(
+                                                      'assets/my/left.svg',
+                                                      width: 15,
+                                                      height: 15,
+                                                    ),
                                                   ),
                                                 ),
 
-                                                const Spacer(),
+                                                const SizedBox(width: 15),
 
-                                                // 이전 페이지 버튼
-                                                IconButton(
-                                                  icon: const Icon(Icons.arrow_back_ios, size: 14),
-                                                  onPressed: () {
-                                                    if (_currentPage > 0) {
-                                                      _pageController.previousPage(
-                                                        duration: const Duration(milliseconds: 300),
-                                                        curve: Curves.easeOut,
-                                                      );
-                                                    }
-                                                  },
-                                                ),
-                                                // 다음 페이지 버튼
-                                                IconButton(
-                                                  icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                                                  onPressed: () {
-                                                    if (_currentPage < _dataList.length - 1) {
+                                                InkWell(
+                                                  onTap: () {
+                                                    if (_currentPage <
+                                                        _dashboardItems.length -
+                                                            1) {
                                                       _pageController.nextPage(
-                                                        duration: const Duration(milliseconds: 300),
+                                                        duration:
+                                                            const Duration(
+                                                              milliseconds: 300,
+                                                            ),
                                                         curve: Curves.easeOut,
                                                       );
                                                     }
                                                   },
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                          4.0,
+                                                        ),
+                                                    child: SvgPicture.asset(
+                                                      'assets/my/right.svg',
+                                                      width: 15,
+                                                      height: 15,
+                                                    ),
+                                                  ),
                                                 ),
+                                                const SizedBox(width: 15),
                                               ],
-                                            ),
+                                            ],
                                           ),
                                         ),
 
-                                        SizedBox(height: 5.0),
-
-                                        // 2. PageView (페이지 전환 가능한 본문) - 높이 고정 (2번 문제 해결)
+                                        SizedBox(height: 12.0 * overallRatio),
                                         Container(
-                                          height: proportionalHeight, // 👈 Expanded 제거, 원래 높이 유지
-                                          margin: EdgeInsets.only(right: spacing),
-                                          child: PageView.builder(
-                                            controller: _pageController,
-                                            itemCount: _dataList.length,
-                                            // 페이지가 바뀔 때마다 상태 업데이트 (1번 문제 해결)
-                                            onPageChanged: (int index) {
-                                              setState(() {
-                                                _currentPage = index;
-                                              });
-                                            },
-                                            itemBuilder: (context, index) {
-                                              final data = _dataList[index];
+                                          height: proportionalHeight,
+                                          margin: EdgeInsets.only(
+                                            right: spacing,
+                                          ),
+                                          child:
+                                              _dashboardItems.isEmpty
+                                                  ? Center(
+                                                    child: Text("데이터 없음"),
+                                                  )
+                                                  : Stack(
+                                                    children: [
+                                                      PageView.builder(
+                                                        controller:
+                                                            _pageController,
+                                                        itemCount:
+                                                            _dashboardItems
+                                                                .length,
+                                                        onPageChanged: (
+                                                          int index,
+                                                        ) {
+                                                          setState(() {
+                                                            _currentPage =
+                                                                index;
+                                                          });
+                                                        },
+                                                        itemBuilder: (
+                                                          context,
+                                                          index,
+                                                        ) {
+                                                          final data =
+                                                              _dashboardItems[index];
 
-                                              // **********************************************
-                                              // PageView의 각 페이지 (상태 카드)
-                                              // **********************************************
-                                              return Container(
-                                                padding: EdgeInsets.symmetric(
-                                                  horizontal: 40 * overallRatio,
-                                                  vertical: 20 * overallRatio,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: Color(0xFFF3F5FF),
-                                                  borderRadius: BorderRadius.circular(10),
-                                                ),
-                                                child: Row(
-                                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                                  children: [
-                                                    // 이미지 영역
-                                                    Container(
-                                                      width: 100,
-                                                      height: 100,
-                                                      decoration: BoxDecoration(
-                                                        color: const Color(0xFFFAFBFF),
-                                                        borderRadius: BorderRadius.circular(6),
-                                                      ),
-                                                      child: Padding(
-                                                        padding: EdgeInsets.all(18.0 * overallRatio),
-                                                        child: ClipRRect(
-                                                          borderRadius: BorderRadius.circular(16 * overallRatio),
-                                                          child: Image.asset(
-                                                            data['image'],
-                                                            fit: BoxFit.contain,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    SizedBox(width: 25 * overallRatio),
-
-                                                    // 텍스트 및 진행률 영역
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        mainAxisAlignment: MainAxisAlignment.center,
-                                                        children: [
-                                                          Text(
-                                                            data['space'],
-                                                            style: const TextStyle(
-                                                              fontSize: 18,
-                                                              fontFamily: 'PretendardMedium',
-                                                              color: Color(0xFF5D5D5D),
+                                                          return Container(
+                                                            padding: EdgeInsets.symmetric(
+                                                              horizontal:
+                                                                  40 *
+                                                                  overallRatio,
+                                                              vertical:
+                                                                  20 *
+                                                                  overallRatio,
                                                             ),
-                                                          ),
-                                                          SizedBox(height: 10 * overallRatio),
-                                                          Row(
-                                                            mainAxisAlignment: MainAxisAlignment.start,
-                                                            children: [
-                                                              Expanded(
-                                                                child: ClipRRect(
-                                                                  borderRadius: BorderRadius.circular(2),
-                                                                  child: SizedBox(
-                                                                    height: 10,
-                                                                    child: LinearProgressIndicator(
-                                                                      value: data['progress'] / 100.0,
-                                                                      backgroundColor: const Color(0xFFDBDEE7),
-                                                                      valueColor:
-                                                                      const AlwaysStoppedAnimation<Color>(
-                                                                        Color(0xFF6AC992),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                                  color: Color(
+                                                                    0xFFF3F5FF,
+                                                                  ),
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        10,
+                                                                      ),
+                                                                ),
+                                                            child: Row(
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .stretch,
+                                                              children: [
+                                                                Container(
+                                                                  width: 100,
+                                                                  height: 100,
+                                                                  decoration: BoxDecoration(
+                                                                    color: const Color(
+                                                                      0xFFFAFBFF,
+                                                                    ),
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                          6,
+                                                                        ),
+                                                                  ),
+                                                                  child: Padding(
+                                                                    padding:
+                                                                        EdgeInsets.all(
+                                                                          18.0 *
+                                                                              overallRatio,
+                                                                        ),
+                                                                    child: ClipRRect(
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                            16 *
+                                                                                overallRatio,
+                                                                          ),
+                                                                      child: Image.asset(
+                                                                        data['image'],
+                                                                        fit:
+                                                                            BoxFit.contain,
                                                                       ),
                                                                     ),
                                                                   ),
                                                                 ),
-                                                              ),
-                                                              SizedBox(width: 13),
-                                                              Text(
-                                                                '${data['progress'].round()}%',
-                                                                style: const TextStyle(
-                                                                  fontSize: 14,
-                                                                  fontFamily: 'PretendardRegular',
-                                                                  color: Color(0xFF8D93A1),
+                                                                SizedBox(
+                                                                  width:
+                                                                      25 *
+                                                                      overallRatio,
                                                                 ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ],
+
+                                                                // 텍스트 및 진행률 영역
+                                                                Expanded(
+                                                                  child: Column(
+                                                                    crossAxisAlignment:
+                                                                        CrossAxisAlignment
+                                                                            .start,
+                                                                    mainAxisAlignment:
+                                                                        MainAxisAlignment
+                                                                            .center,
+                                                                    children: [
+                                                                      Text(
+                                                                        data['space'],
+                                                                        style: const TextStyle(
+                                                                          fontSize:
+                                                                              18,
+                                                                          fontFamily:
+                                                                              'PretendardMedium',
+                                                                          color: Color(
+                                                                            0xFF5D5D5D,
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                      SizedBox(
+                                                                        height:
+                                                                            10 *
+                                                                            overallRatio,
+                                                                      ),
+                                                                      Row(
+                                                                        mainAxisAlignment:
+                                                                            MainAxisAlignment.start,
+                                                                        children: [
+                                                                          Expanded(
+                                                                            child: ClipRRect(
+                                                                              borderRadius: BorderRadius.circular(
+                                                                                2,
+                                                                              ),
+                                                                              child: SizedBox(
+                                                                                height:
+                                                                                    10,
+                                                                                child: LinearProgressIndicator(
+                                                                                  value:
+                                                                                      data['progress'] /
+                                                                                      100.0,
+                                                                                  backgroundColor: const Color(
+                                                                                    0xFFDBDEE7,
+                                                                                  ),
+                                                                                  valueColor: const AlwaysStoppedAnimation<
+                                                                                    Color
+                                                                                  >(
+                                                                                    Color(
+                                                                                      0xFF6AC992,
+                                                                                    ),
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                          SizedBox(
+                                                                            width:
+                                                                                13,
+                                                                          ),
+                                                                          Text(
+                                                                            '${data['progress'].round()}%',
+                                                                            style: const TextStyle(
+                                                                              fontSize:
+                                                                                  14,
+                                                                              fontFamily:
+                                                                                  'PretendardRegular',
+                                                                              color: Color(
+                                                                                0xFF8D93A1,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          );
+                                                        },
                                                       ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            },
-                                          ),
+                                                      if (_dashboardItems
+                                                              .length >
+                                                          1)
+                                                        Positioned(
+                                                          bottom:
+                                                              15 * overallRatio,
+                                                          left:
+                                                              60 +
+                                                              (25 *
+                                                                  overallRatio),
+                                                          right:
+                                                              (40 *
+                                                                  overallRatio) +
+                                                              spacing,
+                                                          child: Center(
+                                                            child:
+                                                                _buildPageIndicator(),
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
                                         ),
                                       ],
                                     ),
@@ -1228,9 +1067,10 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                             fontSize: 20,
                                             fontFamily: 'PretendardBold',
                                             color: Color(0xFF333333),
+                                            height: 2.0,
                                           ),
                                         ),
-                                        SizedBox(height: spacing / 4+7.0),
+                                        SizedBox(height: 12.0 * overallRatio),
                                         SizedBox(
                                           height: proportionalHeight,
                                           child:

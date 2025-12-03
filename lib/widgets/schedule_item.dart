@@ -25,7 +25,7 @@ class ScheduleItem extends StatelessWidget {
 
   double _calculateProgress() {
     final minutes = _parseTimeToMinutes(time);
-    const maxTimeInMinutes = 60.0;
+    const maxTimeInMinutes = 30.0;
     return (minutes / maxTimeInMinutes).clamp(0.0, 1.0);
   }
 
@@ -153,9 +153,7 @@ class _ClockPainter extends CustomPainter {
           ..strokeWidth = strokeWidth;
     canvas.drawCircle(center, outerRadius - strokeWidth / 2, borderPaint);
 
-    // 완료된 항목은 진행도 채움을 그리지 않음
     if (!isCompleted) {
-      // 진행도 채움 (pie-slice)
       final progressFillPaint =
           Paint()
             ..color = progressFillColor

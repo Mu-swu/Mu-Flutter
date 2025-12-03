@@ -77,9 +77,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
     }
 
     final db = AppDatabase.instance;
-
     final String currentSpace = widget.spaceName;
-
     List<String> defaultSections;
 
     switch (currentSpace) {
@@ -99,46 +97,34 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
     }
 
     final allDbSections = await db.getSectionsForUser(1);
-    final allDbSectionNames = allDbSections.map((s) => s.name).toSet();
 
     final int currentMissionIndex = await db.getUserMissionIndex(1);
     final List<Section> orderedMissions = await db.getOrderedMissions(1);
     final Set<String> completedMissionNames;
-    if (currentMissionIndex > 0 && currentMissionIndex <= orderedMissions.length) {
-      completedMissionNames = orderedMissions
-          .sublist(0, currentMissionIndex)
-          .map((s) => s.name)
-          .toSet();
+    if (currentMissionIndex > 0 &&
+        currentMissionIndex <= orderedMissions.length) {
+      completedMissionNames =
+          orderedMissions
+              .sublist(0, currentMissionIndex)
+              .map((s) => s.name)
+              .toSet();
     } else {
       completedMissionNames = {};
     }
+    Map<String, Map<String, dynamic>> tempResults = {};
 
-    List<String> missingSections = [];
-    for (String defaultName in defaultSections) {
-      if (!allDbSectionNames.contains(defaultName)) {
-        missingSections.add(defaultName);
+    for (var s in allDbSections) {
+      if (defaultSections.contains(s.name)) {
+        tempResults[s.name] = {
+          "clutter": s.clutterLevel,
+          "completed": completedMissionNames.contains(s.name),
+        };
       }
     }
 
-    if (missingSections.isNotEmpty) {
-      print("새로운 가구(${widget.spaceName})의 섹션 ${missingSections.join(', ')}을(를) DB에 추가합니다.");
-
-      await db.batchInsertSections(1, missingSections);
-
-      await db.updateUserMissionIndex(1, 0);
-      await db.updateMissionOrder(1, []);
-    }
-    final currentDbSections = await db.getSectionsForUser(1);
-    final Set<String> currentSpaceDefaultNames = defaultSections.toSet();
-
-    Map<String, Map<String, dynamic>> tempResults = {};
-
-    for (var s in currentDbSections) {
-      if (currentSpaceDefaultNames.contains(s.name)) {
-        tempResults[s.name] = {
-          "clutter": s.clutterLevel,
-          "completed": completedMissionNames.contains(s.name)
-        };
+    for (String defaultName in defaultSections) {
+      if (!tempResults.containsKey(defaultName)) {
+        tempResults[defaultName] = {"clutter": "분석 전", "completed": false};
       }
     }
 
@@ -147,6 +133,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
     await _initCamera();
     await _loadModel();
   }
+
   Future<void> _initCamera() async {
     final cameras = await availableCameras();
     _cameraController = CameraController(
@@ -187,6 +174,13 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
       setState(() => _results[section]!["clutter"] = result);
 
       final db = AppDatabase.instance;
+      final allDbSections = await db.getSectionsForUser(1);
+      final bool exists = allDbSections.any((s) => s.name == section);
+
+      if (!exists) {
+        await db.addSection(1, section);
+      }
+
       await db.updateSectionClutterByName(1, section, result);
     } catch (e) {
       setState(() => _results[section]!["clutter"] = "분석 오류");
@@ -490,7 +484,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                flex:3,
+                                flex: 3,
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: Colors.grey[200],
@@ -510,15 +504,25 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                                   CircularProgressIndicator(),
                                             )
                                             : Positioned.fill(
-                                          child: FittedBox(
-                                            fit: BoxFit.cover,
-                                            child: SizedBox(
-                                              width: _cameraController!.value.previewSize!.height,
-                                              height: _cameraController!.value.previewSize!.width,
-                                              child: CameraPreview(_cameraController!),
+                                              child: FittedBox(
+                                                fit: BoxFit.cover,
+                                                child: SizedBox(
+                                                  width:
+                                                      _cameraController!
+                                                          .value
+                                                          .previewSize!
+                                                          .height,
+                                                  height:
+                                                      _cameraController!
+                                                          .value
+                                                          .previewSize!
+                                                          .width,
+                                                  child: CameraPreview(
+                                                    _cameraController!,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                        ),
                                         // 코너 가이드 라인
                                         Positioned(
                                           top: 40 * heightRatio,

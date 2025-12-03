@@ -131,6 +131,8 @@ flutter:
     - assets/mission/undone.png
     - assets/my/done.png
     - assets/my/undone.png
+    - assets/my/left.svg
+    - assets/my/right.svg
 
 
   fonts:
