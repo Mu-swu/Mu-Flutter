@@ -95,6 +95,19 @@ class _MissionStepPageState extends State<MissionStepPage> {
   bool _isTtsSequenceRunning = false;
   int _ttsSessionId = 0;
   bool _showChoices = false; // 몰라형 선택지 표시 여부
+  bool _isMuted = false; // 초기 상태: 음소거 해제(소리 켜짐)로 가정
+
+  void _toggleMute() async {
+    setState(() {
+      _isMuted = !_isMuted;
+    });
+
+    if (_isMuted) {
+      //await _ttsEngine.setVolume(0.0);  // 음소거
+    } else {
+      //await _ttsEngine.setVolume(1.0);  // 소리 켜짐
+    }
+  }
 
   String _molQuestion = "";
   List<String> _molChoices = [];
@@ -739,9 +752,11 @@ class _MissionStepPageState extends State<MissionStepPage> {
                                             ),
                                           ),
                                           IconButton(
-                                            onPressed: _toggleTts,
+                                            onPressed: _toggleMute,
                                             icon: SvgPicture.asset(
-                                              'assets/mission/sound_on.svg',
+                                              _isMuted
+                                                  ? 'assets/mission/sound_off.svg'  // 음소거 아이콘
+                                                  : 'assets/mission/sound_on.svg',  // 소리 켜짐 아이콘
                                               width: 36,
                                               height: 36,
                                             ),
@@ -855,7 +870,11 @@ class _MissionStepPageState extends State<MissionStepPage> {
           children: [
             IconButton(
               icon: SvgPicture.asset(
-                'assets/mission/pause.svg',
+                // _isPaused 값에 따라 아이콘 경로를 변경합니다.
+                // true(일시정지 상태)면 'play.svg', false(실행 중 상태)면 'pause.svg'
+                _isPaused
+                    ? 'assets/mission/play.svg'
+                    : 'assets/mission/pause.svg',
                 width: 84,
                 height: 84,
               ),
@@ -955,7 +974,11 @@ class _MissionStepPageState extends State<MissionStepPage> {
                         // 재생/일시정지 버튼
                         IconButton(
                           icon: SvgPicture.asset(
-                            'assets/mission/pause.svg',
+                            // _isPaused 값에 따라 아이콘 경로를 변경합니다.
+                            // true(일시정지 상태)면 'play.svg', false(실행 중 상태)면 'pause.svg'
+                            _isPaused
+                                ? 'assets/mission/play.svg'
+                                : 'assets/mission/pause.svg',
                             width: 64,
                             height: 64,
                           ),
@@ -1063,7 +1086,11 @@ class _MissionStepPageState extends State<MissionStepPage> {
           children: [
             IconButton(
               icon: SvgPicture.asset(
-                'assets/mission/pause.svg',
+                // _isPaused 값에 따라 아이콘 경로를 변경합니다.
+                // true(일시정지 상태)면 'play.svg', false(실행 중 상태)면 'pause.svg'
+                _isPaused
+                    ? 'assets/mission/play.svg'
+                    : 'assets/mission/pause.svg',
                 width: 64,
                 height: 64,
               ),

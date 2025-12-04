@@ -469,12 +469,14 @@ class _keepboxState extends State<keepbox> {
     try {
       final missionIndex = await _database.getUserMissionIndex(userId);
 
-      // 미션 인덱스가 0 (가장 처음)일 때만 튜토리얼을 보여줍니다.
+
       const int initialIndex = 0;
+      const int secondIndex = 1;
 
       if (mounted) {
         setState(() {
-          _isTutorialActive = (missionIndex == initialIndex);
+          // missionIndex가 initialIndex(0)이거나 secondIndex(1)일 때 true가 됩니다.
+          _isTutorialActive = (missionIndex == initialIndex || missionIndex == secondIndex);
         });
       }
     } catch (e) {

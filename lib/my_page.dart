@@ -873,7 +873,7 @@ class _MyPageState extends State<MyPage> {
     final Map<String, String> todayTip = tips[todayTipIndex];
 
     return Container(
-      height: 350,
+      height: 400,
       padding: EdgeInsets.all(30 * widthRatio),
       decoration: BoxDecoration(
         color: const Color(0xFFF3F5FF),
