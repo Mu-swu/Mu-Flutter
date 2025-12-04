@@ -217,31 +217,31 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
       ];
 
       List<Map<String, dynamic>> calculatedItems =
-      allFurnitureData.map((item) {
-        String spaceName = item['space'];
+          allFurnitureData.map((item) {
+            String spaceName = item['space'];
 
-        List<Section> spaceSections =
-        allSections.where((s) {
-          return db.getSpaceNameForSection(s.name) == spaceName;
-        }).toList();
+            List<Section> spaceSections =
+                allSections.where((s) {
+                  return db.getSpaceNameForSection(s.name) == spaceName;
+                }).toList();
 
-        if (spaceSections.isEmpty) {
-          return {...item, "progress": 0};
-        }
+            if (spaceSections.isEmpty) {
+              return {...item, "progress": 0};
+            }
 
-        int completedCount =
-            spaceSections.where((s) => s.progress == 100).length;
-        int totalCount = spaceSections.length;
-        int rate =
-        totalCount > 0
-            ? ((completedCount / totalCount) * 100).toInt()
-            : 0;
+            int completedCount =
+                spaceSections.where((s) => s.progress == 100).length;
+            int totalCount = spaceSections.length;
+            int rate =
+                totalCount > 0
+                    ? ((completedCount / totalCount) * 100).toInt()
+                    : 0;
 
-        return {...item, "progress": rate};
-      }).toList();
+            return {...item, "progress": rate};
+          }).toList();
 
       var currentSpaceItem = calculatedItems.firstWhere(
-            (item) => item['space'] == _userSpace,
+        (item) => item['space'] == _userSpace,
         orElse: () => calculatedItems[0],
       );
 
@@ -250,7 +250,6 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
       } else {
         _dashboardItems = calculatedItems;
       }
-
     } catch (e, stackTrace) {
       print("사용자 데이터 로드 실패 : $e");
       print("상세 위치 : $stackTrace");
@@ -344,11 +343,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
   }
 
   Widget _buildPageIndicator() {
-    bool isFirstFurnitureClear =
-        _dashboardItems.isNotEmpty &&
-        (_dashboardItems[0]['progress'] as num) >= 100;
-
-    if (_dashboardItems.length <= 1 || !isFirstFurnitureClear) {
+    if (_dashboardItems.length <= 1) {
       return const SizedBox.shrink();
     }
 
@@ -414,10 +409,6 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
 
     final item1RemainingDays = item1ExpirationDate?.difference(today).inDays;
     final item2RemainingDays = item2ExpirationDate?.difference(today).inDays;
-
-    bool isFirstFurnitureClear =
-        _dashboardItems.isNotEmpty &&
-        (_dashboardItems[0]['progress'] as num) >= 100;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -803,8 +794,8 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                               ),
 
                                               const Spacer(),
-                                              if (_dashboardItems.length > 1 &&
-                                                  isFirstFurnitureClear) ...[
+                                              if (_dashboardItems.length >
+                                                  1) ...[
                                                 InkWell(
                                                   onTap: () {
                                                     if (_currentPage > 0) {
