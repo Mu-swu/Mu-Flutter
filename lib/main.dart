@@ -216,29 +216,41 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
         },
       ];
 
-      _dashboardItems =
-          allFurnitureData.map((item) {
-            String spaceName = item['space'];
+      List<Map<String, dynamic>> calculatedItems =
+      allFurnitureData.map((item) {
+        String spaceName = item['space'];
 
-            List<Section> spaceSections =
-                allSections.where((s) {
-                  return db.getSpaceNameForSection(s.name) == spaceName;
-                }).toList();
+        List<Section> spaceSections =
+        allSections.where((s) {
+          return db.getSpaceNameForSection(s.name) == spaceName;
+        }).toList();
 
-            if (spaceSections.isEmpty) {
-              return {...item, "progress": 0};
-            }
+        if (spaceSections.isEmpty) {
+          return {...item, "progress": 0};
+        }
 
-            int completedCount =
-                spaceSections.where((s) => s.progress == 100).length;
-            int totalCount = spaceSections.length;
-            int rate =
-                totalCount > 0
-                    ? ((completedCount / totalCount) * 100).toInt()
-                    : 0;
+        int completedCount =
+            spaceSections.where((s) => s.progress == 100).length;
+        int totalCount = spaceSections.length;
+        int rate =
+        totalCount > 0
+            ? ((completedCount / totalCount) * 100).toInt()
+            : 0;
 
-            return {...item, "progress": rate};
-          }).toList();
+        return {...item, "progress": rate};
+      }).toList();
+
+      var currentSpaceItem = calculatedItems.firstWhere(
+            (item) => item['space'] == _userSpace,
+        orElse: () => calculatedItems[0],
+      );
+
+      if ((currentSpaceItem['progress'] as num) < 100) {
+        _dashboardItems = [currentSpaceItem];
+      } else {
+        _dashboardItems = calculatedItems;
+      }
+
     } catch (e, stackTrace) {
       print("사용자 데이터 로드 실패 : $e");
       print("상세 위치 : $stackTrace");
