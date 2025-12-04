@@ -37,6 +37,7 @@ dependencies:
   flutter_svg: 2.2.1
   flutter_local_notifications: ^19.5.0
 
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -134,6 +135,9 @@ flutter:
     - assets/my/left.svg
     - assets/my/right.svg
     - assets/mission/play.svg
+    - assets/mission/bang.mp3
+    - assets/mission/gam.mp3
+    - assets/mission/mol.mp3
 
 
   fonts:

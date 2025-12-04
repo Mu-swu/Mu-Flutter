@@ -18,6 +18,7 @@ import 'widgets/loadingvideo.dart';
 import 'widgets/choice_popup.dart';
 import 'widgets/longbutton.dart';
 import 'user_theme_manager.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 List<StepData> _parseMissionSteps(String jsonText) {
   String text = jsonText;
@@ -94,8 +95,36 @@ class _MissionStepPageState extends State<MissionStepPage> {
   bool _isTtsSpeaking = false;
   bool _isTtsSequenceRunning = false;
   int _ttsSessionId = 0;
-  bool _showChoices = false; // 몰라형 선택지 표시 여부
-  bool _isMuted = false; // 초기 상태: 음소거 해제(소리 켜짐)로 가정
+  bool _showChoices = false;
+  bool _isMuted = false;
+  final AudioPlayer _bgmPlayer = AudioPlayer();
+
+  Future<void> _playTypeBgm() async {
+    String assetPath;
+
+    switch (_currentUserType) {
+      case UserType.bang:
+        assetPath = 'mission/bang.mp3';
+        break;
+      case UserType.gam:
+        assetPath = 'mission/gam.mp3';
+        break;
+      case UserType.mol:
+        assetPath = 'mission/mol.mp3';
+        break;
+    }
+
+    try {
+      await _bgmPlayer.setReleaseMode(ReleaseMode.loop);
+      await _bgmPlayer.play(AssetSource(assetPath));
+    } catch (e) {
+      print("BGM 재생 오류: $e");
+    }
+  }
+
+  Future<void> _stopBgm() async {
+    await _bgmPlayer.stop();
+  }
 
   void _toggleMute() async {
     setState(() {
@@ -514,6 +543,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
     final currentSessionId = ++_ttsSessionId;
     _isTtsSequenceRunning = true;
 
+    await _stopBgm();
+
     try {
       for (int i = startFrom; i < _currentLines.length; i++) {
         if (_isPaused || !_isTtsEnabled || _ttsSessionId != currentSessionId)
@@ -534,6 +565,13 @@ class _MissionStepPageState extends State<MissionStepPage> {
           _isTtsSpeaking = false;
         });
       }
+      if (!_isPaused &&
+          _isTtsEnabled &&
+          _ttsSessionId == currentSessionId &&
+          _currentLineIndex == _currentLines.length - 1) {
+
+        await _playTypeBgm();
+      }
     } catch (e) {
       print("TTS 오류 : $e");
     } finally {
@@ -544,6 +582,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
   void _onStepFinished() async {
     _ttsEngine?.stop();
     _ttsSessionId++;
+    await _stopBgm();
 
     if (_currentStepIndex < _missionSteps.length - 1) {
       await _loadStepData(_currentStepIndex + 1);
@@ -578,11 +617,14 @@ class _MissionStepPageState extends State<MissionStepPage> {
       if (_isPaused) {
         _ttsEngine?.stop();
         _ttsSessionId++;
+        _stopBgm();
       } else {
         if (_currentLineIndex >= 0 &&
             _currentLineIndex < _currentLines.length &&
             _isTtsEnabled) {
           _startTtsSequence(startFrom: _currentLineIndex);
+        } else{
+          _playTypeBgm();
         }
 
         if (_timer == null || !_timer!.isActive) {
@@ -606,6 +648,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
 
   @override
   void dispose() {
+    _bgmPlayer.dispose();
     _ttsEngine?.stop();
     _ttsSessionId++;
     _scrollController.dispose();
