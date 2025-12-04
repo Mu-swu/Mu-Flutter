@@ -332,7 +332,13 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
   }
 
   Widget _buildPageIndicator() {
-    if (_dashboardItems.length <= 1) return const SizedBox.shrink();
+    bool isFirstFurnitureClear =
+        _dashboardItems.isNotEmpty &&
+        (_dashboardItems[0]['progress'] as num) >= 100;
+
+    if (_dashboardItems.length <= 1 || !isFirstFurnitureClear) {
+      return const SizedBox.shrink();
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -396,6 +402,10 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
 
     final item1RemainingDays = item1ExpirationDate?.difference(today).inDays;
     final item2RemainingDays = item2ExpirationDate?.difference(today).inDays;
+
+    bool isFirstFurnitureClear =
+        _dashboardItems.isNotEmpty &&
+        (_dashboardItems[0]['progress'] as num) >= 100;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -781,8 +791,8 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                               ),
 
                                               const Spacer(),
-                                              if (_dashboardItems.length >
-                                                  1) ...[
+                                              if (_dashboardItems.length > 1 &&
+                                                  isFirstFurnitureClear) ...[
                                                 InkWell(
                                                   onTap: () {
                                                     if (_currentPage > 0) {
