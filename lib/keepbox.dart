@@ -95,16 +95,16 @@ class MaskingPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     // 1. 어둡고 투명한 배경 색상 Paint
     final backgroundPaint =
-    Paint()
-      ..color = Colors.black.withOpacity(0.6)
-      ..style = PaintingStyle.fill;
+        Paint()
+          ..color = Colors.black.withOpacity(0.6)
+          ..style = PaintingStyle.fill;
 
     // 2. 뚫어줄 영역을 위한 Paint 설정
     // 💡 핵심: BlendMode.clear를 사용하여 해당 영역을 투명하게 만듭니다.
     final cutoutPaint =
-    Paint()
-      ..blendMode = BlendMode.clear
-      ..color = Colors.white; // 색상은 중요하지 않음
+        Paint()
+          ..blendMode = BlendMode.clear
+          ..color = Colors.white; // 색상은 중요하지 않음
 
     // 3. 뚫어줄 영역의 둥근 모서리 반지름
     final r = 10.0;
@@ -119,7 +119,10 @@ class MaskingPainter extends CustomPainter {
     if (cutoutRect != null) {
       // 6. 뚫어줄 영역을 clear 모드로 그립니다.
       // 뚫어줄 Path/RRect 생성
-      final cutoutRRect = RRect.fromRectAndRadius(cutoutRect!, Radius.circular(r));
+      final cutoutRRect = RRect.fromRectAndRadius(
+        cutoutRect!,
+        Radius.circular(r),
+      );
 
       // clear 모드로 뚫어주기
       canvas.drawRRect(cutoutRRect, cutoutPaint);
@@ -266,10 +269,7 @@ class _TutorialOverlayWithMaskingState
         Center(
           child: Transform.translate(
             // ⚠️ 원본 TutorialOverlay의 고정 오프셋을 사용 (크기/위치 문제 해결)
-            offset: Offset(
-            5 * scaleFactor,
-            100 * scaleFactor,
-            ),
+            offset: Offset(5 * scaleFactor, 100 * scaleFactor),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,7 +454,6 @@ class _keepboxState extends State<keepbox> {
       // 2. 사용자 유형 로드 후 나머지 데이터 및 튜토리얼 상태 확인
       await _loadData(); // _userType을 사용할 수 있는 상태에서 데이터 로드
       _checkAndLoadTutorialStatus();
-
     } catch (e) {
       print("Keepbox 초기 데이터 로드 중 오류 발생: $e");
       if (mounted) {
@@ -720,26 +719,57 @@ class _keepboxState extends State<keepbox> {
     setState(() {});
   }
 
-  Future<String?> _getCategoryFromGemini(String itemName) async {
-    if (!_isGeminiInitialized || _model == null) {
-      print("Gemini 모델이 초기화되지 않았거나 사용할 수 없습니다.");
-      return "분류 오류(모델 준비 안됨)";
+  String _cleanCategoryText(String text) {
+    String cleaned = text.trim();
+
+    cleaned = cleaned.replaceAll(RegExp(r'[^\w\s가-힣]'), '');
+
+    if (cleaned.contains('\n')) {
+      cleaned = cleaned.split('\n')[0];
     }
+
+    if (cleaned.length > 10) {
+      return "기타";
+    }
+
+    return cleaned;
+  }
+
+  Future<String> _getCategoryFromGemini(String itemName) async {
+    if (!_isGeminiInitialized || _model == null) {
+      print("Gemini: 모델 미초기화로 '기타' 반환");
+      return "기타";
+    }
+
     try {
       final prompt =
-          '다음 품목을 한 단어의 카테고리(예:식품,의류, 기타)로 분류해주세요: $itemName. 답변은 카테고리 단어 하나만 주세요.';
+          '다음 품목을 한 단어의 카테고리(예:식품, 의류, 가전, 가구, 잡화)로 분류해주세요: "$itemName". 설명 없이 딱 단어 하나만 답변하세요.';
       final content = [Content.text(prompt)];
-      final response = await _model!.generateContent(content);
 
-      print("Gemini API 응답 : ${response.text}");
+      final response = await _model!
+          .generateContent(content)
+          .timeout(const Duration(seconds: 3));
+
+      print("Gemini Raw 응답 : ${response.text}");
 
       if (response.text != null && response.text!.isNotEmpty) {
-        return response.text!.trim().replaceAll('.', '');
+        final cleanedText = _cleanCategoryText(response.text!);
+
+        if (cleanedText.isEmpty) return "기타";
+
+        return cleanedText;
       }
+
+      return "기타";
+    } on FormatException catch (_) {
+      print("Gemini: 데이터 형식 오류");
+      return "기타";
+    } on Exception catch (e) {
+      print("Gemini API 호출 안전장치 발동 (오류 내용): $e");
       return "기타";
     } catch (e) {
-      print("Gemini API 호출 오류: $e");
-      return "분류 실패";
+      print("Gemini: 알 수 없는 오류 발생");
+      return "기타";
     }
   }
 

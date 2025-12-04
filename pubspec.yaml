@@ -133,6 +133,7 @@ flutter:
     - assets/my/undone.png
     - assets/my/left.svg
     - assets/my/right.svg
+    - assets/my/play.svg
 
 
   fonts:
