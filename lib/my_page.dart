@@ -112,6 +112,25 @@ class _MyPageState extends State<MyPage> {
       });
     }
 
+    String targetSpaceName;
+    switch (UserThemeManager.currentUserType) {
+      case UserType.gam:
+        targetSpaceName = '옷장';
+        break;
+      case UserType.mol:
+        targetSpaceName = '서랍장';
+        break;
+      case UserType.bang:
+      default:
+        targetSpaceName = '냉장고';
+        break;
+    }
+
+    int initialIndex = tempStats.indexWhere(
+      (stat) => stat['spaceName'] == targetSpaceName,
+    );
+    if (initialIndex == -1) initialIndex = 0;
+
     if (mounted) {
       setState(() {
         _spaceStats = tempStats;
@@ -122,9 +141,13 @@ class _MyPageState extends State<MyPage> {
 
         _isLoading = false;
 
-        if (_currentMissionPageIndex >= _spaceStats.length) {
-          _currentMissionPageIndex = 0;
-        }
+        _currentMissionPageIndex = initialIndex;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_missionPageController.hasClients) {
+            _missionPageController.jumpToPage(initialIndex);
+          }
+        });
       });
     }
   }
