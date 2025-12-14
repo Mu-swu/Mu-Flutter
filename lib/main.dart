@@ -64,9 +64,6 @@ class CustomTag extends StatelessWidget {
   }
 }
 
-final PageController _pageController = PageController();
-int _currentPage = 0;
-
 final List<Map<String, dynamic>> _dataList = [
   {
     "title": "냉장고",
@@ -146,7 +143,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
   int _currentSpaceProgressPercentage = 0;
 
   List<Map<String, dynamic>> _dashboardItems = [];
-  final PageController _pageController = PageController();
+  PageController _pageController = PageController();
   int _currentPage = 0;
 
   @override
@@ -247,8 +244,13 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
 
       if ((currentSpaceItem['progress'] as num) < 100) {
         _dashboardItems = [currentSpaceItem];
+        _currentPage=0;
       } else {
         _dashboardItems = calculatedItems;
+        int targetIndex=_dashboardItems.indexWhere((item)=>item['space']==_userSpace);
+        if(targetIndex==-1) targetIndex=0;
+
+        _currentPage=targetIndex;
       }
     } catch (e, stackTrace) {
       print("사용자 데이터 로드 실패 : $e");
@@ -263,12 +265,13 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
     setState(() {
       _impendingItems = items;
       _isLoading = false;
-      _currentPage = 0;
     });
 
-    if (_pageController.hasClients) {
-      _pageController.jumpToPage(0);
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(_currentPage);
+      }
+    });
 
     if (hasImpendingItems && mounted) {
       await Future.delayed(const Duration(milliseconds: 50));
@@ -608,11 +611,8 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                       ),
                                                     ),
                                                     if (_challengeMission !=
-                                                            null ||
-                                                        !_orderedMissions
-                                                            .isEmpty) ...[
+                                                        null) ...[
                                                       SizedBox(height: 6),
-                                                      // ★ 제목과 내용 사이의 적절한 간격
                                                       Text(
                                                         _challengeMission !=
                                                                 null
@@ -637,33 +637,46 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                 ),
                                               ),
                                               SizedBox(width: 10),
-                                              // 텍스트와 버튼 사이 간격
-                                              ShortButton(
-                                                text: '시작하기',
-                                                fontSize: 16,
-                                                isYes:
-                                                    _challengeMission != null ||
-                                                    _orderedMissions.isEmpty,
-                                                width: 120,
-                                                height: 50,
-                                                onPressed:
-                                                    (_challengeMission !=
-                                                                null ||
-                                                            _orderedMissions
-                                                                .isEmpty)
-                                                        ? () {
-                                                          Navigator.pushNamed(
-                                                            context,
-                                                            '/congestion',
-                                                          ).then((_) {
-                                                            _loadUserData(
-                                                              showLoading:
-                                                                  false,
-                                                            );
-                                                          });
-                                                        }
-                                                        : null,
-                                              ),
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        left: 10,
+                                                      ),
+                                                  child: ShortButton(
+                                                    text: '시작하기',
+                                                    fontSize: 16,
+
+                                                    isYes: true,
+
+                                                    width: 120,
+                                                    height: 50,
+
+                                                    onPressed: () {
+                                                      if (_challengeMission !=
+                                                          null) {
+                                                        Navigator.pushNamed(
+                                                          context,
+                                                          '/mission_start',
+                                                          arguments:
+                                                              _challengeMission,
+                                                        ).then((_) {
+                                                          _loadUserData(
+                                                            showLoading: false,
+                                                          );
+                                                        });
+                                                      } else {
+                                                        Navigator.pushNamed(
+                                                          context,
+                                                          '/congestion',
+                                                        ).then((_) {
+                                                          _loadUserData(
+                                                            showLoading: false,
+                                                          );
+                                                        });
+                                                      }
+                                                    },
+                                                  ),
+                                                ),
                                             ],
                                           ),
                                         ),
@@ -739,6 +752,8 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                                     isCompleted,
                                                               );
                                                             })
+                                                            .toList()
+                                                            .reversed
                                                             .toList(),
                                                   ),
                                         ),
@@ -1067,7 +1082,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                     ),
                                   ),
 
-                                  // 오른쪽: 보관 잔여일 (수정된 부분)
+                                  // 오른쪽: 보관 잔여일
                                   Expanded(
                                     flex: 10,
                                     child: Column(
@@ -1144,10 +1159,15 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                       Expanded(
                                                         child: Container(
                                                           margin:
-                                                              EdgeInsets.only(
-                                                                right:
-                                                                    spacing / 2,
-                                                              ),
+                                                              item2 == null
+                                                                  ? EdgeInsets
+                                                                      .zero
+                                                                  : EdgeInsets.only(
+                                                                    right:
+                                                                        spacing /
+                                                                        2,
+                                                                  ),
+
                                                           padding:
                                                               EdgeInsets.symmetric(
                                                                 horizontal:
@@ -1302,164 +1322,161 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                       // ------------------------------------------------
                                                       // [오른쪽 박스 : item2]
                                                       // ------------------------------------------------
-                                                      Expanded(
-                                                        child:
-                                                            item2 == null
-                                                                ? Container(
-                                                                  margin: EdgeInsets.only(
-                                                                    right:
-                                                                        spacing /
-                                                                        2,
+                                                      if (item2 != null)
+                                                        Expanded(
+                                                          child: Container(
+                                                            margin:
+                                                                EdgeInsets.only(
+                                                                  left:
+                                                                      spacing /
+                                                                      2,
+                                                                ),
+                                                            padding:
+                                                                EdgeInsets.symmetric(
+                                                                  horizontal:
+                                                                      24 *
+                                                                      overallRatio,
+                                                                ),
+                                                            decoration: BoxDecoration(
+                                                              color:
+                                                                  item2RemainingDays! <=
+                                                                          3
+                                                                      ? const Color(
+                                                                        0xFFFFF3F3,
+                                                                      )
+                                                                      : const Color(
+                                                                        0xFFF3F5FF,
+                                                                      ),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    10,
                                                                   ),
-                                                                )
-                                                                : Container(
-                                                                  margin: EdgeInsets.only(
-                                                                    right:
-                                                                        spacing /
-                                                                        2,
-                                                                  ),
-                                                                  padding: EdgeInsets.symmetric(
-                                                                    horizontal:
-                                                                        24 *
-                                                                        overallRatio,
-                                                                  ),
-                                                                  decoration: BoxDecoration(
-                                                                    color:
-                                                                        item2RemainingDays! <=
-                                                                                3
-                                                                            ? const Color(
-                                                                              0xFFFFF3F3,
-                                                                            )
-                                                                            : const Color(
-                                                                              0xFFF3F5FF,
+                                                            ),
+                                                            child:
+                                                                item2RemainingDays <=
+                                                                        3
+                                                                    ? Column(
+                                                                      crossAxisAlignment:
+                                                                          CrossAxisAlignment
+                                                                              .start,
+                                                                      mainAxisAlignment:
+                                                                          MainAxisAlignment
+                                                                              .center,
+                                                                      children: [
+                                                                        Container(
+                                                                          padding: const EdgeInsets.symmetric(
+                                                                            horizontal:
+                                                                                6,
+                                                                            vertical:
+                                                                                3,
+                                                                          ),
+                                                                          decoration: BoxDecoration(
+                                                                            color: const Color(
+                                                                              0xFFFFD7D7,
                                                                             ),
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                          10,
-                                                                        ),
-                                                                  ),
-                                                                  child:
-                                                                      item2RemainingDays <=
-                                                                              3
-                                                                          ? Column(
-                                                                            crossAxisAlignment:
-                                                                                CrossAxisAlignment.start,
-                                                                            mainAxisAlignment:
-                                                                                MainAxisAlignment.center,
-                                                                            children: [
-                                                                              Container(
-                                                                                padding: const EdgeInsets.symmetric(
-                                                                                  horizontal:
-                                                                                      6,
-                                                                                  vertical:
-                                                                                      3,
-                                                                                ),
-                                                                                decoration: BoxDecoration(
-                                                                                  color: const Color(
-                                                                                    0xFFFFD7D7,
-                                                                                  ),
-                                                                                  borderRadius: BorderRadius.circular(
-                                                                                    2,
-                                                                                  ),
-                                                                                ),
-                                                                                child: const Text(
-                                                                                  '임박',
-                                                                                  style: TextStyle(
-                                                                                    color: Color(
-                                                                                      0xFFEC5353,
-                                                                                    ),
-                                                                                    fontSize:
-                                                                                        12,
-                                                                                    fontFamily:
-                                                                                        'PretendardMedium',
-                                                                                  ),
-                                                                                ),
-                                                                              ),
-                                                                              SizedBox(
-                                                                                height:
-                                                                                    5 *
-                                                                                    overallRatio,
-                                                                              ),
-                                                                              Text(
-                                                                                item2!.name,
-                                                                                maxLines:
-                                                                                    1,
-                                                                                overflow:
-                                                                                    TextOverflow.ellipsis,
-                                                                                style: TextStyle(
-                                                                                  fontSize:
-                                                                                      16,
-                                                                                  fontFamily:
-                                                                                      'PretendardMedium',
-                                                                                  color: const Color(
-                                                                                    0xFF5D5D5D,
-                                                                                  ),
-                                                                                ),
-                                                                              ),
-                                                                              Text(
-                                                                                'D-${item2RemainingDays}',
-                                                                                style: TextStyle(
-                                                                                  fontSize:
-                                                                                      32,
-                                                                                  fontFamily:
-                                                                                      'PretendardMedium',
-                                                                                  color: Color(
-                                                                                    0xFF333333,
-                                                                                  ),
-                                                                                ),
-                                                                              ),
-                                                                            ],
-                                                                          )
-                                                                          : Padding(
-                                                                            padding: EdgeInsets.only(
-                                                                              top:
-                                                                                  53 *
-                                                                                  overallRatio,
-                                                                            ),
-                                                                            child: Column(
-                                                                              crossAxisAlignment:
-                                                                                  CrossAxisAlignment.start,
-                                                                              mainAxisAlignment:
-                                                                                  MainAxisAlignment.start,
-                                                                              children: [
-                                                                                Text(
-                                                                                  item2!.name,
-                                                                                  maxLines:
-                                                                                      1,
-                                                                                  overflow:
-                                                                                      TextOverflow.ellipsis,
-                                                                                  style: TextStyle(
-                                                                                    fontSize:
-                                                                                        16,
-                                                                                    fontFamily:
-                                                                                        'PretendardMedium',
-                                                                                    color: const Color(
-                                                                                      0xFF5D5D5D,
-                                                                                    ),
-                                                                                  ),
-                                                                                ),
-                                                                                SizedBox(
-                                                                                  height:
-                                                                                      5 *
-                                                                                      overallRatio,
-                                                                                ),
-                                                                                Text(
-                                                                                  'D-${item2RemainingDays}',
-                                                                                  style: TextStyle(
-                                                                                    fontSize:
-                                                                                        32,
-                                                                                    fontFamily:
-                                                                                        'PretendardMedium',
-                                                                                    color: Color(
-                                                                                      0xFF333333,
-                                                                                    ),
-                                                                                  ),
-                                                                                ),
-                                                                              ],
+                                                                            borderRadius: BorderRadius.circular(
+                                                                              2,
                                                                             ),
                                                                           ),
-                                                                ),
-                                                      ),
+                                                                          child: const Text(
+                                                                            '임박',
+                                                                            style: TextStyle(
+                                                                              color: Color(
+                                                                                0xFFEC5353,
+                                                                              ),
+                                                                              fontSize:
+                                                                                  12,
+                                                                              fontFamily:
+                                                                                  'PretendardMedium',
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        SizedBox(
+                                                                          height:
+                                                                              5 *
+                                                                              overallRatio,
+                                                                        ),
+                                                                        Text(
+                                                                          item2!
+                                                                              .name,
+                                                                          maxLines:
+                                                                              1,
+                                                                          overflow:
+                                                                              TextOverflow.ellipsis,
+                                                                          style: TextStyle(
+                                                                            fontSize:
+                                                                                16,
+                                                                            fontFamily:
+                                                                                'PretendardMedium',
+                                                                            color: const Color(
+                                                                              0xFF5D5D5D,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        Text(
+                                                                          'D-${item2RemainingDays}',
+                                                                          style: TextStyle(
+                                                                            fontSize:
+                                                                                32,
+                                                                            fontFamily:
+                                                                                'PretendardMedium',
+                                                                            color: Color(
+                                                                              0xFF333333,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    )
+                                                                    : Padding(
+                                                                      padding: EdgeInsets.only(
+                                                                        top:
+                                                                            53 *
+                                                                            overallRatio,
+                                                                      ),
+                                                                      child: Column(
+                                                                        crossAxisAlignment:
+                                                                            CrossAxisAlignment.start,
+                                                                        mainAxisAlignment:
+                                                                            MainAxisAlignment.start,
+                                                                        children: [
+                                                                          Text(
+                                                                            item2!.name,
+                                                                            maxLines:
+                                                                                1,
+                                                                            overflow:
+                                                                                TextOverflow.ellipsis,
+                                                                            style: TextStyle(
+                                                                              fontSize:
+                                                                                  16,
+                                                                              fontFamily:
+                                                                                  'PretendardMedium',
+                                                                              color: const Color(
+                                                                                0xFF5D5D5D,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                          SizedBox(
+                                                                            height:
+                                                                                5 *
+                                                                                overallRatio,
+                                                                          ),
+                                                                          Text(
+                                                                            'D-${item2RemainingDays}',
+                                                                            style: TextStyle(
+                                                                              fontSize:
+                                                                                  32,
+                                                                              fontFamily:
+                                                                                  'PretendardMedium',
+                                                                              color: Color(
+                                                                                0xFF333333,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                          ),
+                                                        ),
                                                     ],
                                                   ),
                                         ),
@@ -1511,10 +1528,15 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
         selectedIndex: 0,
         onItemTapped: (index) {
           if (index == 0) {
+            _loadUserData(showLoading: false);
           } else if (index == 1) {
-            Navigator.pushNamed(context, '/congestion');
+            Navigator.pushNamed(context, '/congestion').then((_) {
+              _loadUserData(showLoading: false);
+            });
           } else if (index == 2) {
-            Navigator.pushNamed(context, '/my');
+            Navigator.pushNamed(context, '/my').then((_) {
+              _loadUserData(showLoading: false);
+            });
           }
         },
       ),
