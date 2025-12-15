@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mu/data/database.dart';
 import 'package:mu/my_page.dart';
 import 'package:mu/widgets/dday_banner.dart';
+import 'package:mu/widgets/mom_animated_widget.dart';
 import 'surveyq.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'space_start.dart';
@@ -164,23 +165,26 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
       _userTypeString = userType ?? '방치형';
 
       UserType loadedType;
+      String defaultUserSpace;
+
       switch (_userTypeString) {
         case '감정형':
           loadedType = UserType.gam;
-          _userSpace = '옷장';
+          defaultUserSpace = '옷장';
           break;
         case '몰라형':
           loadedType = UserType.mol;
-          _userSpace = '서랍장';
+          defaultUserSpace = '서랍장';
           break;
         case '방치형':
         default:
           loadedType = UserType.bang;
-          _userSpace = '냉장고';
+          defaultUserSpace = '냉장고';
       }
       UserThemeManager.currentUserType = loadedType;
-      _urgentItems = await db.getTopTowUrgentItems();
+      _userSpace = defaultUserSpace;
 
+      _urgentItems = await db.getTopTowUrgentItems();
       _orderedMissions = await db.getOrderedMissions(1);
       _currentMissionIndex = await db.getUserMissionIndex(1);
 
@@ -189,6 +193,14 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
       } else {
         _challengeMission = null;
       }
+
+      String targetSpaceToShow;
+      if (_challengeMission != null) {
+        targetSpaceToShow = db.getSpaceNameForSection(_challengeMission!.name);
+      } else {
+        targetSpaceToShow = defaultUserSpace;
+      }
+
       final status = await db.getMyPageStatistics(1);
       List<Section> allSections = status['sections'];
 
@@ -216,7 +228,6 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
       List<Map<String, dynamic>> calculatedItems =
           allFurnitureData.map((item) {
             String spaceName = item['space'];
-
             List<Section> spaceSections =
                 allSections.where((s) {
                   return db.getSpaceNameForSection(s.name) == spaceName;
@@ -237,21 +248,25 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
             return {...item, "progress": rate};
           }).toList();
 
-      var currentSpaceItem = calculatedItems.firstWhere(
-        (item) => item['space'] == _userSpace,
-        orElse: () => calculatedItems[0],
+      bool hasAnyCompletedSpace = calculatedItems.any(
+        (item) => (item['progress'] as int) == 100,
       );
-
-      if ((currentSpaceItem['progress'] as num) < 100) {
-        _dashboardItems = [currentSpaceItem];
-        _currentPage=0;
-      } else {
+      if (hasAnyCompletedSpace) {
         _dashboardItems = calculatedItems;
-        int targetIndex=_dashboardItems.indexWhere((item)=>item['space']==_userSpace);
-        if(targetIndex==-1) targetIndex=0;
 
-        _currentPage=targetIndex;
+        int targetIndex = _dashboardItems.indexWhere(
+          (item) => item['space'] == targetSpaceToShow,
+        );
+        _currentPage = (targetIndex == -1) ? 0 : targetIndex;
+      } else {
+        var targetItem = calculatedItems.firstWhere(
+          (item) => item['space'] == targetSpaceToShow,
+          orElse: () => calculatedItems[0],
+        );
+        _dashboardItems = [targetItem];
+        _currentPage = 0;
       }
+      _pageController = PageController(initialPage: _currentPage);
     } catch (e, stackTrace) {
       print("사용자 데이터 로드 실패 : $e");
       print("상세 위치 : $stackTrace");
@@ -567,10 +582,9 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                     children: [
                                       Expanded(
                                         flex: 2,
-                                        child: Image.asset(
-                                          UserThemeManager.momImage,
-                                          fit: BoxFit.contain,
-                                          width: 130,
+                                        child: MomAnimatedWidget(
+                                          userType:
+                                              UserThemeManager.currentUserType,
                                         ),
                                       ),
                                       Expanded(
@@ -637,46 +651,45 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                                                 ),
                                               ),
                                               SizedBox(width: 10),
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        left: 10,
-                                                      ),
-                                                  child: ShortButton(
-                                                    text: '시작하기',
-                                                    fontSize: 16,
-
-                                                    isYes: true,
-
-                                                    width: 120,
-                                                    height: 50,
-
-                                                    onPressed: () {
-                                                      if (_challengeMission !=
-                                                          null) {
-                                                        Navigator.pushNamed(
-                                                          context,
-                                                          '/mission_start',
-                                                          arguments:
-                                                              _challengeMission,
-                                                        ).then((_) {
-                                                          _loadUserData(
-                                                            showLoading: false,
-                                                          );
-                                                        });
-                                                      } else {
-                                                        Navigator.pushNamed(
-                                                          context,
-                                                          '/congestion',
-                                                        ).then((_) {
-                                                          _loadUserData(
-                                                            showLoading: false,
-                                                          );
-                                                        });
-                                                      }
-                                                    },
-                                                  ),
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  left: 10,
                                                 ),
+                                                child: ShortButton(
+                                                  text: '시작하기',
+                                                  fontSize: 16,
+
+                                                  isYes: true,
+
+                                                  width: 120,
+                                                  height: 50,
+
+                                                  onPressed: () {
+                                                    if (_challengeMission !=
+                                                        null) {
+                                                      Navigator.pushNamed(
+                                                        context,
+                                                        '/mission_start',
+                                                        arguments:
+                                                            _challengeMission,
+                                                      ).then((_) {
+                                                        _loadUserData(
+                                                          showLoading: false,
+                                                        );
+                                                      });
+                                                    } else {
+                                                      Navigator.pushNamed(
+                                                        context,
+                                                        '/congestion',
+                                                      ).then((_) {
+                                                        _loadUserData(
+                                                          showLoading: false,
+                                                        );
+                                                      });
+                                                    }
+                                                  },
+                                                ),
+                                              ),
                                             ],
                                           ),
                                         ),

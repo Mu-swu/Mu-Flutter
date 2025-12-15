@@ -138,6 +138,18 @@ flutter:
     - assets/mission/bang.mp3
     - assets/mission/gam.mp3
     - assets/mission/mol.mp3
+    - assets/home/mom2_bang.png
+    - assets/home/mom3_bang.png
+    - assets/home/mom4_bang.png
+    - assets/home/mom5_bang.png
+    - assets/home/mom2_gam.png
+    - assets/home/mom3_gam.png
+    - assets/home/mom4_gam.png
+    - assets/home/mom5_gam.png
+    - assets/home/mom2_mol.png
+    - assets/home/mom3_mol.png
+    - assets/home/mom4_mol.png
+    - assets/home/mom5_mol.png
 
 
   fonts:
