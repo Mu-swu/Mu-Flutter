@@ -156,6 +156,7 @@ flutter:
     - assets/mission/close.svg
     - assets/mission/arrow_down.svg
     - assets/mission/camera.svg
+    - assets/mission/sound_off.svg
 
 
   fonts:

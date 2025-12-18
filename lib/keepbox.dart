@@ -33,7 +33,7 @@ const Map<String, TutorialStyle> tutorialStyles = {
   '방치형': TutorialStyle(
     balloonColor: Color(0xFFFBF4FF),
     arrowColor: Color(0xFFDB84EF),
-    imagePath: 'assets/home/mom_bang.png',
+    imagePath: 'assets/mission/bang_mom.png',
     texts: [
       '작은 물건부터 분류하면, 큰 물건은 쉬워져! 기준을 배우기 딱 좋은 공간이야.',
       '보관할 물건이 없다면 완료 버튼을 눌러 비움 미션을 마칠 수 있어.',
@@ -42,7 +42,7 @@ const Map<String, TutorialStyle> tutorialStyles = {
   '감정형': TutorialStyle(
     balloonColor: Color(0xFFFFF6EF),
     arrowColor: Color(0xFFFFB172),
-    imagePath: 'assets/home/mom_gam.png',
+    imagePath: 'assets/mission/gam_mom.png',
     texts: [
       '작은 물건부터 분류하면, 큰 물건은 쉬워져! 기준을 배우기 딱 좋은 공간이야.',
       '보관할 물건이 없다면 완료 버튼을 눌러 비움 미션을 마칠 수 있어.',
@@ -51,7 +51,7 @@ const Map<String, TutorialStyle> tutorialStyles = {
   '몰라형': TutorialStyle(
     balloonColor: Color(0xFFF3FBF0),
     arrowColor: Color(0xFFA1C68D),
-    imagePath: 'assets/home/mom_mol.png',
+    imagePath: 'assets/mission/mol_mom.png',
     texts: [
       '작은 물건부터 분류하면, 큰 물건은 쉬워져! 기준을 배우기 딱 좋은 공간이야.',
       '보관할 물건이 없다면 완료 버튼을 눌러 비움 미션을 마칠 수 있어.',

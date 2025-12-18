@@ -132,9 +132,15 @@ class _MissionStepPageState extends State<MissionStepPage> {
     });
 
     if (_isMuted) {
-      //await _ttsEngine.setVolume(0.0);  // 음소거
+      _ttsEngine?.stop();
+      await _stopBgm();
+      _ttsSessionId++;
     } else {
-      //await _ttsEngine.setVolume(1.0);  // 소리 켜짐
+      if (_isTtsEnabled) {
+        _startTtsSequence(startFrom: _currentLineIndex);
+      } else {
+        _playTypeBgm();
+      }
     }
   }
 
@@ -280,7 +286,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
     final prompt = """
     
     AI 코치 응답 규칙 (최우선 적용)
-1.  응답 길이: 모든 답변은 **4개의 문장**으로만 구성되어야 합니다.
+1.  응답 길이: 모든 답변은 **6개의 문장**으로만 구성되어야 합니다.
 2. 문장 길이 : 각 문장은 공백 및 구두점을 포함하여 정확히 20자 이상 45자 이하로 구성되어야 합니다. 단, 이 규칙을 절대 위반하지 마십시오.
 3. 반말 유지: 모든 응답은 친근한 반말(자식에게 말하듯이) 진행해주세요.
     
@@ -415,7 +421,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
     -공간 밀집도:$density
     
     위 정보를 바탕으로, 다음 JSON 형식에 맞춰 5단계 미션 가이드를 생성해줘.
-    각 단계(step)의 lines는 3~4개의 문장으로 구성해줘.
+    각 단계(step)의 lines는 6개의 문장으로 구성해줘.
     
     {
       "steps":[
@@ -568,8 +574,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
       if (!_isPaused &&
           _isTtsEnabled &&
           _ttsSessionId == currentSessionId &&
-          _currentLineIndex == _currentLines.length - 1) {
-
+          _currentLineIndex == _currentLines.length - 1 &&
+          !_isMuted) {
         await _playTypeBgm();
       }
     } catch (e) {
@@ -623,7 +629,7 @@ class _MissionStepPageState extends State<MissionStepPage> {
             _currentLineIndex < _currentLines.length &&
             _isTtsEnabled) {
           _startTtsSequence(startFrom: _currentLineIndex);
-        } else{
+        } else {
           _playTypeBgm();
         }
 
@@ -697,45 +703,47 @@ class _MissionStepPageState extends State<MissionStepPage> {
             _isLoading
                 ? Center(
                   key: const ValueKey('loading'),
-              child: Column( //세로로 배치
-                mainAxisAlignment: MainAxisAlignment.center, // Column 내용을 중앙 정렬
-                mainAxisSize: MainAxisSize.min, // 필요한 공간만 차지하도록 설정
-                children: [
-                // 1. 첫 번째 문구
-                Text(
-                'AI가 맞춤형 가이드를 생성중입니다',
-                style: const TextStyle(
-                  fontFamily: 'PretendardBold',
-                  fontSize: 32,
-                  color: Colors.black,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8), // 두 줄 사이 간격
-              // 2. 두 번째 문구
-              Text(
-                '잠시만 기다려주세요',
-                style: TextStyle(
-                  fontFamily: 'PretendardRegular',
-                  fontSize: 20,
-                  color: Colors.black54,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32), // 텍스트와 비디오 사이 간격 추가
-
-              // 3. 로딩 비디오
-              SizedBox(
-                width: MediaQuery.of(context).size.width > 1000
-                    ? 1000
-                    : MediaQuery.of(context).size.width,
-                // 비디오가 너무 커지는 것을 방지하기 위해 최대 높이 제한을 추가할 수도 있습니다.
-                // height: 400,
-                    child: LoadingVideo(videoPath: loadingVideoPath),
+                  child: Column(
+                    //세로로 배치
+                    mainAxisAlignment:
+                        MainAxisAlignment.center, // Column 내용을 중앙 정렬
+                    mainAxisSize: MainAxisSize.min, // 필요한 공간만 차지하도록 설정
+                    children: [
+                      // 1. 첫 번째 문구
+                      Text(
+                        'AI가 맞춤형 가이드를 생성중입니다',
+                        style: const TextStyle(
+                          fontFamily: 'PretendardBold',
+                          fontSize: 32,
+                          color: Colors.black,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8), // 두 줄 사이 간격
+                      // 2. 두 번째 문구
+                      Text(
+                        '잠시만 기다려주세요',
+                        style: TextStyle(
+                          fontFamily: 'PretendardRegular',
+                          fontSize: 20,
+                          color: Colors.black54,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32), // 텍스트와 비디오 사이 간격 추가
+                      // 3. 로딩 비디오
+                      SizedBox(
+                        width:
+                            MediaQuery.of(context).size.width > 1000
+                                ? 1000
+                                : MediaQuery.of(context).size.width,
+                        // 비디오가 너무 커지는 것을 방지하기 위해 최대 높이 제한을 추가할 수도 있습니다.
+                        // height: 400,
+                        child: LoadingVideo(videoPath: loadingVideoPath),
+                      ),
+                    ],
                   ),
-              ],
-                ),
-            )
+                )
                 : SafeArea(
                   key: const ValueKey('mission_content'),
                   child: SizedBox.expand(
@@ -798,8 +806,8 @@ class _MissionStepPageState extends State<MissionStepPage> {
                                             onPressed: _toggleMute,
                                             icon: SvgPicture.asset(
                                               _isMuted
-                                                  ? 'assets/mission/sound_off.svg'  // 음소거 아이콘
-                                                  : 'assets/mission/sound_on.svg',  // 소리 켜짐 아이콘
+                                                  ? 'assets/mission/sound_off.svg'
+                                                  : 'assets/mission/sound_on.svg',
                                               width: 36,
                                               height: 36,
                                             ),
