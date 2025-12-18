@@ -155,6 +155,7 @@ flutter:
     - assets/mission/mol_mom.png
     - assets/mission/close.svg
     - assets/mission/arrow_down.svg
+    - assets/mission/camera.svg
 
 
   fonts:

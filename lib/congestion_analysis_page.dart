@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image/image.dart' as img;
+import 'package:mu/widgets/shortbutton.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:mu/scheduling.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -28,8 +29,88 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
   final int _inputSize = 300;
   List<String>? _labels;
   String? _currentSection;
+  String? _selectedSection;
 
   Future<void>? _initializationFuture;
+
+  Future<void> showDeleteConfirmationDialog({
+    required BuildContext context,
+    required String sectionName,
+    required VoidCallback onDelete,
+  }) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        final double dialogWidth = 543;
+        final double dialogHeight = 384;
+
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: dialogWidth,
+              height: dialogHeight,
+              padding: const EdgeInsets.all(50),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    '정말로 삭제하시겠습니까?',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontFamily: 'PretendardBold',
+                      color: Color(0xFF333333),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  Text(
+                    "삭제 시 세부 공간이 목록에서 제거돼요!\n삭제된 공간은 다시 추가할 수 있어요.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontFamily: 'PretendardRegular',
+                      color: Color(0xFF5D5D5D),
+                    ),
+                  ),
+                  const Spacer(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ShortButton(
+                        text: "아니요",
+                        isYes: false,
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        width: 185,
+                        height: 52,
+                        fontSize: 16,
+                      ),
+                      ShortButton(
+                        text: "네",
+                        isYes: true,
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                          onDelete();
+                        },
+                        width: 185,
+                        height: 52,
+                        fontSize: 16,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   Map<String, Map<String, dynamic>> _results = {};
   String _headerTitle = "";
@@ -272,7 +353,6 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
         detectedCount++;
       }
 
-      // ✅ 겹침 비율(overlap ratio) 계산
       double overlapArea = 0;
       for (int i = 0; i < boxes.length; i++) {
         for (int j = i + 1; j < boxes.length; j++) {
@@ -284,10 +364,8 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
       }
       double overlapRatio = totalBoxArea > 0 ? overlapArea / totalBoxArea : 0;
 
-      // ✅ 이미지 전체 대비 박스 비율
       double areaRatio = totalBoxArea / imageArea;
 
-      // ✅ 혼잡도 판정 (겹침 비율 포함)
       if (detectedCount > 9 && areaRatio > 0.5 && overlapRatio > 0.05) {
         return "혼잡";
       } else if (detectedCount > 6 && areaRatio > 0.3 && overlapRatio > 0.05) {
@@ -311,74 +389,127 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
 
     TextEditingController controller = TextEditingController();
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
+      barrierDismissible: true,
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  '새로운 칸 추가',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: controller,
-                  decoration: InputDecoration(
-                    hintText: '칸 이름을 입력하세요',
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 543,
+              padding: const EdgeInsets.all(30),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: const Text(
+                            '취소',
+                            style: TextStyle(
+                              color: Color(0xFF5D5D5D),
+                              fontSize: 16,
+                              fontFamily: 'PretendardRegular',
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Text(
+                        '세부 공간 추가',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontFamily: 'PretendardMedium',
+                          color: Color(0xFF5D5D5D),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: Column(
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 8),
+                            child: Text(
+                              '이름',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontFamily: 'PretendardMedium',
+                                color: Color(0xFF5D5D5D),
+                              ),
+                            ),
+                          ),
+                        ),
+                        TextField(
+                          controller: controller,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Color(0xFFF2F3F5),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(6),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 100),
+
+                        SizedBox(
+                          width: double.infinity,
+                          height: 60,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              if (controller.text.trim().isNotEmpty) {
+                                final newName = controller.text.trim();
+                                setState(() {
+                                  _results[newName] = {
+                                    "clutter": "분석 전",
+                                    "completed": false,
+                                  };
+                                });
+                                final db = AppDatabase.instance;
+                                await db.addSection(1, newName);
+                                Navigator.of(context).pop();
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF463EC6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              '저장하기',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontFamily: 'PretendardMedium',
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 40),
-                LongButton(
-                  text: "추가하기",
-                  onPressed: () async {
-                    if (controller.text.trim().isNotEmpty) {
-                      final newName = controller.text.trim();
-
-                      setState(() {
-                        _results[newName] = {
-                          "clutter": "분석 전",
-                          "completed": false,
-                        };
-                      });
-                      final db = AppDatabase.instance;
-                      await db.addSection(1, newName);
-
-                      Navigator.of(context).pop();
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('칸 이름을 입력해주세요.')),
-                      );
-                    }
-                  },
-                  isEnabled: true,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -427,6 +558,10 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
     final screenHeight = MediaQuery.of(context).size.height;
     final widthRatio = screenWidth / 1280;
     final heightRatio = screenHeight / 832;
+    bool isAnyAnalyzed = _results.values.any((result) {
+      final clutter = result["clutter"];
+      return clutter != "분석 전" && clutter != "분석 중..." && clutter != "분석 오류";
+    });
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -701,11 +836,17 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                           );
                                         } else {
                                           titleColor = const Color(0xFF5D5D5D);
-                                          tileBackgroundColor =
-                                              isSliding
-                                                  ? const Color(0xFFFFF3F3)
-                                                  : const Color(0xFFF3F5FF);
-
+                                          if (clutterStatus == "분석 전" ||
+                                              clutterStatus == "분석 중...") {
+                                            tileBackgroundColor = const Color(
+                                              0xFFF5F5F5,
+                                            );
+                                          } else {
+                                            tileBackgroundColor =
+                                                isSliding
+                                                    ? const Color(0xFFFFF3F3)
+                                                    : const Color(0xFFF3F5FF);
+                                          }
                                           switch (clutterStatus) {
                                             case '혼잡':
                                               statusBackgroundColor =
@@ -738,7 +879,8 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                               break;
                                           }
                                         }
-
+                                        final bool isSelected =
+                                            _selectedSection == section;
                                         return Slidable(
                                           key: ValueKey(section),
                                           controller: controller,
@@ -748,7 +890,13 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                             children: [
                                               CustomSlidableAction(
                                                 onPressed: (context) {
-                                                  _deleteSection(section);
+                                                  showDeleteConfirmationDialog(
+                                                    context: context,
+                                                    sectionName: section,
+                                                    onDelete: () {
+                                                      _deleteSection(section);
+                                                    },
+                                                  );
                                                 },
                                                 flex: 1,
                                                 child: Transform.translate(
@@ -788,9 +936,12 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                               0.0,
                                               4.0,
                                             ),
-                                            child: Card(
-                                              margin: EdgeInsets.zero,
-                                              shape: RoundedRectangleBorder(
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                milliseconds: 200,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: tileBackgroundColor,
                                                 borderRadius:
                                                     isSliding
                                                         ? const BorderRadius.only(
@@ -802,77 +953,86 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                                                               Radius.circular(
                                                                 8,
                                                               ),
-                                                          topRight:
-                                                              Radius.circular(
-                                                                0,
-                                                              ),
-                                                          bottomRight:
-                                                              Radius.circular(
-                                                                0,
-                                                              ),
                                                         )
                                                         : BorderRadius.circular(
                                                           8,
                                                         ),
+                                                border: Border.all(
+                                                  color:
+                                                      isSelected
+                                                          ? const Color(
+                                                            0xFF7F91FF,
+                                                          )
+                                                          : Colors.transparent,
+                                                  width: 4.0,
+                                                ),
                                               ),
-                                              elevation: 0,
-                                              color: tileBackgroundColor,
-                                              child: ListTile(
-                                                splashColor: Color(
-                                                  0xFF8D93A1,
-                                                ).withOpacity(0.2),
-                                                leading:
-                                                    showStatus
-                                                        ? Container(
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                horizontal: 10,
-                                                                vertical: 4,
-                                                              ),
-                                                          decoration: BoxDecoration(
-                                                            color:
-                                                                statusBackgroundColor,
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  2,
+                                              child: Material(
+                                                color: Colors.transparent,
+                                                child: ListTile(
+                                                  onTap:
+                                                      isCompleted
+                                                          ? null
+                                                          : () {
+                                                            setState(() {
+                                                              _selectedSection =
+                                                                  section;
+                                                              _currentSection =
+                                                                  section;
+                                                            });
+                                                          },
+                                                  leading:
+                                                      showStatus
+                                                          ? Container(
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal:
+                                                                      10,
+                                                                  vertical: 4,
                                                                 ),
-                                                          ),
-                                                          child: Text(
-                                                            clutterStatus,
-                                                            style: TextStyle(
-                                                              fontFamily:
-                                                                  'PretendardMedium',
+                                                            decoration: BoxDecoration(
                                                               color:
-                                                                  statusTextColor,
-
-                                                              fontSize:
-                                                                  14 *
-                                                                  widthRatio,
+                                                                  statusBackgroundColor,
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    2,
+                                                                  ),
                                                             ),
-                                                          ),
-                                                        )
-                                                        : null,
-                                                title: Text(
-                                                  section,
-                                                  style: TextStyle(
-                                                    fontFamily:
-                                                        'PretendardMedium',
-                                                    color: titleColor,
-                                                    fontSize: 18 * widthRatio,
+                                                            child: Text(
+                                                              clutterStatus,
+                                                              style: TextStyle(
+                                                                fontFamily:
+                                                                    'PretendardMedium',
+                                                                color:
+                                                                    statusTextColor,
+
+                                                                fontSize:
+                                                                    14 *
+                                                                    widthRatio,
+                                                              ),
+                                                            ),
+                                                          )
+                                                          : null,
+                                                  title: Text(
+                                                    section,
+                                                    style: TextStyle(
+                                                      fontFamily:
+                                                          'PretendardMedium',
+                                                      color: titleColor,
+                                                      fontSize: 18 * widthRatio,
+                                                    ),
+                                                  ),
+                                                  trailing: GestureDetector(
+                                                    onTap: () {
+                                                      _captureAndAnalyze(
+                                                        section,
+                                                      );
+                                                    },
+                                                    child: SvgPicture.asset(
+                                                      'assets/mission/camera.svg',
+                                                    ),
                                                   ),
                                                 ),
-                                                contentPadding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 20,
-                                                      vertical: 4,
-                                                    ),
-                                                onTap:
-                                                    isCompleted
-                                                        ? null
-                                                        : () =>
-                                                            _captureAndAnalyze(
-                                                              section,
-                                                            ),
                                               ),
                                             ),
                                           ),
@@ -951,7 +1111,7 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                         SizedBox(height: 80 * heightRatio),
                         LongButton(
                           text: "다음",
-
+                          isEnabled: isAnyAnalyzed,
                           onPressed: () {
                             final analyzedResults = <String, String>{};
                             _results.forEach((key, valueMap) {
@@ -967,7 +1127,6 @@ class _CongestionAnalysisLayoutState extends State<CongestionAnalysisLayout>
                               ),
                             );
                           },
-                          isEnabled: true,
                         ),
                         SizedBox(height: 90 * heightRatio),
                       ],
