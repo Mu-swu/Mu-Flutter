@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:mu/ExhibitionGuestbookPage.dart';
 import 'package:mu/data/database.dart';
 import 'package:mu/my_page.dart';
 import 'package:mu/widgets/dday_banner.dart';
@@ -117,6 +118,9 @@ class MyApp extends StatelessWidget {
         '/keepbox': (context) => const keepbox(),
         '/inven': (context) => const InventoryPage(),
         '/mission_start': (context) => const MissionStartPage(),
+        '/exhibition' : (context) => ExhibitionGuestbookPage(
+          userType: UserThemeManager.currentUserType,
+        ),
       },
     );
   }
@@ -537,7 +541,7 @@ class _FigmaHomePageState extends State<FigmaHomePage> {
                       const Spacer(),
                       GestureDetector(
                         onTap: () {
-                          Navigator.pushNamed(context, '/inven');
+                          Navigator.pushNamed(context, '/exhibition');
                         },
                         child: Container(
                           padding: EdgeInsets.all(12 * overallRatio),

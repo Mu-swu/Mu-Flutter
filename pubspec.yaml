@@ -36,6 +36,7 @@ dependencies:
   flutter_slidable: ^4.0.3
   flutter_svg: 2.2.1
   flutter_local_notifications: ^19.5.0
+  share_plus: ^7.2.2
 
 
 dev_dependencies:
