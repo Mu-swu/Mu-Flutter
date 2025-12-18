@@ -150,6 +150,11 @@ flutter:
     - assets/home/mom3_mol.png
     - assets/home/mom4_mol.png
     - assets/home/mom5_mol.png
+    - assets/mission/bang_mom.png
+    - assets/mission/gam_mom.png
+    - assets/mission/mol_mom.png
+    - assets/mission/close.svg
+    - assets/mission/arrow_down.svg
 
 
   fonts:
