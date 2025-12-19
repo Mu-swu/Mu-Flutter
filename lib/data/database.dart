@@ -9,7 +9,7 @@ import 'tables.dart';
 part 'database.g.dart';
 
 @DriftDatabase(
-  tables: [Users, Sections, Missions, KeepBoxes, SpaceProgresses, MissionLogs],
+  tables: [Users, Sections, Missions, KeepBoxes, SpaceProgresses, MissionLogs,Guestbooks],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase._internal() : super(_openConnection());
@@ -54,6 +54,8 @@ class AppDatabase extends _$AppDatabase {
     return (select(sections)..where((s) => s.userId.equals(userId))).get();
   }
 
+
+
   Future<void> batchInsertSections(int userId, List<String> names) async {
     await batch((batch) {
       for (final name in names) {
@@ -68,6 +70,17 @@ class AppDatabase extends _$AppDatabase {
         );
       }
     });
+  }
+
+  Future<int> insertGuestbook(GuestbooksCompanion entry) {
+    return into(guestbooks).insert(entry);
+  }
+
+  // 3. 방명록 목록 불러오기 (최신순)
+  Future<List<Guestbook>> getAllGuestbooks() {
+    return (select(guestbooks)
+      ..orderBy([(t) => OrderingTerm(expression: t.id, mode: OrderingMode.desc)]))
+        .get();
   }
 
   Future<void> addSection(int userId, String name) {

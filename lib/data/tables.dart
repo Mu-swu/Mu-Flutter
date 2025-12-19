@@ -55,4 +55,10 @@ class MissionLogs extends Table{
   DateTimeColumn get completedAt=>dateTime()();
 }
 
+class Guestbooks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get content => text()();
+  TextColumn get date => text()();
+  TextColumn get imagePath => text()();
+}
 

@@ -1,17 +1,22 @@
 import 'dart:io';
+import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:mu/user_theme_manager.dart';
-import 'package:mu/widgets/longbutton.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:path/path.dart' as p;
+import 'package:drift/drift.dart' as drift;
 
-List<Map<String, String>> savedGuestbooks = [];
+// 프로젝트의 실제 경로에 맞게 수정해주세요
+import 'package:mu/data/database.dart';
+import 'package:mu/user_theme_manager.dart';
+import 'package:mu/widgets/longbutton.dart';
 
 class ExhibitionGuestbookPage extends StatefulWidget {
   final UserType userType;
@@ -27,6 +32,10 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
   final TextEditingController _textController = TextEditingController();
   XFile? _capturedImage;
   final GlobalKey _storyTemplateKey = GlobalKey();
+
+  int _timerCount = 0;
+  Timer? _timer;
+  bool _isTimerRunning = false;
   bool _isSharing = false;
 
   @override
@@ -44,38 +53,79 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
       if (cameras.isNotEmpty) frontCamera = cameras.first;
       else return;
     }
-    _cameraController = CameraController(frontCamera!, ResolutionPreset.medium, enableAudio: true);
+    _cameraController = CameraController(frontCamera!, ResolutionPreset.medium, enableAudio: false);
     _initializeControllerFuture = _cameraController!.initialize();
     if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _cameraController?.dispose();
     _textController.dispose();
     super.dispose();
   }
 
-  // 💡 기록 저장만 수행하는 함수
-  void _handleSaveOnly() {
+  void _startTimer() {
+    if (_isTimerRunning || _capturedImage != null) return;
+    setState(() {
+      _isTimerRunning = true;
+      _timerCount = 3;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_timerCount > 1) {
+          _timerCount--;
+        } else {
+          _timer?.cancel();
+          _isTimerRunning = false;
+          _timerCount = 0;
+          _takePicture();
+        }
+      });
+    });
+  }
+
+  Future<void> _takePicture() async {
+    try {
+      await _initializeControllerFuture;
+      final image = await _cameraController!.takePicture();
+      setState(() => _capturedImage = image);
+    } catch (e) {
+      print("촬영 오류: $e");
+    }
+  }
+
+  Future<void> _handleSaveOnly() async {
     if (_textController.text.isEmpty || _capturedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('사진과 메시지를 모두 입력해주세요.')));
       return;
     }
-    setState(() {
-      savedGuestbooks.add({
-        'content': _textController.text,
-        'date': DateFormat('yyyy. MM. dd').format(DateTime.now()),
-        'imagePath': _capturedImage!.path,
+
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName = "mu_${DateTime.now().millisecondsSinceEpoch}.png";
+      final savedFile = await File(_capturedImage!.path).copy(p.join(appDir.path, fileName));
+
+      await AppDatabase.instance.insertGuestbook(
+        GuestbooksCompanion.insert(
+          content: _textController.text,
+          date: DateFormat('yyyy. MM. dd').format(DateTime.now()),
+          imagePath: savedFile.path,
+        ),
+      );
+
+      setState(() {
+        _capturedImage = null;
+        _textController.clear();
       });
-      _capturedImage = null;
-      _textController.clear();
-    });
-    FocusScope.of(context).unfocus();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('소중한 기록이 저장되었습니다. 💜')));
+      FocusScope.of(context).unfocus();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('소중한 기록이 저장되었습니다. 💜')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('저장 중 오류가 발생했습니다.')));
+    }
   }
 
-  // 📸 이미지 캡처 함수
   Future<XFile?> _capturePng() async {
     try {
       await Future.delayed(const Duration(milliseconds: 300));
@@ -88,26 +138,18 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
       final file = await File('${tempDir.path}/mu_story_${DateTime.now().millisecondsSinceEpoch}.png').create();
       await file.writeAsBytes(pngBytes);
       return XFile(file.path);
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   }
 
-  // 📤 공유 함수
   Future<void> _shareImage(XFile imageFile) async {
     final box = context.findRenderObject() as RenderBox?;
-    await Share.shareXFiles(
-      [imageFile],
-      text: 'MU 전시회에서 남긴 나의 기록 💜',
-      sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
-    );
+    await Share.shareXFiles([imageFile], text: 'MU 전시회에서 남긴 나의 기록 💜', sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size);
   }
 
   @override
   Widget build(BuildContext context) {
     final Color baseColor;
     final Color accentColor = const Color(0xFF463EC6);
-
     switch (widget.userType) {
       case UserType.bang: baseColor = const Color(0xFFF9F1FD); break;
       case UserType.gam: baseColor = const Color(0xFFFFF6EF); break;
@@ -120,18 +162,12 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
       body: SafeArea(
         child: Stack(
           children: [
-            // [계층 1] 캡처용 템플릿
             SingleChildScrollView(
               child: RepaintBoundary(
                 key: _storyTemplateKey,
-                child: InstagramStoryTemplate(
-                  baseColor: baseColor,
-                  imagePath: _capturedImage?.path,
-                  message: _textController.text,
-                ),
+                child: InstagramStoryTemplate(baseColor: baseColor, imagePath: _capturedImage?.path, message: _textController.text),
               ),
             ),
-            // [계층 2] 메인 UI
             Container(
               color: Colors.white,
               child: Column(
@@ -154,19 +190,7 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
               ),
             ),
             if (_isSharing)
-              Container(
-                color: Colors.black.withOpacity(0.8),
-                child: const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      SizedBox(height: 20),
-                      Text("MU RECORD 생성 중...", style: TextStyle(color: Colors.white, letterSpacing: 2)),
-                    ],
-                  ),
-                ),
-              ),
+              Container(color: Colors.black.withOpacity(0.8), child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [CircularProgressIndicator(color: Colors.white, strokeWidth: 2), SizedBox(height: 20), Text("MU RECORD 생성 중...", style: TextStyle(color: Colors.white, letterSpacing: 2))]))),
           ],
         ),
       ),
@@ -175,8 +199,7 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
 
   Widget _buildModernHeader(Color baseColor, Color accentColor) {
     return Container(
-      height: 80,
-      padding: const EdgeInsets.symmetric(horizontal: 30),
+      height: 80, padding: const EdgeInsets.symmetric(horizontal: 30),
       decoration: BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Colors.black.withOpacity(0.05)))),
       child: Row(
         children: [
@@ -216,17 +239,39 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
                           Positioned.fill(child: Transform.scale(scaleX: -1, child: Image.file(File(_capturedImage!.path), fit: BoxFit.cover))),
                           Positioned(
                             top: 15, right: 15,
-                            child: GestureDetector(
-                              onTap: () => setState(() => _capturedImage = null),
-                              child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), shape: BoxShape.circle), child: const Icon(Icons.refresh_rounded, size: 20, color: Colors.white)),
-                            ),
+                            child: GestureDetector(onTap: () => setState(() => _capturedImage = null), child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), shape: BoxShape.circle), child: const Icon(Icons.refresh_rounded, size: 20, color: Colors.white))),
                           ),
                         ],
                       )
                           : FutureBuilder<void>(
                         future: _initializeControllerFuture,
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.done) return CameraPreview(_cameraController!);
+                          if (snapshot.connectionState == ConnectionState.done) {
+                            return Stack(
+                              children: [
+                                LayoutBuilder(builder: (context, constraints) {
+                                  return SizedBox(
+                                    width: constraints.maxWidth, height: constraints.maxHeight,
+                                    child: ClipRect(
+                                      child: OverflowBox(
+                                        alignment: Alignment.center,
+                                        child: FittedBox(
+                                          fit: BoxFit.cover,
+                                          child: SizedBox(
+                                            width: constraints.maxWidth,
+                                            height: constraints.maxWidth / _cameraController!.value.aspectRatio,
+                                            child: CameraPreview(_cameraController!),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                                if (_isTimerRunning)
+                                  Center(child: Text("$_timerCount", style: TextStyle(fontSize: 80, fontWeight: FontWeight.w200, color: Colors.white.withOpacity(0.8), shadows: [Shadow(blurRadius: 15, color: Colors.black.withOpacity(0.3))]))),
+                              ],
+                            );
+                          }
                           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
                         },
                       ),
@@ -236,14 +281,8 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
                 const SizedBox(height: 25),
                 if (_capturedImage == null)
                   GestureDetector(
-                    onTap: () async {
-                      try {
-                        await _initializeControllerFuture;
-                        final image = await _cameraController!.takePicture();
-                        setState(() => _capturedImage = image);
-                      } catch (e) { print(e); }
-                    },
-                    child: Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: const Color(0xFF463EC6), width: 4)), child: const Icon(Icons.camera_alt_rounded, color: Color(0xFF463EC6), size: 35)),
+                    onTap: _isTimerRunning ? null : _startTimer,
+                    child: Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: _isTimerRunning ? Colors.grey[300]! : const Color(0xFF463EC6), width: 4)), child: Icon(_isTimerRunning ? Icons.timer_3 : Icons.camera_alt_rounded, color: _isTimerRunning ? Colors.grey[300] : const Color(0xFF463EC6), size: 35)),
                   )
                 else
                   Column(
@@ -278,31 +317,23 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
                 controller: _textController, maxLines: null, expands: true, textAlignVertical: TextAlignVertical.top,
                 style: const TextStyle(fontSize: 18, height: 1.6),
                 decoration: InputDecoration(
-                  hintText: "MU 전시에 방문해준 여러분 환영합니다!\nMU 전시 소감이나 치우개팀에게 응원의 메시지를 남겨주세요.", filled: true, fillColor: const Color(0xFFF2F3F5),
+                  hintText: "MU 전시에 방문해준 여러분 환영합니다!\n소감이나 응원의 메시지를 남겨주세요.", filled: true, fillColor: const Color(0xFFF2F3F5),
                   contentPadding: const EdgeInsets.all(30), border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                 ),
               ),
             ),
             const SizedBox(height: 30),
-            // 💡 버튼 2개 분리 레이아웃
             Row(
               children: [
-                // 1. 저장 버튼 (세컨더리)
                 Expanded(
                   flex: 1,
                   child: OutlinedButton(
                     onPressed: _handleSaveOnly,
-                    style: OutlinedButton.styleFrom(
-                      fixedSize: const Size.fromHeight(60),
-                      side: BorderSide(color: accentColor, width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      backgroundColor: Colors.white,
-                    ),
+                    style: OutlinedButton.styleFrom(fixedSize: const Size.fromHeight(60), side: BorderSide(color: accentColor, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), backgroundColor: Colors.white),
                     child: Text("기록 저장", style: TextStyle(color: accentColor, fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
                 ),
                 const SizedBox(width: 15),
-                // 2. 공유 버튼 (프라이머리)
                 Expanded(
                   flex: 2,
                   child: LongButton(
@@ -314,7 +345,10 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
                       }
                       setState(() => _isSharing = true);
                       try {
-                        savedGuestbooks.add({'content': _textController.text, 'date': DateFormat('yyyy. MM. dd').format(DateTime.now()), 'imagePath': _capturedImage!.path});
+                        final appDir = await getApplicationDocumentsDirectory();
+                        final fileName = "mu_share_${DateTime.now().millisecondsSinceEpoch}.png";
+                        final savedFile = await File(_capturedImage!.path).copy(p.join(appDir.path, fileName));
+                        await AppDatabase.instance.insertGuestbook(GuestbooksCompanion.insert(content: _textController.text, date: DateFormat('yyyy. MM. dd').format(DateTime.now()), imagePath: savedFile.path));
                         final file = await _capturePng();
                         setState(() => _isSharing = false);
                         if (file != null) await _shareImage(file);
@@ -336,19 +370,16 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
   }
 }
 
-// ─────── ✨ 인스타그램 스토리 템플릿 (Typography 교정) ───────
 class InstagramStoryTemplate extends StatelessWidget {
   final Color baseColor;
   final String? imagePath;
   final String message;
-
   const InstagramStoryTemplate({super.key, required this.baseColor, this.imagePath, required this.message});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 1080, height: 1920,
-      color: Colors.white,
+      width: 1080, height: 1920, color: Colors.white,
       child: Stack(
         children: [
           Positioned(top: 0, left: 0, right: 0, height: 800, child: Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [baseColor.withOpacity(0.4), Colors.white])))),
@@ -357,13 +388,12 @@ class InstagramStoryTemplate extends StatelessWidget {
             child: Column(
               children: [
                 const SizedBox(height: 150),
-                // 💡 상단 타이포그래피 날짜 수정
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     const Text("MU : EXHIBITION", style: TextStyle(fontSize: 40, fontFamily: 'PretendardBold', letterSpacing: 10)),
-                    Text(DateFormat('2025. 12. 19').format(DateTime.now()), style: const TextStyle(fontSize: 24, letterSpacing: 2, color: Colors.black54)),
+                    Text(DateFormat('yyyy. MM. dd').format(DateTime.now()), style: const TextStyle(fontSize: 24, letterSpacing: 2, color: Colors.black54)),
                   ],
                 ),
                 const Divider(height: 60, thickness: 2, color: Colors.black),
@@ -382,9 +412,7 @@ class InstagramStoryTemplate extends StatelessWidget {
                 const Spacer(),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 450),
-                  child: SingleChildScrollView(
-                    child: Text(message.isEmpty ? "비움 뒤에 찾아오는\n채움의 기록." : message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 48, fontFamily: 'PretendardBold', height: 1.6, color: Color(0xFF1A1A1A))),
-                  ),
+                  child: SingleChildScrollView(child: Text(message.isEmpty ? "비움 뒤에 찾아오는\n채움의 기록." : message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 48, fontFamily: 'PretendardBold', height: 1.6, color: Color(0xFF1A1A1A)))),
                 ),
                 const SizedBox(height: 120),
                 const Text("RECORDED BY MU", style: TextStyle(fontSize: 18, letterSpacing: 6, color: Colors.grey)),
@@ -398,35 +426,215 @@ class InstagramStoryTemplate extends StatelessWidget {
   }
 }
 
-// ─────── 📁 리스트 페이지 ───────
-class GuestbookListPage extends StatelessWidget {
+// ─────── 🧱 벽에 붙은 폴라로이드 리스트 페이지 (부드러운 드래그 최적화) ───────
+
+class PolaroidPlacement {
+  double top;
+  double left;
+  final double angle;
+  final Color tapeColor;
+  PolaroidPlacement({required this.top, required this.left, required this.angle, required this.tapeColor});
+}
+
+class GuestbookListPage extends StatefulWidget {
   final Color baseColor;
   const GuestbookListPage({super.key, required this.baseColor});
 
   @override
+  State<GuestbookListPage> createState() => _GuestbookListPageState();
+}
+
+class _GuestbookListPageState extends State<GuestbookListPage> {
+  // 💡 데이터 최적화: 메모리에 한 번만 로드하여 드래그 시 DB 재호출 방지
+  List<Guestbook> _items = [];
+  bool _isLoading = true;
+
+  final Map<int, PolaroidPlacement> _placements = {};
+  final math.Random _random = math.Random();
+  double _totalScrollHeight = 1000;
+
+  final List<Color> _tapeColors = [
+    Colors.blue.withOpacity(0.4), Colors.green.withOpacity(0.4),
+    Colors.orange.withOpacity(0.4), Colors.pink.withOpacity(0.4),
+    Colors.yellow.withOpacity(0.5),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData(); // 💡 시작 시 딱 한 번만 DB 데이터 가져오기
+  }
+
+  Future<void> _loadInitialData() async {
+    final data = await AppDatabase.instance.getAllGuestbooks();
+    if (mounted) {
+      setState(() {
+        _items = data;
+        _generatePlacements(data);
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _generatePlacements(List<Guestbook> items) {
+    if (items.isEmpty) return;
+
+    final double screenWidth = 400; // 대략적인 기본값 (화면 빌드 시 갱신됨)
+    final double itemWidth = screenWidth / 4.2;
+
+    for (int i = 0; i < items.length; i++) {
+      if (_placements.containsKey(items[i].id)) continue;
+
+      double left;
+      if (i % 3 == 0) left = _random.nextDouble() * 30 + 15;
+      else if (i % 3 == 1) left = 150 + (_random.nextDouble() * 40 - 20);
+      else left = 250 - (_random.nextDouble() * 30 + 15);
+
+      _placements[items[i].id] = PolaroidPlacement(
+        top: 50.0 + (i * 120.0) + _random.nextDouble() * 50,
+        left: left,
+        angle: (_random.nextDouble() * 0.4) - 0.2,
+        tapeColor: _tapeColors[_random.nextInt(_tapeColors.length)],
+      );
+    }
+    _totalScrollHeight = (items.length * 130.0) + 400;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text("MU RECORDS", style: TextStyle(color: Color(0xFF1A1A1A), fontFamily: 'PretendardBold', letterSpacing: 2)), backgroundColor: Colors.white, centerTitle: true, elevation: 0, leading: IconButton(icon: const Icon(Icons.close_rounded, color: Color(0xFF1A1A1A)), onPressed: () => Navigator.pop(context))),
-      body: savedGuestbooks.isEmpty
-          ? const Center(child: Text("기록된 이야기가 없습니다."))
-          : GridView.builder(
-        padding: const EdgeInsets.all(30),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.75, crossAxisSpacing: 25, mainAxisSpacing: 25),
-        itemCount: savedGuestbooks.length,
-        itemBuilder: (context, index) {
-          final item = savedGuestbooks[savedGuestbooks.length - 1 - index];
-          return Container(
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]),
+      backgroundColor: const Color(0xFFF2EFE9),
+      appBar: AppBar(
+        title: const Text("MU MEMORY WALL", style: TextStyle(color: Color(0xFF1A1A1A), fontFamily: 'PretendardBold', fontSize: 16, letterSpacing: 4)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Color(0xFF1A1A1A)),
+        centerTitle: true,
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : _items.isEmpty
+          ? const Center(child: Text("기록을 남겨 벽을 채워주세요."))
+          : SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: SizedBox(
+          height: _totalScrollHeight,
+          child: Stack(
+            children: _items.map((item) {
+              final placement = _placements[item.id];
+              if (placement == null) return const SizedBox.shrink();
+
+              return Positioned(
+                top: placement.top,
+                left: placement.left,
+                child: GestureDetector(
+                  // 💡 즉각적인 반응성 확보: 메모리의 좌표값만 변경하고 setState 호출
+                  onPanUpdate: (details) {
+                    setState(() {
+                      placement.top += details.delta.dy;
+                      placement.left += details.delta.dx;
+                    });
+                  },
+                  onTap: () => _showDetailDialog(context, item),
+                  child: Transform.rotate(
+                    angle: placement.angle,
+                    child: _buildTapedPolaroid(context, item, screenWidth / 4.2, placement.tapeColor),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTapedPolaroid(BuildContext context, Guestbook item, double width, Color tapeColor) {
+    return Stack(
+      alignment: Alignment.topCenter,
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: width,
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 25),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 8, offset: const Offset(2, 4))
+            ],
+            border: Border.all(color: Colors.grey[200]!, width: 0.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AspectRatio(
+                aspectRatio: 1.0,
+                child: Container(
+                  color: const Color(0xFFF8F8F8),
+                  child: ClipRRect(
+                    child: Transform.scale(
+                      scaleX: -1,
+                      child: Image.file(
+                        File(item.imagePath),
+                        fit: BoxFit.cover,
+                        cacheWidth: 300, // 💡 렉 방지: 메모리 최적화를 위해 이미지를 작게 캐싱
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(item.content, style: const TextStyle(fontSize: 9, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 4),
+              Text(item.date, style: const TextStyle(fontSize: 7, color: Colors.grey)),
+            ],
+          ),
+        ),
+        // 💡 마스킹 테이프
+        Positioned(
+          top: -8,
+          child: Transform.rotate(
+            angle: -0.1,
+            child: Container(
+              width: width * 0.45,
+              height: 16,
+              decoration: BoxDecoration(
+                color: tapeColor,
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 2)],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showDetailDialog(BuildContext context, Guestbook item) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(15, 15, 15, 45),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(2)),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(flex: 3, child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(15)), child: item['imagePath'] != null ? Transform.scale(scaleX: -1, child: Image.file(File(item['imagePath']!), fit: BoxFit.cover, width: double.infinity)) : Container(color: Colors.grey[200]))),
-                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.all(15), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: Text(item['content']!, style: const TextStyle(fontSize: 14, height: 1.4, color: Color(0xFF333333)), maxLines: 3, overflow: TextOverflow.ellipsis)), const SizedBox(height: 5), Text(item['date']!, style: const TextStyle(fontSize: 11, color: Colors.grey))]))),
+                Transform.scale(scaleX: -1, child: Image.file(File(item.imagePath), fit: BoxFit.cover)),
+                const SizedBox(height: 20),
+                Text(item.content, style: const TextStyle(fontSize: 16, height: 1.5)),
+                const SizedBox(height: 10),
+                Text(item.date, style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
