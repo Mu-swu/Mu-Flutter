@@ -13,7 +13,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:drift/drift.dart' as drift;
 
-// 프로젝트의 실제 경로에 맞게 수정해주세요
 import 'package:mu/data/database.dart';
 import 'package:mu/user_theme_manager.dart';
 import 'package:mu/widgets/longbutton.dart';
@@ -96,6 +95,7 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
     }
   }
 
+  // ✨ 수정됨: 저장 시 파일명만 추출하여 저장
   Future<void> _handleSaveOnly() async {
     if (_textController.text.isEmpty || _capturedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('사진과 메시지를 모두 입력해주세요.')));
@@ -111,7 +111,8 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
         GuestbooksCompanion.insert(
           content: _textController.text,
           date: DateFormat('yyyy. MM. dd').format(DateTime.now()),
-          imagePath: savedFile.path,
+          // ✨ 핵심: 전체 경로(savedFile.path) 대신 파일명(fileName)만 저장
+          imagePath: fileName,
         ),
       );
 
@@ -301,6 +302,7 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
     );
   }
 
+  // ✨ 수정됨: 공유 시에도 파일명만 추출하여 저장
   Widget _buildInputSection(Color baseColor, Color accentColor) {
     return Expanded(
       flex: 1,
@@ -348,7 +350,14 @@ class _ExhibitionGuestbookPageState extends State<ExhibitionGuestbookPage> {
                         final appDir = await getApplicationDocumentsDirectory();
                         final fileName = "mu_share_${DateTime.now().millisecondsSinceEpoch}.png";
                         final savedFile = await File(_capturedImage!.path).copy(p.join(appDir.path, fileName));
-                        await AppDatabase.instance.insertGuestbook(GuestbooksCompanion.insert(content: _textController.text, date: DateFormat('yyyy. MM. dd').format(DateTime.now()), imagePath: savedFile.path));
+
+                        // ✨ 핵심: DB에는 파일명만 저장
+                        await AppDatabase.instance.insertGuestbook(GuestbooksCompanion.insert(
+                            content: _textController.text,
+                            date: DateFormat('yyyy. MM. dd').format(DateTime.now()),
+                            imagePath: fileName
+                        ));
+
                         final file = await _capturePng();
                         setState(() => _isSharing = false);
                         if (file != null) await _shareImage(file);
@@ -426,7 +435,11 @@ class InstagramStoryTemplate extends StatelessWidget {
   }
 }
 
-// ─────── 🧱 벽에 붙은 폴라로이드 리스트 페이지 (부드러운 드래그 최적화) ───────
+// ─────── 🧱 벽에 붙은 폴라로이드 리스트 페이지 (수정됨) ───────
+
+// ... 앞부분 (ExhibitionGuestbookPage 클래스 등)은 동일하므로 생략하거나 유지하시면 됩니다.
+
+// ─────── 🧱 벽에 붙은 폴라로이드 리스트 페이지 (개선 버전) ───────
 
 class PolaroidPlacement {
   double top;
@@ -445,7 +458,6 @@ class GuestbookListPage extends StatefulWidget {
 }
 
 class _GuestbookListPageState extends State<GuestbookListPage> {
-  // 💡 데이터 최적화: 메모리에 한 번만 로드하여 드래그 시 DB 재호출 방지
   List<Guestbook> _items = [];
   bool _isLoading = true;
 
@@ -462,7 +474,7 @@ class _GuestbookListPageState extends State<GuestbookListPage> {
   @override
   void initState() {
     super.initState();
-    _loadInitialData(); // 💡 시작 시 딱 한 번만 DB 데이터 가져오기
+    _loadInitialData();
   }
 
   Future<void> _loadInitialData() async {
@@ -470,39 +482,60 @@ class _GuestbookListPageState extends State<GuestbookListPage> {
     if (mounted) {
       setState(() {
         _items = data;
-        _generatePlacements(data);
+        // 💡 빌드 후에 화면 너비를 가져오기 위해 잠시 대기하거나 build에서 처리합니다.
         _isLoading = false;
       });
     }
   }
 
-  void _generatePlacements(List<Guestbook> items) {
+  // ✨ 수정됨: 화면 너비를 인자로 받아 전체 영역에 분산 배치하는 로직
+  void _generatePlacements(List<Guestbook> items, double screenWidth) {
     if (items.isEmpty) return;
 
-    final double screenWidth = 400; // 대략적인 기본값 (화면 빌드 시 갱신됨)
-    final double itemWidth = screenWidth / 4.2;
+    final double itemWidth = screenWidth / 4.2; // 폴라로이드 실제 너비
 
     for (int i = 0; i < items.length; i++) {
       if (_placements.containsKey(items[i].id)) continue;
 
       double left;
-      if (i % 3 == 0) left = _random.nextDouble() * 30 + 15;
-      else if (i % 3 == 1) left = 150 + (_random.nextDouble() * 40 - 20);
-      else left = 250 - (_random.nextDouble() * 30 + 15);
+      // 💡 화면을 3개 구역으로 나누어 랜덤 배치 (분산 효과)
+      if (i % 3 == 0) {
+        // 왼쪽 구역 (0 ~ 20%)
+        left = _random.nextDouble() * (screenWidth * 0.15) + 20;
+      } else if (i % 3 == 1) {
+        // 중간 구역 (35 ~ 55%)
+        left = (screenWidth * 0.4) + (_random.nextDouble() * (screenWidth * 0.15));
+      } else {
+        // 오른쪽 구역 (70 ~ 85%)
+        left = screenWidth - itemWidth - (_random.nextDouble() * (screenWidth * 0.15)) - 20;
+      }
 
       _placements[items[i].id] = PolaroidPlacement(
-        top: 50.0 + (i * 120.0) + _random.nextDouble() * 50,
+        // 세로 위치도 살짝 랜덤하게 줘서 자연스럽게 겹치게 함
+        top: 60.0 + (i * 140.0) + _random.nextDouble() * 40,
         left: left,
-        angle: (_random.nextDouble() * 0.4) - 0.2,
+        angle: (_random.nextDouble() * 0.5) - 0.25, // 회전 각도 (-0.25 ~ 0.25)
         tapeColor: _tapeColors[_random.nextInt(_tapeColors.length)],
       );
     }
-    _totalScrollHeight = (items.length * 130.0) + 400;
+    // 스크롤 높이 갱신
+    _totalScrollHeight = (items.length * 150.0) + 500;
+  }
+
+  Future<File> _getImageFile(String storedPath) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final fileName = p.basename(storedPath);
+    return File(p.join(directory.path, fileName));
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+
+    // 💡 데이터 로딩이 끝났다면 화면 너비를 기준으로 배치 정보 생성
+    if (!_isLoading && _items.isNotEmpty && _placements.length < _items.length) {
+      _generatePlacements(_items, screenWidth);
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2EFE9),
@@ -521,6 +554,8 @@ class _GuestbookListPageState extends State<GuestbookListPage> {
         physics: const BouncingScrollPhysics(),
         child: SizedBox(
           height: _totalScrollHeight,
+          // 💡 화면 전체를 쓰기 위해 Stack의 너비를 기기 너비로 고정
+          width: screenWidth,
           child: Stack(
             children: _items.map((item) {
               final placement = _placements[item.id];
@@ -530,7 +565,6 @@ class _GuestbookListPageState extends State<GuestbookListPage> {
                 top: placement.top,
                 left: placement.left,
                 child: GestureDetector(
-                  // 💡 즉각적인 반응성 확보: 메모리의 좌표값만 변경하고 setState 호출
                   onPanUpdate: (details) {
                     setState(() {
                       placement.top += details.delta.dy;
@@ -561,9 +595,7 @@ class _GuestbookListPageState extends State<GuestbookListPage> {
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 25),
           decoration: BoxDecoration(
             color: Colors.white,
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 8, offset: const Offset(2, 4))
-            ],
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 8, offset: const Offset(2, 4))],
             border: Border.all(color: Colors.grey[200]!, width: 0.5),
           ),
           child: Column(
@@ -574,26 +606,30 @@ class _GuestbookListPageState extends State<GuestbookListPage> {
                 aspectRatio: 1.0,
                 child: Container(
                   color: const Color(0xFFF8F8F8),
-                  child: ClipRRect(
-                    child: Transform.scale(
-                      scaleX: -1,
-                      child: Image.file(
-                        File(item.imagePath),
-                        fit: BoxFit.cover,
-                        cacheWidth: 300, // 💡 렉 방지: 메모리 최적화를 위해 이미지를 작게 캐싱
-                      ),
-                    ),
+                  child: FutureBuilder<File>(
+                    future: _getImageFile(item.imagePath),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data!.existsSync()) {
+                        return ClipRRect(
+                          child: Transform.scale(
+                            scaleX: -1,
+                            child: Image.file(snapshot.data!, fit: BoxFit.cover, cacheWidth: 300),
+                          ),
+                        );
+                      }
+                      return const Center(child: Icon(Icons.broken_image, color: Colors.grey, size: 20));
+                    },
                   ),
                 ),
               ),
               const SizedBox(height: 8),
-              Text(item.content, style: const TextStyle(fontSize: 9, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
+              // 글자가 너무 길면 자연스럽게 생략
+              Text(item.content, style: const TextStyle(fontSize: 10, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
               const SizedBox(height: 4),
-              Text(item.date, style: const TextStyle(fontSize: 7, color: Colors.grey)),
+              Text(item.date, style: const TextStyle(fontSize: 8, color: Colors.grey)),
             ],
           ),
         ),
-        // 💡 마스킹 테이프
         Positioned(
           top: -8,
           child: Transform.rotate(
@@ -601,10 +637,7 @@ class _GuestbookListPageState extends State<GuestbookListPage> {
             child: Container(
               width: width * 0.45,
               height: 16,
-              decoration: BoxDecoration(
-                color: tapeColor,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 2)],
-              ),
+              decoration: BoxDecoration(color: tapeColor, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 2)]),
             ),
           ),
         ),
@@ -622,16 +655,24 @@ class _GuestbookListPageState extends State<GuestbookListPage> {
           child: Container(
             padding: const EdgeInsets.fromLTRB(15, 15, 15, 45),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(2)),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Transform.scale(scaleX: -1, child: Image.file(File(item.imagePath), fit: BoxFit.cover)),
-                const SizedBox(height: 20),
-                Text(item.content, style: const TextStyle(fontSize: 16, height: 1.5)),
-                const SizedBox(height: 10),
-                Text(item.date, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
+            child: FutureBuilder<File>(
+              future: _getImageFile(item.imagePath),
+              builder: (context, snapshot) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (snapshot.hasData && snapshot.data!.existsSync())
+                      Transform.scale(scaleX: -1, child: Image.file(snapshot.data!, fit: BoxFit.cover))
+                    else
+                      const AspectRatio(aspectRatio: 1.0, child: Center(child: Icon(Icons.broken_image, size: 50))),
+                    const SizedBox(height: 20),
+                    Text(item.content, style: const TextStyle(fontSize: 18, height: 1.5)),
+                    const SizedBox(height: 10),
+                    Text(item.date, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                  ],
+                );
+              },
             ),
           ),
         ),
